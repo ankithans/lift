@@ -1,5 +1,7 @@
 # Music mobile correction — 22 October 2026
 
+> Size/layout superseded by [compact player verification](mini-verification.md): 56 × 32 in the capsule, 96 × 54 when docked. These sizes are below YouTube’s documented minimum, accepted explicitly by the user.
+
 This supersedes the header-pill placement and close-to-pause decisions in the earlier README and verification report. Final scope is **play in Lift for both providers**. Play never redirects. A provider link exists only under More in the sheet. The intermediate native-app handoff proposal was withdrawn and is not implemented.
 
 ## Root causes and production evidence

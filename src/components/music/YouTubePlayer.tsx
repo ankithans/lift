@@ -1,6 +1,8 @@
 import { useEffect, useImperativeHandle, useRef, type Ref } from 'react'
 import { loadYouTube, type Item, type YTPlayer } from './providers'
 
+export const YOUTUBE_GESTURE_MESSAGE = 'Tap the small video to allow audio.'
+
 export interface YouTubeHandle { play: () => void; pause: () => void; load: (item: Item) => void }
 
 /** Kept in a body portal so closing sheets never unmounts it. Sized by its container. */
@@ -48,8 +50,8 @@ export function YouTubePlayer({ item, playing, onPlaying, onEnded, onError, ref 
             else if (e.data === 1) { switching.current = false; latest.current.onPlaying(true) }
             else if (e.data === 2 && !switching.current) latest.current.onPlaying(false)
           },
-          onError: () => { if (!disposed) { switching.current = false; latest.current.onPlaying(false); latest.current.onError('This video cannot play in Lift. Choose another track.') } },
-          onAutoplayBlocked: () => { if (!disposed) { switching.current = false; latest.current.onPlaying(false); latest.current.onError('Tap Play in the visible YouTube player to allow audio.') } },
+          onError: e => { if (!disposed) { switching.current = false; latest.current.onPlaying(false); latest.current.onError(`This video cannot play in Lift. Choose another track. (YouTube ${e.data})`) } },
+          onAutoplayBlocked: () => { if (!disposed) { switching.current = false; latest.current.onPlaying(false); latest.current.onError(YOUTUBE_GESTURE_MESSAGE) } },
         },
       })
     }).catch(() => { if (!disposed) latest.current.onError('YouTube could not load. Check your connection and try again.') })

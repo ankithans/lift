@@ -9,7 +9,7 @@ import { announce } from '#/lib/announce'
 import { useOnline } from '#/lib/convex'
 import { ConnectMusic } from './MusicConnections'
 import { musicError, PROVIDERS, type Item, type Source } from './providers'
-import { YouTubePlayer, type YouTubeHandle } from './YouTubePlayer'
+import { YouTubePlayer, YOUTUBE_GESTURE_MESSAGE, type YouTubeHandle } from './YouTubePlayer'
 import { useSpotify } from './useSpotify'
 import './music.css'
 
@@ -62,7 +62,7 @@ export function WorkoutMusic({ open, editing, sheetOpen, restVisible, onOpen, on
   useEffect(() => () => onHeight(0), [onHeight])
   useEffect(() => {
     // Reserve clear space above every modal rather than hiding the playing video.
-    if (video && modal) document.body.style.setProperty('--music-video-space', '268px')
+    if (video && modal) document.body.style.setProperty('--music-video-space', '84px')
     else document.body.style.removeProperty('--music-video-space')
     return () => { document.body.style.removeProperty('--music-video-space') }
   }, [video, modal])
@@ -85,7 +85,7 @@ export function WorkoutMusic({ open, editing, sheetOpen, restVisible, onOpen, on
   const load = useCallback(async (cursor?: string) => {
     if (!connected || !online) return
     const id = ++requestId.current
-    setLoading(true); setError('')
+    setLoading(true); setError(old => old === YOUTUBE_GESTURE_MESSAGE ? old : '')
     try {
       const result = collection === 'queue' ? { items: source === 'spotify' ? await getQueue({}) : queue.slice(index + 1) }
         : source === 'spotify' ? await spotifyLibrary({ collection, playlistId: playlist?.id, cursor })
@@ -161,7 +161,7 @@ export function WorkoutMusic({ open, editing, sheetOpen, restVisible, onOpen, on
     {mounted && createPortal(<>
       {/* The video takes the cover-art slot in the capsule; while the capsule is hidden it waits, still playing, in the top corner. */}
       {youtubeConnected && <aside className="music-ui music-pip" data-youtube-pip={video ? '' : undefined} data-docked={capsuleVisible ? undefined : ''} style={{ display: video ? undefined : 'none', ...(capsuleVisible ? { bottom: `calc(var(--safe-bottom) + ${bottom + 8}px)` } : { top: `calc(var(--safe-top) + ${modal ? 12 : 76}px)` }) }} aria-label="YouTube video">
-        <YouTubePlayer ref={youtube} item={queue[index]} playing={ytPlaying} onPlaying={setYtPlaying} onEnded={() => youtubeSkip(1, false)} onError={setError} />
+        <YouTubePlayer ref={youtube} item={queue[index]} playing={ytPlaying} onPlaying={p => { setYtPlaying(p); if (p) setError(old => old === YOUTUBE_GESTURE_MESSAGE ? '' : old) }} onEnded={() => youtubeSkip(1, false)} onError={setError} />
       </aside>}
       {capsuleVisible && <aside className="music-ui music-capsule" data-music-capsule style={{ bottom: `calc(var(--safe-bottom) + ${bottom}px)` }} aria-label="Workout music">
         <button className="flex h-12 min-w-0 flex-1 items-center gap-2 pl-2 text-left" aria-label={`Now playing: ${item!.title}, open music controls`} onClick={onOpen}>
@@ -184,6 +184,7 @@ export function WorkoutMusic({ open, editing, sheetOpen, restVisible, onOpen, on
           {item.image && <img src={item.image} alt="" className="size-14 shrink-0 rounded-md object-cover" />}
           <div className="min-w-0"><p className="truncate text-[16px] font-[600]">{item.title}</p><p className="truncate text-[13px] text-muted">{item.subtitle}</p></div>
         </div> : <p className="mt-5 text-[14px] text-muted">Choose a favourite to set the mood.</p>}
+        {source === 'youtube' && error === YOUTUBE_GESTURE_MESSAGE && <p data-youtube-gesture-prompt className="mt-3 text-[13px] leading-5 text-warning">{error}</p>}
         {controls}
         {source === 'spotify' && <>
           {!premium && <p className="my-3 text-[13px] leading-5 text-muted">Spotify Premium is needed for playback in Lift.</p>}
@@ -217,7 +218,7 @@ export function WorkoutMusic({ open, editing, sheetOpen, restVisible, onOpen, on
         {page?.next && <button className="btn btn-secondary mt-4 w-full" disabled={!online || loading} onClick={() => void load(page.next)}>{loading ? 'Loading…' : 'Load more'}</button>}
       </>}
       {item && <details className="mt-4 text-[12px] text-muted"><summary className="min-h-11 cursor-pointer py-3">More</summary><a className="inline-flex min-h-11 items-center gap-2 underline" href={item.url} target="_blank" rel="noreferrer">Open in {PROVIDERS[source]}<ExternalLink aria-hidden className="size-3" /></a></details>}
-      {error && !(source === 'spotify' && spotify.noDevice) && <div className="mt-4 rounded-xl border border-line p-3"><p className="text-[13px] leading-5 text-muted">{error}</p><button className="mt-1 min-h-11 text-[13px] text-accent" disabled={!online || loading || busy} onClick={() => source === 'spotify' && item ? void spotify.retry() : void load()}>Try again</button></div>}
+      {error && error !== YOUTUBE_GESTURE_MESSAGE && !(source === 'spotify' && spotify.noDevice) && <div className="mt-4 rounded-xl border border-line p-3"><p className="text-[13px] leading-5 text-muted">{error}</p><button className="mt-1 min-h-11 text-[13px] text-accent" disabled={!online || loading || busy} onClick={() => source === 'spotify' && item ? void spotify.retry() : void load()}>Try again</button></div>}
     </Sheet>
   </>
 }

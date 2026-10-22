@@ -69,7 +69,7 @@ declare global {
   interface Window {
     Spotify?: { Player: new (options: { name: string; getOAuthToken: (cb: (token: string) => void) => void; volume: number }) => SpotifyPlayer }
     onSpotifyWebPlaybackSDKReady?: () => void
-    YT?: { Player: new (node: HTMLElement, options: { width: string; height: string; videoId?: string; playerVars: Record<string, string | number>; events: { onReady: () => void; onStateChange: (e: { data: number }) => void; onError: () => void; onAutoplayBlocked: () => void } }) => YTPlayer }
+    YT?: { Player: new (node: HTMLElement, options: { width: string; height: string; videoId?: string; playerVars: Record<string, string | number>; events: { onReady: () => void; onStateChange: (e: { data: number }) => void; onError: (e: { data: number }) => void; onAutoplayBlocked: () => void } }) => YTPlayer }
     onYouTubeIframeAPIReady?: () => void
   }
 }
