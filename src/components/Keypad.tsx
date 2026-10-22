@@ -138,7 +138,8 @@ export function Keypad({
                     : 'bg-surface text-muted'
               }`}
             >
-              {target.low === target.high ? target.high : `${target.low}–${target.high}`} reps
+              {target.low === target.high ? target.high : `${target.low}–${target.high}`}
+              <span className="sr-only"> reps target</span>
               {field === 'reps' && value ? (
                 <span className="sr-only">
                   {Number(value) < target.low ? ', below target' : Number(value) > target.high ? ', above target' : ', in target'}

@@ -8,7 +8,7 @@ import { ExerciseThumb } from '#/components/ExerciseThumb'
 import { PageHeader } from '#/components/PageHeader'
 import { Sheet, SheetAction } from '#/components/Sheet'
 import { BlockSkeleton } from '#/components/Skeletons'
-import { fmtDate, fmtDuration, fmtNum, fmtVolume, fmtWeight, fromDisplayWeight, toDisplayWeight } from '#/lib/format'
+import { fmtDate, fmtDuration, fmtNum, fmtSet, fmtVolume, fromDisplayWeight, toDisplayWeight } from '#/lib/format'
 import { useUnit } from '#/lib/me'
 import { toast } from '#/lib/toast'
 import { useTitle } from '#/lib/useTitle'
@@ -29,11 +29,16 @@ function WorkoutDetail() {
   const removeSet = useMutation(api.workouts.removeSet)
   const addSet = useMutation(api.workouts.addSet)
   const completeSet = useMutation(api.workouts.completeSet)
+  /** Resolves false (after a toast) when the server rejects the value, so the field can revert. */
   const updateSet = (args: Parameters<typeof updateSetMut>[0]) =>
-    updateSetMut(args).catch((err: unknown) => {
-      const data = (err as { data?: unknown })?.data
-      toast(typeof data === 'string' ? data : 'Could not save that change.', { tone: 'error' })
-    })
+    updateSetMut(args).then(
+      () => true,
+      (err: unknown) => {
+        const data = (err as { data?: unknown })?.data
+        toast(typeof data === 'string' ? data : 'Could not save that change.', { tone: 'error' })
+        return false
+      },
+    )
   const remove = useMutation(api.workouts.remove)
   const [editing, setEditing] = useState(false)
   const [menu, setMenu] = useState<null | 'options' | 'delete'>(null)
@@ -100,9 +105,7 @@ function WorkoutDetail() {
             {prSets.map(({ we, set }) => (
               <li key={set._id} className="flex items-baseline justify-between gap-3 text-[15px]">
                 <span className="truncate">{we.exercise.name}</span>
-                <span className="num shrink-0 font-[650]">
-                  {fmtWeight(set.weightKg, unit)} {unit} × {set.reps}
-                </span>
+                <span className="num shrink-0 font-[650]">{fmtSet(set, we.exercise.tracking, unit)}</span>
               </li>
             ))}
           </ul>
@@ -128,12 +131,13 @@ function WorkoutDetail() {
                 </Link>
                 <div className="mt-2 divide-hair rounded-[16px] bg-surface px-4">
                   {we.sets.map((set, i) => (
-                    <div key={set._id} className="flex h-12 items-center gap-3">
-                      <span className={`num w-7 text-[13px] font-[700] ${set.kind !== 'working' ? 'text-warning' : 'text-subtle'}`}>
+                    <div key={set._id} className={`flex items-center gap-3 ${editing ? 'min-h-14 flex-wrap py-1.5' : 'h-12'}`}>
+                      <span className={`num relative w-7 shrink-0 text-[13px] font-[700] ${set.kind !== 'working' ? 'text-warning' : 'text-subtle'}`}>
                         {setLabel(set as never, we.sets.filter((x, j) => j < i && x.kind === 'working').length, letter)}
+                        {set.isPr && editing && <Trophy aria-label="Personal record" className="absolute -right-1 -top-2 size-3 text-pr" />}
                       </span>
                       {editing ? (
-                        <div className="flex flex-1 items-center gap-2">
+                        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
                           {we.exercise.tracking !== 'reps' && we.exercise.tracking !== 'duration' && (
                             <NumField
                               key={`w-${unit}-${set.weightKg}`}
@@ -160,15 +164,12 @@ function WorkoutDetail() {
                         </div>
                       ) : (
                         <span className="num flex-1 text-[16px] font-[560]">
-                          {we.exercise.tracking === 'duration'
-                            ? `${fmtNum(set.durationSec)} s`
-                            : we.exercise.tracking === 'reps'
-                              ? `${set.reps ?? '—'} reps`
-                              : `${fmtWeight(set.weightKg, unit)} ${unit} × ${set.reps ?? '—'}`}
+                          {fmtSet(set, we.exercise.tracking, unit)}
+                          {we.exercise.tracking !== 'duration' && we.exercise.tracking !== 'reps' && set.weightKg ? <span className="text-[13px] text-muted"> {unit}</span> : null}
                         </span>
                       )}
                       {set.rir !== undefined && !editing && <span className="num text-[13px] text-subtle">RIR {set.rir}</span>}
-                      {set.isPr && <Trophy className="size-4 text-pr" aria-label="Personal record" />}
+                      {set.isPr && !editing && <Trophy className="size-4 text-pr" aria-label="Personal record" />}
                     </div>
                   ))}
                   {editing && (
@@ -177,11 +178,13 @@ function WorkoutDetail() {
                       onClick={async () => {
                         const last = we.sets[we.sets.length - 1]
                         const id = await addSet({ workoutExerciseId: we._id })
+                        // Copy the previous set; fall back to the rep target rather than inventing "1".
                         await completeSet({
                           setId: id,
                           weightKg: last?.weightKg ?? null,
-                          reps: last?.reps ?? (we.exercise.tracking === 'duration' ? null : 1),
+                          reps: last?.reps ?? (we.exercise.tracking === 'duration' ? null : we.repLow || 8),
                           durationSec: last?.durationSec ?? (we.exercise.tracking === 'duration' ? 30 : null),
+                          rir: last?.rir ?? null,
                         })
                       }}
                     >
@@ -248,18 +251,22 @@ function NumField({
   decimal?: boolean
   narrow?: boolean
   label: string
-  onCommit: (v: number | null) => void
+  onCommit: (v: number | null) => Promise<boolean> | void
 }) {
-  const [text, setText] = useState(value === null ? '' : fmtNum(value))
+  const saved = value === null ? '' : fmtNum(value)
+  const [text, setText] = useState(saved)
   return (
-    <label className={`flex h-11 items-center ${narrow ? 'w-[76px] shrink-0' : 'min-w-0 flex-1'} gap-1 rounded-[10px] bg-raised px-3 focus-within:ring-1 focus-within:ring-line-strong`}>
+    <label className={`flex h-11 items-center ${narrow ? 'w-[84px] shrink-0' : 'min-w-[96px] flex-1'} gap-1 rounded-[10px] bg-raised px-3 focus-within:ring-1 focus-within:ring-line-strong`}>
       <input
         value={text}
         inputMode={decimal ? 'decimal' : 'numeric'}
         onChange={(e) => setText(e.target.value.replace(',', '.'))}
-        onBlur={() => {
+        onBlur={async () => {
+          if (text === saved) return
           const n = text.trim() === '' ? null : Number.parseFloat(text)
-          if (n === null || Number.isFinite(n)) onCommit(n)
+          if (n !== null && !Number.isFinite(n)) return setText(saved)
+          // A rejected value snaps back instead of lingering (and re-submitting).
+          if ((await onCommit(n)) === false) setText(saved)
         }}
         onFocus={(e) => e.currentTarget.select()}
         aria-label={label}

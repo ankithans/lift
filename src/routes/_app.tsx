@@ -7,6 +7,7 @@ import { Splash } from '#/components/Splash'
 import { MeProvider } from '#/lib/me'
 import { Toaster } from '#/lib/toast'
 import { Announcer } from '#/lib/announce'
+import { replayOutbox } from '#/lib/outbox'
 
 export const Route = createFileRoute('/_app')({
   ssr: false,
@@ -24,6 +25,11 @@ function AppLayout() {
   useEffect(() => {
     if (!isLoading && !isAuthenticated) navigate({ to: '/signin', replace: true })
   }, [isLoading, isAuthenticated, navigate])
+
+  // Replay set changes a previous session couldn't deliver (offline reload, killed tab).
+  useEffect(() => {
+    if (isAuthenticated) void replayOutbox()
+  }, [isAuthenticated])
 
   useEffect(() => {
     if (me && !me.profile) {

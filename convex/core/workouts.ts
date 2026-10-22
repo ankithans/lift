@@ -213,7 +213,33 @@ function cleanValues(args: { weightKg?: number | null; reps?: number | null; rir
   return out;
 }
 
+/**
+ * During a live workout, flag the single best done set of an exercise as a
+ * provisional PR if it beats every earlier workout. Re-run after any edit so
+ * badges never go stale. Returns the PR set id, if any.
+ */
+async function provisionalPrs(ctx: MutationCtx, workoutExerciseId: Id<"workoutExercises">) {
+  const we = await ctx.db.get(workoutExerciseId);
+  if (!we) return null;
+  const sets = await setsOf(ctx, we._id);
+  const stats = await statsFor(ctx, we.userId, we.exerciseId);
+  const prior = stats && stats.totalSets > 0 ? (stats.bestScore ?? (stats.bestE1rmKg ? 1000 + stats.bestE1rmKg : 0)) : null;
+  let top: Doc<"sets"> | null = null;
+  for (const s of sets) if (s.done && s.kind !== "warmup" && (!top || setScore(s) > setScore(top))) top = s;
+  const winner = prior !== null && top && setScore(top) > prior + 0.01 ? top._id : null;
+  for (const s of sets) {
+    const isPr = s._id === winner;
+    if (Boolean(s.isPr) !== isPr) await ctx.db.patch(s._id, { isPr });
+  }
+  return winner;
+}
+
 async function afterHistoryEdit(ctx: MutationCtx, workout: Doc<"workouts">, exerciseIds: Id<"exercises">[]) {
+  if (workout.status === "active") {
+    // Live edits: keep provisional PR badges honest for the touched exercises.
+    for (const we of await exercisesOf(ctx, workout._id)) if (exerciseIds.includes(we.exerciseId)) await provisionalPrs(ctx, we._id);
+    return;
+  }
   if (workout.status !== "completed") return;
   for (const id of new Set(exerciseIds)) {
     await rebuildPrs(ctx, workout.userId, id);
@@ -305,20 +331,8 @@ export const completeSet = defineMutation({
     // Back-filling a finished workout keeps its sets inside that workout's time.
     const doneAt = set.doneAt ?? (workout.status === "active" ? now : (workout.finishedAt ?? workout.startedAt));
     const patch = { ...cleanValues(values), done: true, doneAt };
-    const merged = { ...set, ...patch };
-    let isPr = false;
-    const stats = await statsFor(ctx, userId, set.exerciseId);
-    const score = setScore(merged);
-    const priorBest = stats?.bestScore ?? (stats?.bestE1rmKg ? 1000 + stats.bestE1rmKg : 0);
-    if (set.kind !== "warmup" && stats && stats.totalSets > 0 && score > 0 && score > priorBest + 0.01) {
-      const siblings = await ctx.db
-        .query("sets")
-        .withIndex("by_workoutExerciseId_and_order", (q) => q.eq("workoutExerciseId", set.workoutExerciseId))
-        .take(40);
-      isPr = siblings.every((s) => s._id === set._id || !s.isPr || setScore(s) < score);
-      if (isPr) for (const s of siblings) if (s.isPr && s._id !== set._id) await ctx.db.patch(s._id, { isPr: false });
-    }
-    await ctx.db.patch(set._id, { ...patch, isPr });
+    await ctx.db.patch(set._id, patch);
+    const isPr = workout.status === "active" ? (await provisionalPrs(ctx, set.workoutExerciseId)) === set._id : false;
 
     let restSec = 0;
     if (workout.status === "active") {

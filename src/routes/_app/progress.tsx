@@ -9,7 +9,7 @@ import { LineChart } from '#/components/LineChart'
 import { PageHeader } from '#/components/PageHeader'
 import { Sheet } from '#/components/Sheet'
 import { BlockSkeleton } from '#/components/Skeletons'
-import { fmtDate, fmtNum, fmtRelativeDay, fmtVolume, fmtWeight, fromDisplayWeight, toDisplayWeight } from '#/lib/format'
+import { fmtDate, fmtNum, fmtRelativeDay, fmtSet, fmtVolume, fmtWeight, fromDisplayWeight, toDisplayWeight } from '#/lib/format'
 import { useMe, useUnit } from '#/lib/me'
 import { weekBoundaries } from '#/lib/time'
 import { useNow } from '#/lib/useNow'
@@ -53,9 +53,9 @@ function Consistency({ summary }: { summary: NonNullable<ReturnType<typeof useQu
     <section className="animate-rise">
       <h2 className="t-eyebrow text-subtle">Consistency</h2>
       <div className="mt-3 grid grid-cols-3 gap-2">
-        <Tile label="Week streak" value={String(summary.streakWeeks)} icon={<Flame className="size-4 text-warning" />} />
-        <Tile label="Per week (4w)" value={fmtNum(Math.round(avg * 10) / 10)} />
-        <Tile label="Workouts" value={String(summary.totalWorkouts)} />
+        <Tile label="Streak" value={String(summary.streakWeeks)} icon={<Flame className="size-4 text-warning" />} />
+        <Tile label="Per week" value={fmtNum(Math.round(avg * 10) / 10)} />
+        <Tile label="Total" value={String(summary.totalWorkouts)} />
       </div>
       <div className="card mt-2 p-4">
         <ul className="sr-only">
@@ -87,9 +87,9 @@ function Consistency({ summary }: { summary: NonNullable<ReturnType<typeof useQu
 
 function Tile({ label, value, icon }: { label: string; value: string; icon?: React.ReactNode }) {
   return (
-    <div className="card px-3.5 py-3">
-      <div className="flex items-center gap-1 text-[12px] font-[550] text-subtle">{icon}{label}</div>
-      <div className="num mt-0.5 text-[24px] font-[680] tracking-[-0.03em]">{value}</div>
+    <div className="card flex flex-col-reverse px-3.5 py-3">
+      <div className="mt-0.5 flex items-center gap-1 whitespace-nowrap text-[12px] font-[550] text-muted">{icon}{label}</div>
+      <div className="num text-[24px] font-[680] tracking-[-0.03em]">{value}</div>
     </div>
   )
 }
@@ -243,15 +243,20 @@ function Records() {
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-[15px] font-[560]">{p.name}</div>
                     <div className="num text-[13px] text-subtle">
-                      {fmtWeight(p.weightKg, unit)} {unit} × {p.reps} · {fmtRelativeDay(p.at)}
+                      {fmtSet(p, p.tracking, unit)}
+                      {p.weightKg && p.tracking === 'weight_reps' ? ` ${unit}` : ''} · {fmtRelativeDay(p.at)}
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className="num flex items-center gap-1 text-[15px] font-[650] text-pr">
-                      <Trophy className="size-3.5" /> {fmtWeight(p.bestE1rmKg, unit)}
+                  {p.tracking === 'weight_reps' && p.bestE1rmKg ? (
+                    <div className="text-right">
+                      <div className="num flex items-center gap-1 text-[15px] font-[650] text-pr">
+                        <Trophy aria-hidden className="size-3.5" /> {fmtWeight(p.bestE1rmKg, unit)}
+                      </div>
+                      <div className="text-[11px] text-subtle">est. 1RM</div>
                     </div>
-                    <div className="text-[11px] text-subtle">est. 1RM</div>
-                  </div>
+                  ) : (
+                    <Trophy aria-label="Personal record" className="size-4 shrink-0 text-pr" />
+                  )}
                 </Link>
               </li>
             ))}

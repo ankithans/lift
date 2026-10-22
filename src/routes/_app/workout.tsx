@@ -31,10 +31,11 @@ import { BlockSkeleton } from '#/components/Skeletons'
 import { announce } from '#/lib/announce'
 import { useOnline } from '#/lib/convex'
 import { askNotifyPermission, chime, notify, tap, unlockAudio } from '#/lib/haptics'
-import { fmtClock, fmtDuration, fmtNum, fmtReps, fmtVolume, fmtWeight, fromDisplayWeight, toDisplayWeight, type Unit } from '#/lib/format'
+import { fmtClock, fmtDuration, fmtNum, fmtReps, fmtSet, fmtVolume, fmtWeight, fromDisplayWeight, toDisplayWeight, type Unit } from '#/lib/format'
 import { useUnit } from '#/lib/me'
 import { toast } from '#/lib/toast'
 import { useNow } from '#/lib/useNow'
+import { track } from '#/lib/outbox'
 import {
   type ActiveWorkout,
   type WorkoutExercise,
@@ -120,6 +121,16 @@ function useRest(workout: ActiveWorkout | null | undefined, quietUntil: { curren
 
   useEffect(() => {
     if (!endsAt) return
+    // A timer that was already running when this screen opened (reload, coming back):
+    // keep counting, but don't announce its start, and don't re-alert if it's already over.
+    const inherited = announced.current === null && Date.now() - (endsAt - total * 1000) > 3000
+    if (inherited) {
+      announced.current = endsAt
+      if (endsAt <= Date.now()) {
+        fired.current = endsAt
+        return
+      }
+    }
     const fire = () => {
       if (fired.current === endsAt) return
       fired.current = endsAt
@@ -256,7 +267,7 @@ function LiveWorkout() {
   }, [])
 
   // Mutations with optimistic updates for instant feel.
-  const updateSet = useMutation(api.workouts.updateSet).withOptimisticUpdate((store, args) => {
+  const updateSetMut = useMutation(api.workouts.updateSet).withOptimisticUpdate((store, args) => {
     const patch: Partial<WorkoutSet> = {}
     for (const k of ['weightKg', 'reps', 'rir', 'durationSec'] as const) {
       if (args[k] !== undefined) patch[k] = args[k] ?? undefined
@@ -264,7 +275,7 @@ function LiveWorkout() {
     if (args.kind) patch.kind = args.kind
     patchActiveSet(store, args.setId, patch)
   })
-  const completeSet = useMutation(api.workouts.completeSet).withOptimisticUpdate((store, args) => {
+  const completeSetMut = useMutation(api.workouts.completeSet).withOptimisticUpdate((store, args) => {
     const patch: Partial<WorkoutSet> = { done: true, doneAt: Date.now() }
     for (const k of ['weightKg', 'reps', 'rir', 'durationSec'] as const) {
       if (args[k] !== undefined) patch[k] = args[k] ?? undefined
@@ -274,7 +285,7 @@ function LiveWorkout() {
       return r > 0 ? { restEndsAt: Date.now() + r * 1000, restTotalSec: r } : {}
     })
   })
-  const uncompleteSet = useMutation(api.workouts.uncompleteSet).withOptimisticUpdate((store, args) => {
+  const uncompleteSetMut = useMutation(api.workouts.uncompleteSet).withOptimisticUpdate((store, args) => {
     const cur = store.getQuery(api.workouts.active, {})
     const set = cur?.exercises.flatMap((x) => x.sets).find((s) => s._id === args.setId)
     const restStart = cur?.restEndsAt ? cur.restEndsAt - (cur.restTotalSec ?? 0) * 1000 : null
@@ -292,6 +303,10 @@ function LiveWorkout() {
         restTotalSec: Math.max(1, (cur.restTotalSec ?? 0) + (args.addSec ?? 0)),
       })
   })
+  // Every set change is also written to a durable outbox until the server confirms it.
+  const updateSet = (args: Parameters<typeof updateSetMut>[0]) => track('updateSet', args, updateSetMut(args))
+  const completeSet = (args: Parameters<typeof completeSetMut>[0]) => track('completeSet', args, completeSetMut(args))
+  const uncompleteSet = (args: Parameters<typeof uncompleteSetMut>[0]) => track('uncompleteSet', args, uncompleteSetMut(args))
   const addSet = useMutation(api.workouts.addSet)
   const removeSet = useMutation(api.workouts.removeSet)
   const addExercise = useMutation(api.workouts.addExercise)
@@ -301,9 +316,20 @@ function LiveWorkout() {
   const finish = useMutation(api.workouts.finish)
   const discard = useMutation(api.workouts.remove)
 
+  // Keep a copy of the live workout so it can be shown if the app reopens without signal.
+  useEffect(() => {
+    try {
+      if (workout) localStorage.setItem('lift:last-workout', JSON.stringify(workout))
+      else if (workout === null) localStorage.removeItem('lift:last-workout')
+    } catch {
+      // ignore
+    }
+  }, [workout])
+
   const blocks = useMemo(() => (workout ? toBlocks(workout.exercises) : []), [workout])
   const weById = useMemo(() => new Map(workout?.exercises.map((we) => [we._id, we]) ?? []), [workout])
 
+  if (workout === undefined && !online) return <OfflineWorkout />
   if (workout === undefined) {
     return (
       <main className="page space-y-4 pt-16">
@@ -455,7 +481,10 @@ function LiveWorkout() {
       if (next) {
         const nwe = next.we._id === we._id ? patched : next.we
         const nset = nwe.sets[next.index]
-        const field = tabsFor(nwe.exercise.tracking)[0]
+        // Bodyweight-plus-load with no load suggested: start on reps, not an empty "+kg".
+        const loadSuggested = suggestFor(nwe, next.index).weightKg
+        const field =
+          nwe.exercise.tracking === 'weighted_bodyweight' && !loadSuggested && nset.weightKg === undefined ? 'reps' : tabsFor(nwe.exercise.tracking)[0]
         const { text } = displayValue(nwe, nset, next.index, field)
         setEditing({ setId: nset._id, weId: nwe._id, field, draft: text, initial: text, fresh: true, auto: true })
         said.push(`Next: ${nwe._id === we._id ? '' : `${nwe.exercise.name}, `}set ${workingIndex(nwe, next.index) + 1}, ${fieldLabel(field, nwe.exercise.tracking, unit)} ${text || 'empty'}.`)
@@ -477,7 +506,15 @@ function LiveWorkout() {
         toast(`New PR · ${we.exercise.name}`, {
           tone: 'pr',
           ms: 5000,
-          action: { label: 'Undo', run: () => void uncompleteSet({ setId: set._id }) },
+          action: {
+            label: 'Undo',
+            run: () => {
+              void uncompleteSet({ setId: set._id })
+              const field = tabsFor(we.exercise.tracking)[0]
+              const text = field === 'weight' ? fmtNum(toDisplayWeight(values.weightKg ?? null, unit)) : String(values[argKey(field)] ?? '')
+              setEditing({ setId: set._id, weId: we._id, field, draft: text, initial: text, fresh: true })
+            },
+          },
         })
       }
     } catch (err) {
@@ -845,7 +882,9 @@ function LiveWorkout() {
       </Sheet>
 
       <Sheet open={menu?.type === 'discard'} onClose={() => setMenu(null)} title="Discard this workout?">
-        <p className="text-[15px] text-muted">All {doneSets} logged sets will be deleted. This can’t be undone.</p>
+        <p className="text-[15px] text-muted">
+          {doneSets === 0 ? 'Nothing is logged yet.' : `All ${doneSets} logged set${doneSets > 1 ? 's' : ''} will be deleted. This can’t be undone.`}
+        </p>
         <div className="mt-5 grid grid-cols-2 gap-2 pb-2">
           <button className="btn btn-secondary" onClick={() => setMenu(null)}>Keep training</button>
           <button
@@ -935,9 +974,7 @@ function prevLabel(we: WorkoutExercise, i: number, unit: Unit) {
   const t = we.exercise.tracking
   const prev = previousFor(we, i)
   if (!prev) return '—'
-  if (t === 'duration') return `${fmtNum(prev.durationSec)}s`
-  if (t === 'reps') return `${prev.reps ?? '—'} reps`
-  return prev.weightKg ? `${t === 'weighted_bodyweight' ? '+' : ''}${fmtWeight(prev.weightKg, unit)} × ${prev.reps ?? '—'}` : `BW × ${prev.reps ?? '—'}`
+  return fmtSet(prev, t, unit)
 }
 
 function FoldedCard({ we, letter, inSuperset, onExpand }: { we: WorkoutExercise; letter: string | null; inSuperset: boolean; onExpand: () => void }) {
@@ -1005,13 +1042,21 @@ const ExerciseCard = memo(function ExerciseCard({
   const t = we.exercise.tracking
   const cols: KeypadField[] = t === 'reps' ? ['reps', 'rir'] : t === 'duration' ? ['duration'] : ['weight', 'reps', 'rir']
   const allDone = we.sets.length > 0 && we.sets.every((s) => s.done)
-  // Below 390px the "Previous" column moves under each row so inputs keep their size.
-  const grid =
-    cols.length === 3
+  // On narrow screens the "Previous" column moves under each row so inputs keep their size.
+  // Superset blocks lose ~14px to their rail, so they switch a little earlier (430px).
+  const grid = inSuperset
+    ? cols.length === 3
+      ? 'grid-cols-[40px_minmax(0,1fr)_minmax(0,1fr)_40px_44px] min-[430px]:grid-cols-[44px_minmax(0,1fr)_62px_62px_42px_46px]'
+      : cols.length === 2
+        ? 'grid-cols-[40px_minmax(0,1fr)_52px_44px] min-[430px]:grid-cols-[44px_minmax(0,1fr)_72px_52px_46px]'
+        : 'grid-cols-[40px_minmax(0,1fr)_44px] min-[430px]:grid-cols-[44px_minmax(0,1fr)_88px_46px]'
+    : cols.length === 3
       ? 'grid-cols-[40px_minmax(0,1fr)_minmax(0,1fr)_40px_44px] min-[390px]:grid-cols-[44px_minmax(0,1fr)_62px_62px_42px_46px]'
       : cols.length === 2
         ? 'grid-cols-[40px_minmax(0,1fr)_52px_44px] min-[390px]:grid-cols-[44px_minmax(0,1fr)_72px_52px_46px]'
         : 'grid-cols-[40px_minmax(0,1fr)_44px] min-[390px]:grid-cols-[44px_minmax(0,1fr)_88px_46px]'
+  const narrowHide = inSuperset ? 'max-[429px]:hidden' : 'max-[389px]:hidden'
+  const narrowShow = inSuperset ? 'max-[429px]:block' : 'max-[389px]:block'
   const best = we.best
     ? we.best.weightKg
       ? `${fmtWeight(we.best.weightKg, unit)}×${we.best.reps}`
@@ -1061,7 +1106,7 @@ const ExerciseCard = memo(function ExerciseCard({
       <div className={`mt-3 ${inSuperset ? '' : 'px-1 min-[390px]:px-2'}`}>
         <div aria-hidden className={`grid ${grid} items-center gap-1 px-1 pb-1 text-[11px] font-[650] uppercase tracking-[0.08em] text-subtle min-[390px]:px-2`}>
           <span className="text-center">Set</span>
-          <span className="pl-1 max-[389px]:hidden">Previous</span>
+          <span className={`pl-1 ${narrowHide}`}>Previous</span>
           {cols.map((c) => (
             <span key={c} className="text-center">
               {c === 'weight' ? (t === 'weighted_bodyweight' ? `+${unit}` : unit) : c === 'reps' ? 'Reps' : c === 'rir' ? 'RIR' : 'Sec'}
@@ -1094,7 +1139,7 @@ const ExerciseCard = memo(function ExerciseCard({
                   </span>
                 )}
               </button>
-              <span className="num truncate pl-1 text-[13px] text-muted max-[389px]:hidden">
+              <span className={`num truncate pl-1 text-[13px] text-muted ${narrowHide}`}>
                 <span className="sr-only">Previous </span>
                 {prevText}
               </span>
@@ -1132,7 +1177,7 @@ const ExerciseCard = memo(function ExerciseCard({
               >
                 <Check aria-hidden className={`size-5 ${set.done ? 'animate-pop' : ''}`} strokeWidth={2.8} />
               </button>
-              <span className="num col-span-full -mt-1 hidden pb-1.5 pl-[44px] text-[12px] text-muted max-[389px]:block">
+              <span className={`num col-span-full -mt-1 hidden pb-1.5 pl-[44px] text-[12px] text-muted ${narrowShow}`}>
                 Last: {prevText}
               </span>
             </div>
@@ -1375,7 +1420,7 @@ function FinishPanel({
         {[
           ['Duration', fmtDuration((Date.now() - workout.startedAt) / 1000)],
           ['Sets', `${done}`],
-          [`Volume ${unit}`, fmtVolume(volume, unit)],
+          [`Volume ${unit}`, volume > 0 ? fmtVolume(volume, unit) : '—'],
         ].map(([k, v]) => (
           <div key={k} className="rounded-[16px] bg-raised px-3 py-3">
             <dt className="text-[12px] font-[550] text-muted">{k}</dt>
@@ -1429,5 +1474,50 @@ function FinishPanel({
       )}
       {done === 0 && <p className="mt-3 text-center text-[13px] text-muted">Log at least one set, or discard the workout.</p>}
     </div>
+  )
+}
+
+/** Shown when the workout page opens with no connection: the last saved state, read-only. */
+function OfflineWorkout() {
+  const unit = useUnit()
+  const snap = (() => {
+    try {
+      return JSON.parse(localStorage.getItem('lift:last-workout') ?? 'null') as ActiveWorkout | null
+    } catch {
+      return null
+    }
+  })()
+  return (
+    <main className="page pt-10">
+      <div role="status" className="flex items-start gap-3 rounded-[18px] bg-warning/10 p-4 text-warning">
+        <CloudOff aria-hidden className="mt-0.5 size-5 shrink-0" />
+        <div>
+          <div className="text-[15px] font-[650]">You’re offline</div>
+          <p className="mt-0.5 text-[14px] leading-5 text-warning/90">
+            Showing your last saved workout. Sets you logged are kept and sync as soon as you have signal.
+          </p>
+        </div>
+      </div>
+      {snap ? (
+        <section className="mt-6">
+          <h1 className="t-screen">{snap.title}</h1>
+          <ul className="mt-4 space-y-3">
+            {snap.exercises.map((we) => (
+              <li key={we._id} className="card px-4 py-3">
+                <div className="text-[16px] font-[600]">{we.exercise.name}</div>
+                <div className="num mt-1 text-[14px] text-muted">
+                  {we.sets
+                    .map((s) => (s.done ? `${s.weightKg ? fmtWeight(s.weightKg, unit) + '×' : ''}${s.reps ?? (s.durationSec ? s.durationSec + 's' : '—')} ✓` : '·'))
+                    .join('   ')}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : (
+        <p className="mt-6 text-muted">No saved workout on this device yet.</p>
+      )}
+      <button onClick={() => location.reload()} className="btn btn-secondary mt-6 w-full">Try again</button>
+    </main>
   )
 }

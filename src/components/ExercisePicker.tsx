@@ -56,7 +56,7 @@ export function ExercisePicker({
     return (
       <Sheet open={open} onClose={close} title="New exercise">
         <CreateExercise
-          initialName={q.trim()}
+          initialName={titleCase(q.trim())}
           onCancel={() => setCreating(false)}
           onCreated={(item) => {
             setCreating(false)
@@ -159,7 +159,7 @@ export function ExercisePicker({
               </li>
             )
           })}
-          {q.trim() && (
+          {q.trim() && !results.some((e) => e.name.toLowerCase() === q.trim().toLowerCase()) && (
             <li>
               <button onClick={() => setCreating(true)} className="press flex w-full items-center gap-3 rounded-2xl px-2 py-2 text-left text-accent hover:bg-raised">
                 <span className="grid size-11 place-items-center rounded-[12px] bg-accent-dim">
@@ -174,6 +174,8 @@ export function ExercisePicker({
     </Sheet>
   )
 }
+
+const titleCase = (s: string) => s.replace(/\b([a-z])/g, (m) => m.toUpperCase())
 
 const TRACKING = [
   { value: 'weight_reps', label: 'Weight × reps' },

@@ -34,6 +34,7 @@ export function fmtDuration(sec: number) {
   const h = Math.floor(s / 3600)
   const m = Math.floor((s % 3600) / 60)
   if (h > 0) return `${h}h ${m}m`
+  if (m === 0) return '<1 min'
   return `${m} min`
 }
 
@@ -79,4 +80,18 @@ export const RIR_LABELS: Record<number, string> = {
   2: '2 left',
   3: '3 left',
   4: '4+ left',
+}
+
+/** "+10 × 8" for added load on bodyweight moves, "BW × 8" without load, "60 × 8" otherwise. */
+export function fmtSet(
+  set: { weightKg?: number | null; reps?: number | null; durationSec?: number | null },
+  tracking: string,
+  unit: Unit,
+  sep = ' × ',
+) {
+  if (tracking === 'duration' || (set.durationSec && !set.reps)) return `${fmtNum(set.durationSec ?? null)}s`
+  const reps = set.reps ?? '—'
+  if (tracking === 'reps') return `${reps} reps`
+  if (!set.weightKg) return `BW${sep}${reps}`
+  return `${tracking === 'weighted_bodyweight' ? '+' : ''}${fmtWeight(set.weightKg, unit)}${sep}${reps}`
 }

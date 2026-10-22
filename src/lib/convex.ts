@@ -19,21 +19,29 @@ export const MCP_URL =
 
 /** True while the realtime connection is up (debounced so brief blips don't flash). */
 export function useOnline() {
-  const [online, setOnline] = useState(true)
+  const [socket, setSocket] = useState(true)
+  const [network, setNetwork] = useState(() => (typeof navigator === 'undefined' ? true : navigator.onLine))
   useEffect(() => {
     const client = getConvex()
     let timer: ReturnType<typeof setTimeout> | undefined
     const update = (s: { isWebSocketConnected: boolean }) => {
       clearTimeout(timer)
-      if (s.isWebSocketConnected) setOnline(true)
-      else timer = setTimeout(() => setOnline(false), 2000)
+      if (s.isWebSocketConnected) setSocket(true)
+      else timer = setTimeout(() => setSocket(false), 2000)
     }
     const unsubscribe = client.subscribeToConnectionState(update)
     update(client.connectionState())
+    // The browser knows about lost signal immediately; a half-open socket can take a while.
+    const on = () => setNetwork(true)
+    const off = () => setNetwork(false)
+    window.addEventListener('online', on)
+    window.addEventListener('offline', off)
     return () => {
       unsubscribe()
       clearTimeout(timer)
+      window.removeEventListener('online', on)
+      window.removeEventListener('offline', off)
     }
   }, [])
-  return online
+  return socket && network
 }

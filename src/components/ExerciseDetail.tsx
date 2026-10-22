@@ -4,7 +4,7 @@ import type { FunctionReturnType } from 'convex/server'
 import { Play, Trophy } from 'lucide-react'
 import { useState } from 'react'
 import { api } from '../../convex/_generated/api'
-import { fmtDate, fmtNum, fmtRelativeDay, fmtWeight, toDisplayWeight } from '#/lib/format'
+import { fmtDate, fmtRelativeDay, fmtSet, fmtWeight, toDisplayWeight } from '#/lib/format'
 import { useUnit } from '#/lib/me'
 import { LineChart } from './LineChart'
 import { BlockSkeleton } from './Skeletons'
@@ -68,8 +68,8 @@ export function ExerciseBody({ data, compact = false }: { data: ExerciseData; co
     <div>
       {data.videoUrl ? (
         <VideoPlayer url={data.videoUrl} name={data.name} />
-      ) : (
-        <div className="grid aspect-video place-items-center rounded-[18px] bg-surface text-[14px] text-subtle">Video coming soon</div>
+      ) : data.custom ? null : (
+        <div className="grid h-24 place-items-center rounded-[18px] bg-surface text-[14px] text-subtle">No form video for this one yet</div>
       )}
 
       <div className="mt-5 grid grid-cols-2 rounded-full bg-surface p-1">
@@ -132,14 +132,18 @@ export function ExerciseBody({ data, compact = false }: { data: ExerciseData; co
             <p className="py-10 text-center text-[15px] text-muted">No sets logged yet. Your first one sets the bar.</p>
           ) : (
             <>
-              {data.stats?.bestE1rmKg ? (
+              {data.stats?.bestE1rmKg || data.stats?.bestReps ? (
                 <div className="flex items-center gap-3 rounded-[18px] bg-pr-dim p-4">
                   <Trophy className="size-5 text-pr" />
                   <div className="min-w-0 flex-1">
                     <div className="text-[13px] font-[600] text-pr">Best set</div>
                     <div className="num text-[17px] font-[650]">
-                      {fmtWeight(data.stats.bestWeightKg, unit)} {unit} × {data.stats.bestReps}
-                      <span className="ml-2 text-[13px] font-[500] text-muted">≈ {fmtWeight(data.stats.bestE1rmKg, unit)} {unit} 1RM</span>
+                      {fmtSet({ weightKg: data.stats.bestWeightKg, reps: data.stats.bestReps }, data.tracking, unit)}
+                      {data.tracking === 'weight_reps' && data.stats.bestE1rmKg ? (
+                        <span className="ml-2 text-[13px] font-[500] text-muted">
+                          {unit} ≈ {fmtWeight(data.stats.bestE1rmKg, unit)} {unit} 1RM
+                        </span>
+                      ) : null}
                     </div>
                   </div>
                   {data.stats.bestSetAt && <div className="text-[12px] text-subtle">{fmtDate(data.stats.bestSetAt, { month: 'short', day: 'numeric' })}</div>}
@@ -163,7 +167,7 @@ export function ExerciseBody({ data, compact = false }: { data: ExerciseData; co
                         {s.sets.map((x, i) => (
                           <span key={i} className={x.isPr ? 'text-pr' : ''}>
                             {x.isPr && <span className="sr-only">Personal record: </span>}
-                            {x.durationSec && !x.reps ? `${fmtNum(x.durationSec)}s` : `${x.weightKg ? fmtWeight(x.weightKg, unit) : 'BW'}×${x.reps ?? '—'}`}
+                            {fmtSet(x, data.tracking, unit, '×')}
                           </span>
                         ))}
                       </div>

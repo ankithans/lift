@@ -90,7 +90,7 @@ function Train() {
             </div>
           </div>
           <WeekList days={days} />
-          <p className="mt-3 text-[13px] text-subtle">Drag a day by its handle, or press and hold, to swap it with another. Tap the handle to pick a day. This changes your weekly plan.</p>
+          <DragHint />
         </section>
       )}
     </main>
@@ -102,10 +102,11 @@ function TodayLine({ day }: { day: Day }) {
   const start = useStartWorkout()
   const p = day.planned
   if (day.status === 'active') {
+    // The dock at the bottom is the one place to resume; here, just say what's happening.
     return (
-      <Link to="/workout" className="btn btn-primary mt-1 w-full">
-        <Play className="size-[18px] fill-current" /> Resume {day.workout?.title}
-      </Link>
+      <p className="-mt-2 flex items-center gap-2 text-[15px] text-muted">
+        <span aria-hidden className="size-2 rounded-full bg-accent" /> {day.workout?.title} in progress
+      </p>
     )
   }
   if (day.status === 'done') {
@@ -381,7 +382,7 @@ function DayCard({
   }
 
   const meta = workout?.stats
-    ? `${fmtDuration(workout.stats.durationSec)} · ${workout.stats.sets} sets · ${fmtVolume(workout.stats.volumeKg, unit)} ${unit}`
+    ? `${fmtDuration(workout.stats.durationSec)} · ${workout.stats.sets} sets`
     : status === 'active'
       ? 'In progress'
       : !isRest
@@ -419,7 +420,14 @@ function DayCard({
             {isRest && !workout && <Footprints className="size-4 shrink-0" strokeWidth={1.75} />}
             <span className="truncate">{title}</span>
           </span>
-          {meta && <span className="num block truncate text-[13px] text-subtle">{meta}</span>}
+          {meta && (
+            <span className="num block truncate text-[13px] text-subtle">
+              {meta}
+              {workout?.stats && workout.stats.volumeKg > 0 && (
+                <span className="max-[389px]:hidden"> · {fmtVolume(workout.stats.volumeKg, unit)} {unit}</span>
+              )}
+            </span>
+          )}
           {!moved && slot.extras.length > 0 && (
             <span className="block truncate text-[13px] text-subtle">+ {slot.extras.map((w) => w.title).join(', ')}</span>
           )}
@@ -427,7 +435,8 @@ function DayCard({
         <span className="shrink-0 text-[13px] font-[600]">
           {status === 'done' && (
             <span className="flex items-center gap-1 text-accent">
-              <Check className="size-4" strokeWidth={2.6} /> Done
+              <Check aria-hidden className="size-4" strokeWidth={2.6} />
+              <span className="max-[389px]:sr-only">Done</span>
             </span>
           )}
           {status === 'missed' && <span className="text-muted">Skipped</span>}
@@ -490,5 +499,24 @@ function NoProgram() {
       <p className="mt-2 text-[15px] text-muted">Pick a plan and your week fills itself in.</p>
       <Link to="/welcome" className="btn btn-primary mt-5">Choose a program</Link>
     </section>
+  )
+}
+
+/** Teach the reorder gesture for the first few visits, then get out of the way. */
+function DragHint() {
+  const [show] = useState(() => {
+    try {
+      const n = Number(localStorage.getItem('lift:drag-hint') ?? '0')
+      localStorage.setItem('lift:drag-hint', String(n + 1))
+      return n < 3
+    } catch {
+      return false
+    }
+  })
+  if (!show) return null
+  return (
+    <p className="mt-3 text-[13px] text-subtle animate-fade">
+      Tip: drag a day by its handle, or press and hold, to swap it with another. Tap the handle to pick a day.
+    </p>
   )
 }

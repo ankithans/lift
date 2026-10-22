@@ -93,7 +93,7 @@ export const recentPrs = defineQuery({
       .query("exerciseStats")
       .withIndex("by_userId_and_exerciseId", (q) => q.eq("userId", userId))
       .take(1000);
-    const withBest = rows.filter((r) => r.bestE1rmKg && r.bestSetAt).sort((a, b) => (b.bestSetAt ?? 0) - (a.bestSetAt ?? 0));
+    const withBest = rows.filter((r) => (r.bestE1rmKg || r.bestReps) && r.bestSetAt).sort((a, b) => (b.bestSetAt ?? 0) - (a.bestSetAt ?? 0));
     const out = [];
     for (const r of withBest.slice(0, Math.max(1, Math.min(limit ?? 30, 200)))) {
       const e = await load(r.exerciseId);
@@ -102,8 +102,9 @@ export const recentPrs = defineQuery({
         exerciseId: r.exerciseId,
         name: e.name,
         slug: e.slug,
+        tracking: e.tracking,
         thumbnailUrl: e.thumbnailUrl ?? null,
-        bestE1rmKg: r.bestE1rmKg!,
+        bestE1rmKg: r.bestE1rmKg ?? null,
         weightKg: r.bestWeightKg ?? null,
         reps: r.bestReps ?? null,
         at: r.bestSetAt!,
