@@ -15,6 +15,10 @@ import { useMe } from '#/lib/me'
 import { startOfDay, weekBoundaries } from '#/lib/time'
 import { toast } from '#/lib/toast'
 import { useNow } from '#/lib/useNow'
+import { useWhoop, dayKey, type WhoopView } from '#/components/whoop/useWhoop'
+import { WhoopToday, WhoopWeekSummary, WhoopMetricLine, WhoopDayButton } from '#/components/whoop/WhoopCalendar'
+import { WhoopConnectRow } from '#/components/whoop/WhoopConnection'
+import type { WhoopDay } from '../../../convex/whoop/model'
 
 export const Route = createFileRoute('/_app/')({
   head: () => ({ meta: [{ title: 'Train · Lift' }] }),
@@ -27,6 +31,7 @@ type ServerDay = Week['days'][number]
 type Day = Omit<ServerDay, 'status'> & { status: ServerDay['status'] | 'before' }
 
 const ROW_H = 60
+const WHOOP_ROW_H = 76
 // The click that ends a drag must not also open the day.
 let lastDragEnd = 0
 
@@ -48,6 +53,7 @@ function Train() {
   const [offset, setOffset] = useState(0)
   const boundaries = useMemo(() => weekBoundaries(today, weekStartsOn, offset), [today, weekStartsOn, offset])
   const week = useQuery(api.programs.week, { boundaries, now: today })
+  const whoop = useWhoop(boundaries[0], boundaries[7])
   const thisWeekBounds = useMemo(() => weekBoundaries(today, weekStartsOn, 0), [today, weekStartsOn])
   const thisWeek = useQuery(api.programs.week, offset === 0 ? 'skip' : { boundaries: thisWeekBounds, now: today })
 
@@ -73,11 +79,13 @@ function Train() {
           <BlockSkeleton h={420} />
         </div>
       ) : !week.program ? (
-        <NoProgram />
+        <><NoProgram /><WhoopConnectRow /></>
       ) : (
         <>
-          {todayDay && <TodayHero day={todayDay} days={currentDays!} />}
+          {todayDay && <TodayHero day={todayDay} days={currentDays!} whoop={whoop} />}
+          {whoop.data?.status === 'disconnected' && <WhoopConnectRow />}
           <WeekSection
+            whoop={whoop}
             key={offset}
             days={days}
             title={offset === 0 ? 'This week' : offset === -1 ? 'Last week' : offset === 1 ? 'Next week' : 'Week'}
@@ -121,7 +129,7 @@ function useStartWorkout() {
   }
 }
 
-function TodayHero({ day, days }: { day: Day; days: Day[] }) {
+function TodayHero({ day, days, whoop }: { day: Day; days: Day[]; whoop: WhoopView }) {
   const me = useMe()
   const start = useStartWorkout()
   const now = useNow(60_000)
@@ -193,6 +201,7 @@ function TodayHero({ day, days }: { day: Day; days: Day[] }) {
         </h2>
       )}
       <p className="mt-1 text-[14px] leading-5 text-muted">{support}</p>
+      <WhoopToday view={whoop} />
       <div className="mt-4">{action}</div>
     </section>
   )
@@ -204,6 +213,7 @@ function TodayHero({ day, days }: { day: Day; days: Day[] }) {
 type DragState = { from: number; to: number; dy: number; pointerId: number }
 
 function WeekSection({
+  whoop,
   days,
   title,
   range,
@@ -211,6 +221,7 @@ function WeekSection({
   offset,
   setOffset,
 }: {
+  whoop: WhoopView
   days: Day[]
   title: string
   range: string
@@ -222,6 +233,8 @@ function WeekSection({
   const [order, setOrder] = useState<Day[]>(days)
   useEffect(() => setOrder(days), [days])
   const [editing, setEditing] = useState(false)
+  const sensorConnected = Boolean(whoop.data && whoop.data.status !== 'disconnected')
+  const rowHeight = sensorConnected && !editing ? WHOOP_ROW_H : ROW_H
   const [drag, setDrag] = useState<DragState | null>(null)
   const [moveFrom, setMoveFrom] = useState<number | null>(null)
   const [settle, setSettle] = useState<{ key: number; offsets: Record<number, number> } | null>(null)
@@ -362,6 +375,7 @@ function WeekSection({
           </div>
         )}
       </div>
+      {sensorConnected && !editing && <WhoopWeekSummary view={whoop} dates={days.map(d => d.start)} />}
       {editing && <p className="mb-2 text-[13px] text-muted animate-fade">Drag a workout onto another day to swap them.</p>}
 
       <ol
@@ -379,7 +393,7 @@ function WeekSection({
           const settling = settle && settle.offsets[i] !== undefined ? settle : null
           const locked = editing && !movable(i)
           return (
-            <li key={slot.start} className="relative flex items-stretch" style={{ height: ROW_H }}>
+            <li key={slot.start} className="relative flex items-stretch" style={{ height: rowHeight }}>
               <div aria-hidden className={`flex w-14 shrink-0 items-center gap-1 text-[13px] ${slot.isToday ? 'text-accent' : 'text-muted'}`}>
                 <span className="font-[600]">{WEEKDAYS[slot.weekday]}</span>
                 <span className="num">{new Date(slot.start).getDate()}</span>
@@ -408,6 +422,9 @@ function WeekSection({
               >
                 <DayRow
                   slot={slot}
+                  whoop={whoop}
+                  sensor={whoop.data?.days.find(d => d.date === dayKey(slot.start, whoop.timezone))}
+                  showSensor={sensorConnected && !editing && slot.start <= today}
                   item={item}
                   index={i}
                   editing={editing}
@@ -489,6 +506,9 @@ function WeekSection({
 }
 
 function DayRow({
+  whoop,
+  sensor,
+  showSensor,
   slot,
   item,
   index,
@@ -505,6 +525,9 @@ function DayRow({
   onKeyMove,
   onOpenMove,
 }: {
+  whoop: WhoopView
+  sensor?: WhoopDay
+  showSensor: boolean
   slot: Day
   item: Day
   index: number
@@ -570,6 +593,7 @@ function DayRow({
           >
             {floating ?? title}
           </span>
+          {showSensor && <WhoopMetricLine day={sensor} today={slot.isToday} />}
           {(floatingSub ?? (target !== null ? (target === 'Rest' ? 'Move here (rest day)' : `Swap with ${target}`) : null)) && (
             <span className="block text-[13px] text-accent">{floatingSub ?? (target === 'Rest' ? 'Move here (rest day)' : `Swap with ${target}`)}</span>
           )}
@@ -590,6 +614,7 @@ function DayRow({
           </span>
         )}
       </button>
+      {showSensor && <WhoopDayButton view={whoop} day={sensor} dateAt={slot.start} />}
       {editing &&
         (locked ? (
           <span className="grid size-11 shrink-0 place-items-center text-muted" aria-label="Already happened, can’t move">

@@ -12,6 +12,7 @@ import { useUnit } from '#/lib/me'
 import { toast } from '#/lib/toast'
 import { useTitle } from '#/lib/useTitle'
 import { setLabel, toBlocks } from '#/lib/workout'
+import { WhoopWorkout } from '#/components/whoop/WhoopWorkout'
 
 export const Route = createFileRoute('/_app/history/$workoutId')({
   validateSearch: (s: Record<string, unknown>): { done?: number } => (s.done ? { done: 1 } : {}),
@@ -99,6 +100,8 @@ function WorkoutDetail() {
           ))}
         </dl>
       )}
+
+      <WhoopWorkout workoutId={workoutId as Id<'workouts'>} />
 
       {prSets.length > 0 && (
         <section className="mt-7 border-y border-line py-3" aria-label="Personal records">

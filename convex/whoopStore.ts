@@ -168,3 +168,14 @@ export const readConnection = internalMutation({
   args:connId,returns:v.union(schema.doc('whoopConnections'),v.null()),
   handler:async(ctx,{connectionId})=>await ctx.db.get(connectionId),
 });
+
+/** Explicitly used for end-to-end token-rotation verification; never callable by clients. */
+export const expireForRefresh = internalMutation({
+  args:connId,returns:v.boolean(),
+  handler:async(ctx,{connectionId})=>{
+    const c=await ctx.db.get(connectionId);
+    if(!c||c.status!=='connected'||(c.leaseUntil??0)>Date.now())return false;
+    await ctx.db.patch(c._id,{expiresAt:0,lastAttemptAt:0});
+    await ctx.runMutation(internal.whoopStore.enqueue,{userId:c.userId});return true;
+  },
+});

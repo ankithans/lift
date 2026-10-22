@@ -1,0 +1,5 @@
+.whoop { --whoop-green: #75d99b; --whoop-yellow: #eed477; --whoop-red: #ff8e8e; --whoop-blue: #93baff; }
+/* Inherit the host theme; these equivalents retain contrast if Lift switches to its light tokens. */
+[data-theme="light"] .whoop { --whoop-green: #22733e; --whoop-yellow: #806000; --whoop-red: #b52d38; --whoop-blue: #315eaf; }
+.whoop summary::-webkit-details-marker { display: none; }
+@media (prefers-reduced-motion: reduce) { .whoop *, .whoop *::before, .whoop *::after { animation: none !important; transition: none !important; } }

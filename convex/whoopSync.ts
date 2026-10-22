@@ -57,3 +57,8 @@ export const revoke=internalAction({
     await ctx.runMutation(internal.whoopStore.erase,{connectionId});return null;
   },
 });
+
+export const forceRefresh=internalAction({
+  args:{connectionId:v.id('whoopConnections')},returns:v.boolean(),
+  handler:async(ctx,{connectionId}):Promise<boolean>=>await ctx.runMutation(internal.whoopStore.expireForRefresh,{connectionId}),
+});

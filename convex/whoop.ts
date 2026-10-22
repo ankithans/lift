@@ -54,8 +54,8 @@ export const disconnect = mutation({
 });
 
 export const week = query({
-  args: { start: v.number(), end: v.number(), timezone: v.string() }, returns: weekResult,
-  handler: async (ctx, { start, end, timezone }) => {
+  args: { start: v.number(), end: v.number(), timezone: v.string(), todayAt: v.optional(v.number()) }, returns: weekResult,
+  handler: async (ctx, { start, end, timezone, todayAt }) => {
     if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start || end - start > 8 * 86400000) throw new Error('Choose one week.');
     dateKey(start, timezone); // Validate IANA timezone.
     const userId = await getAuthUserId(ctx);
@@ -64,6 +64,10 @@ export const week = query({
     if (!c || c.status === 'disconnecting') return { status: 'disconnected' as const, days: [], trend: [] };
     const from = start - 8 * 86400000;
     const records = await ctx.db.query('whoopRecords').withIndex('by_userId_and_startAt', q => q.eq('userId', userId).gte('startAt', from).lt('startAt', end)).take(2000);
+    if (todayAt !== undefined && (todayAt < from || todayAt >= end)) {
+      if (!Number.isFinite(todayAt)) throw new Error('Invalid date.');
+      records.push(...await ctx.db.query('whoopRecords').withIndex('by_userId_and_startAt', q => q.eq('userId', userId).gte('startAt', todayAt - 2 * 86400000).lt('startAt', todayAt + 2 * 86400000)).take(300));
+    }
     const workouts = await ctx.db.query('workouts').withIndex('by_userId_and_startedAt', q => q.eq('userId', userId).gte('startedAt', from - 86400000).lt('startedAt', end)).take(500);
     const cycles = new Map(records.filter(r => r.kind === 'cycle').map(r => [r.externalId, r]));
     const groups = new Map<string, WhoopDay>();
@@ -83,10 +87,10 @@ export const week = query({
       }
       groups.set(key, d);
     }
-    const trend = [...groups.values()].sort((a,b) => a.date.localeCompare(b.date));
+    const trend = [...groups.values()].filter(d => d.date >= dateKey(from, timezone) && d.date <= dateKey(end - 1, timezone)).sort((a,b) => a.date.localeCompare(b.date));
     const first = dateKey(start, timezone), last = dateKey(end - 1, timezone);
     return { status: c.status, lastSyncedAt: c.lastSyncedAt, backfilledAt: c.backfilledAt, error: c.error,
-      days: trend.filter(d => d.date >= first && d.date <= last), trend };
+      days: trend.filter(d => d.date >= first && d.date <= last), trend, today: todayAt !== undefined ? groups.get(dateKey(todayAt, timezone)) : undefined };
   },
 });
 

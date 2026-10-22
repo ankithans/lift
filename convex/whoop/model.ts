@@ -46,7 +46,7 @@ export const day = v.object({
 export type WhoopDay = Infer<typeof day>;
 export const weekResult = v.object({
   status: v.union(v.literal('disconnected'), connectionStatus), lastSyncedAt: v.optional(v.number()),
-  error: v.optional(v.string()), backfilledAt: v.optional(v.number()), days: v.array(day), trend: v.array(day),
+  error: v.optional(v.string()), backfilledAt: v.optional(v.number()), days: v.array(day), trend: v.array(day), today: v.optional(day),
 });
 export type WhoopWeek = Infer<typeof weekResult>;
 

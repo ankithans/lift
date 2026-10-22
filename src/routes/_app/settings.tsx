@@ -11,6 +11,8 @@ import { MCP_URL } from '#/lib/convex'
 import { fmtClock, fmtRelativeDay, WEEKDAYS_LONG } from '#/lib/format'
 import { useMe } from '#/lib/me'
 import { toast } from '#/lib/toast'
+import { WhoopSettings } from '#/components/whoop/WhoopConnection'
+import { clearWhoopCache } from '#/components/whoop/useWhoop'
 
 
 export const Route = createFileRoute('/_app/settings')({
@@ -104,6 +106,7 @@ function Settings() {
       <Row label="Default rest" value={fmtClock(p.defaultRestSec)} onClick={() => setSheet('rest')} />
 
       <h2 className="mb-1 mt-7 text-[13px] font-[500] text-muted">Connections</h2>
+      <WhoopSettings />
       <Row label="AI access" onClick={() => setSheet('ai')} />
 
       <h2 className="mb-1 mt-7 text-[13px] font-[500] text-muted">Account</h2>
@@ -111,7 +114,7 @@ function Settings() {
         <span className="flex-1">Privacy</span>
         <ChevronRight aria-hidden className="size-4 text-muted" />
       </a>
-      <button onClick={() => void signOut()} className="press flex min-h-14 w-full items-center border-b border-line text-left text-[16px] text-danger">
+      <button onClick={() => { clearWhoopCache(); void signOut() }} className="press flex min-h-14 w-full items-center border-b border-line text-left text-[16px] text-danger">
         Sign out
       </button>
       <p className="mt-10 text-center text-[12px] text-muted">Lift 1.0</p>
