@@ -1,0 +1,21 @@
+import * as c from "./core/workouts";
+import { userMutation, userQuery } from "./lib/commands";
+
+export const active = userQuery(c.getActiveWorkout);
+export const get = userQuery(c.getWorkout);
+export const list = userQuery(c.listWorkouts);
+export const start = userMutation(c.startWorkout);
+export const finish = userMutation(c.finishWorkout);
+export const remove = userMutation(c.discardWorkout);
+export const update = userMutation(c.updateWorkout);
+export const log = userMutation(c.logWorkout);
+export const addExercise = userMutation(c.addWorkoutExercise);
+export const removeExercise = userMutation(c.removeWorkoutExercise);
+export const swapExercise = userMutation(c.swapWorkoutExercise);
+export const updateExercise = userMutation(c.updateWorkoutExercise);
+export const addSet = userMutation(c.addSet);
+export const updateSet = userMutation(c.updateSet);
+export const completeSet = userMutation(c.completeSet);
+export const uncompleteSet = userMutation(c.uncompleteSet);
+export const removeSet = userMutation(c.removeSet);
+export const rest = userMutation(c.setRest);
