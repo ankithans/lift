@@ -55,6 +55,18 @@
   from { background-position: -200% 0; }
   to { background-position: 200% 0; }
 }
+@keyframes settle {
+  from { transform: translateY(var(--settle-y, 0)); }
+  to { transform: translateY(0); }
+}
+@keyframes swap-flash {
+  0%, 35% { background-color: #b8f4d014; box-shadow: 0 0 0 1px #b8f4d080; }
+  100% { box-shadow: 0 0 0 1px transparent; }
+}
+@keyframes pr-sheen {
+  from { background-position: 150% 0; }
+  to { background-position: -50% 0; }
+}
 @keyframes ring {
   from { stroke-dashoffset: var(--from, 0); }
 }

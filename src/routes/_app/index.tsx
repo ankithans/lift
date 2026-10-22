@@ -170,6 +170,14 @@ function WeekList({ days }: { days: Day[] }) {
   const [drag, setDrag] = useState<DragState | null>(null)
   const [restSheet, setRestSheet] = useState<Day | null>(null)
   const [moveFrom, setMoveFrom] = useState<number | null>(null)
+  // After a swap: where each moved card animates in from, and which rows flash.
+  const [settle, setSettle] = useState<{ key: number; offsets: Record<number, number> } | null>(null)
+  const [flash, setFlash] = useState<{ key: number; rows: number[] } | null>(null)
+  useEffect(() => {
+    if (!flash) return
+    const t = setTimeout(() => setFlash(null), 1200)
+    return () => clearTimeout(t)
+  }, [flash])
   const startY = useRef(0)
   const press = useRef<{ timer: ReturnType<typeof setTimeout>; x: number; y: number; id: number } | null>(null)
 
@@ -183,17 +191,42 @@ function WeekList({ days }: { days: Day[] }) {
     }
   }
 
-  const move = (from: number, to: number) => {
+  /**
+   * A week has fixed slots: dropping a day onto another weekday swaps the two.
+   * `releaseY` is where the dragged card was let go (so it glides home from there).
+   */
+  const move = (from: number, to: number, releaseY?: number) => {
     if (from === to) return
-    // A week has fixed slots: dropping a day onto another weekday swaps the two.
+    const before = order
     const next = [...order]
     const item = next[from]
     next[from] = next[to]
     next[to] = item
     void commit(next)
     tap('success')
+    setSettle({
+      key: Date.now(),
+      offsets: {
+        [to]: releaseY !== undefined ? releaseY - (to - from) * ROW_H : (from - to) * ROW_H,
+        // While dragging, the other day already previewed its move; otherwise it slides too.
+        [from]: releaseY !== undefined ? 0 : (to - from) * ROW_H,
+      },
+    })
+    setFlash({ key: Date.now(), rows: [from, to] })
     const name = (d: Day | undefined) => (d?.planned?.kind === 'workout' ? d.planned.title : 'Rest')
     announce(`${name(item)} moved to ${WEEKDAYS_LONG[days[to].weekday]}. ${name(next[from])} is now on ${WEEKDAYS_LONG[days[from].weekday]}.`)
+    toast(`${name(item)} → ${WEEKDAYS_LONG[days[to].weekday]}`, {
+      ms: 4500,
+      action: {
+        label: 'Undo',
+        run: () => {
+          void commit(before)
+          setSettle({ key: Date.now(), offsets: { [from]: (to - from) * ROW_H, [to]: (from - to) * ROW_H } })
+          setFlash({ key: Date.now(), rows: [from, to] })
+          announce('Move undone.')
+        },
+      },
+    })
   }
 
   const begin = (index: number, pointerId: number, clientY: number) => {
@@ -219,7 +252,7 @@ function WeekList({ days }: { days: Day[] }) {
       lastDragEnd = Date.now()
       // A tap on the handle (no real movement) opens the "Move to…" sheet instead.
       if (Math.abs(drag.dy) < 6 && drag.from === drag.to) setMoveFrom(drag.from)
-      else move(drag.from, drag.to)
+      else move(drag.from, drag.to, drag.dy)
     }
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setDrag(null)
@@ -258,25 +291,37 @@ function WeekList({ days }: { days: Day[] }) {
           // The day being hovered previews the swap by sliding into the origin slot.
           const shift = drag && i === drag.to && i !== drag.from ? (drag.from - drag.to) * ROW_H : 0
           const dragging = drag?.from === i
+          const involved = drag && (i === drag.from || i === drag.to)
+          const settling = settle && settle.offsets[i] !== undefined ? settle : null
           return (
             <li key={slot.start} className="relative flex items-stretch" style={{ height: ROW_H }}>
+              {/* Drop target: a soft outline where the dragged day will land. */}
+              {drag && i === drag.to && i !== drag.from && (
+                <span aria-hidden className="pointer-events-none absolute inset-y-1 left-12 right-0 rounded-[18px] border border-dashed border-accent/50 bg-accent/[0.04]" />
+              )}
               <div className={`flex w-12 shrink-0 flex-col justify-center ${slot.isToday ? 'text-accent' : 'text-subtle'}`} aria-hidden>
                 <span className="text-[12px] font-[700] uppercase tracking-[0.06em]">{WEEKDAYS[slot.weekday]}</span>
                 <span className={`num text-[19px] font-[680] leading-6 ${slot.isToday ? 'text-accent' : 'text-ink/80'}`}>{new Date(slot.start).getDate()}</span>
               </div>
               <div
-                className="relative min-w-0 flex-1 py-1"
+                key={settling ? `${slot.start}-${settling.key}` : slot.start}
+                className={`relative min-w-0 flex-1 py-1 ${settling ? 'animate-[settle_380ms_cubic-bezier(0.22,1,0.36,1)_both]' : ''}`}
                 style={{
-                  transform: `translateY(${dragging ? drag.dy : shift}px)`,
-                  transition: dragging ? 'none' : 'transform 220ms cubic-bezier(0.22,1,0.36,1)',
-                  zIndex: dragging ? 20 : undefined,
+                  transform: settling ? undefined : `translateY(${dragging ? drag.dy : shift}px)`,
+                  transition: dragging ? 'none' : 'transform 220ms cubic-bezier(0.22,1,0.36,1), opacity 160ms',
+                  zIndex: dragging ? 20 : settling && settle?.offsets[i] ? 10 : undefined,
+                  opacity: drag && !involved ? 0.45 : 1,
+                  ['--settle-y' as string]: settling ? `${settling.offsets[i]}px` : undefined,
                 }}
+                onAnimationEnd={(e) => e.target === e.currentTarget && settling && setSettle(null)}
               >
                 <DayCard
                   slot={slot}
                   item={item}
                   index={i}
                   dragging={dragging}
+                  flash={Boolean(flash?.rows.includes(i))}
+                  flashKey={flash?.key ?? 0}
                   onHandleDown={(e) => begin(i, e.pointerId, e.clientY)}
                   onPressStart={(e) => {
                     const { pointerId, clientX, clientY } = e
@@ -346,6 +391,8 @@ function DayCard({
   item,
   index,
   dragging,
+  flash,
+  flashKey,
   onHandleDown,
   onPressStart,
   onKeyMove,
@@ -356,6 +403,8 @@ function DayCard({
   item: Day
   index: number
   dragging: boolean
+  flash: boolean
+  flashKey: number
   onHandleDown: (e: React.PointerEvent) => void
   onPressStart: (e: React.PointerEvent) => void
   onKeyMove: (dir: -1 | 1) => void
@@ -393,9 +442,12 @@ function DayCard({
 
   return (
     <div
+      key={flash ? flashKey : 'idle'}
       className={`flex h-full items-center gap-1 rounded-[18px] pl-4 transition-[background-color,box-shadow,transform] duration-200 ${
+        flash ? 'animate-[swap-flash_1100ms_ease-out_both] ' : ''
+      }${
         dragging
-          ? 'scale-[1.02] bg-raised shadow-[0_18px_40px_-12px_#000] ring-1 ring-line-strong'
+          ? 'scale-[1.04] bg-raised shadow-[0_24px_48px_-12px_#000,0_0_0_1px_var(--color-accent)]'
           : highlight
             ? 'bg-surface ring-1 ring-accent/25'
             : 'hover:bg-surface/70'

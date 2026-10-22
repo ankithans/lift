@@ -1122,8 +1122,14 @@ const ExerciseCard = memo(function ExerciseCard({
             <div
               key={set._id}
               id={`set-${set._id}`}
-              className={`grid ${grid} min-h-[56px] items-center gap-1 rounded-[14px] px-1 transition-colors duration-200 min-[390px]:px-2 ${
-                set.done ? 'bg-accent/[0.07]' : editing?.setId === set._id ? 'bg-raised/70' : ''
+              className={`grid ${grid} relative min-h-[56px] items-center gap-1 overflow-hidden rounded-[14px] px-1 transition-colors duration-200 min-[390px]:px-2 ${
+                set.isPr
+                  ? 'bg-pr/[0.08] shadow-[inset_0_0_0_1px_rgba(233,199,120,0.35)]'
+                  : set.done
+                    ? 'bg-accent/[0.07]'
+                    : editing?.setId === set._id
+                      ? 'bg-raised/70'
+                      : ''
               }`}
             >
               <button
@@ -1133,13 +1139,15 @@ const ExerciseCard = memo(function ExerciseCard({
                 }`}
                 aria-label={`Set ${label}${set.kind !== 'working' ? `, ${set.kind === 'warmup' ? 'warm-up' : set.kind === 'drop' ? 'drop set' : 'to failure'}` : ''}${set.isPr ? ', personal record' : ''}, options`}
               >
-                {label}
-                {set.isPr && (
-                  <span aria-hidden className="absolute -right-0.5 -top-0.5 grid size-4 place-items-center rounded-full bg-pr text-black animate-pop">
-                    <Trophy className="size-2.5" strokeWidth={2.5} />
-                  </span>
-                )}
+                {set.isPr ? <Trophy aria-hidden className="size-[18px] text-pr animate-pop" strokeWidth={2} /> : label}
               </button>
+              {/* One soft sheen across a new record — the only flourish in the app. */}
+              {set.isPr && (
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0 animate-[pr-sheen_1400ms_ease-out_1_both] bg-[linear-gradient(105deg,transparent_35%,rgba(233,199,120,0.22)_50%,transparent_65%)] bg-[length:250%_100%]"
+                />
+              )}
               <span className={`num truncate pl-1 text-[13px] text-muted ${narrowHide}`}>
                 <span className="sr-only">Previous </span>
                 {prevText}
@@ -1160,7 +1168,7 @@ const ExerciseCard = memo(function ExerciseCard({
                     } ${v.suggested && !active ? 'font-[500] italic text-subtle' : ''}`}
                   >
                     {active
-                      ? editing.draft || '0'
+                      ? editing.draft || (c === 'rir' ? '–' : '0')
                       : v.text || (
                           <span className="text-subtle">{c === 'reps' && we.repLow ? fmtReps(we.repLow, we.repHigh) : '–'}</span>
                         )}
@@ -1173,7 +1181,11 @@ const ExerciseCard = memo(function ExerciseCard({
                 aria-label={`Set ${label} done`}
                 aria-pressed={set.done}
                 className={`press mx-auto grid size-11 place-items-center rounded-full transition-all duration-200 ${
-                  set.done ? 'bg-accent text-accent-ink' : 'border-[1.5px] border-edge text-subtle hover:border-muted hover:text-muted'
+                  set.isPr
+                    ? 'bg-pr text-black'
+                    : set.done
+                      ? 'bg-accent text-accent-ink'
+                      : 'border-[1.5px] border-edge text-subtle hover:border-muted hover:text-muted'
                 }`}
               >
                 <Check aria-hidden className={`size-5 ${set.done ? 'animate-pop' : ''}`} strokeWidth={2.8} />

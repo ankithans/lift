@@ -1,6 +1,7 @@
 import { X } from 'lucide-react'
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
+import { openOverlay } from '#/lib/overlays'
 
 /**
  * Bottom sheet on mobile, centered panel on desktop.
@@ -73,6 +74,14 @@ export function Sheet({
     })
     return () => cancelAnimationFrame(id)
   }, [open, mounted])
+
+  // Back button / gesture closes the sheet instead of leaving the page.
+  const closeRef = useRef(onClose)
+  closeRef.current = onClose
+  useEffect(() => {
+    if (!open) return
+    return openOverlay(() => closeRef.current())
+  }, [open])
 
   useEffect(() => {
     if (!open) return

@@ -1,6 +1,7 @@
 import { Check, ChevronDown, Delete, Minus, Plus } from 'lucide-react'
 import { useEffect, useRef, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react'
 import { announce } from '#/lib/announce'
+import { openOverlay } from '#/lib/overlays'
 import { tap } from '#/lib/haptics'
 
 export type KeypadField = 'weight' | 'reps' | 'rir' | 'duration'
@@ -8,11 +9,12 @@ export type KeypadField = 'weight' | 'reps' | 'rir' | 'duration'
 export type KeypadTab = { field: KeypadField; label: string; value: string }
 
 const RIR_OPTIONS = [
-  { v: 0, label: 'Failure', hint: 'nothing left' },
-  { v: 1, label: '1', hint: 'one more' },
-  { v: 2, label: '2', hint: 'two more' },
-  { v: 3, label: '3', hint: 'three more' },
-  { v: 4, label: '4+', hint: 'easy' },
+  { v: 0, label: '0' },
+  { v: 1, label: '1' },
+  { v: 2, label: '2' },
+  { v: 3, label: '3' },
+  { v: 4, label: '4' },
+  { v: 5, label: '5+' },
 ]
 
 /**
@@ -100,6 +102,11 @@ export function Keypad({
     onInput(String(next), true)
   }
 
+  // Back button closes the keypad (saving the draft) instead of leaving the workout.
+  const closeRef = useRef(onClose)
+  closeRef.current = onClose
+  useEffect(() => openOverlay(() => closeRef.current()), [])
+
   // Keys are handled only while focus is inside the keypad (focus moves there on open).
   const onKeyDown = (e: ReactKeyboardEvent) => {
     {
@@ -108,7 +115,7 @@ export function Keypad({
       // Enter/Space on a focused key/button performs that button's own action.
       if ((e.key === 'Enter' || e.key === ' ') && t?.tagName === 'BUTTON' && !t.dataset.tab) return
       if (/^[0-9]$/.test(e.key)) {
-        if (field === 'rir') onInput(String(Math.min(4, Number(e.key))), true)
+        if (field === 'rir') onInput(String(Math.min(5, Number(e.key))), true)
         else press(e.key)
       } else if (e.key === '.' || e.key === ',') press('.')
       else if (e.key === 'Backspace') press('back')
@@ -171,7 +178,7 @@ export function Keypad({
                 <span className="num text-[22px] font-[650] leading-[26px] tracking-[-0.02em]">
                   {on ? (
                     <>
-                      <span className={fresh && value ? 'rounded bg-black/10 px-0.5' : ''}>{value || <span className="text-black/55">0</span>}</span>
+                      <span className={fresh && value ? 'rounded bg-black/10 px-0.5' : ''}>{value || <span className="text-black/55">{field === 'rir' ? '–' : '0'}</span>}</span>
                       <span aria-hidden className="ml-0.5 inline-block h-[20px] w-[2px] translate-y-[2px] animate-pulse bg-black/70" />
                     </>
                   ) : (
@@ -189,8 +196,9 @@ export function Keypad({
           </p>
         )}
         {field === 'rir' ? (
-          <div className="mt-2">
-            <div role="radiogroup" aria-label="Reps in reserve" className="grid grid-cols-5 gap-2">
+          // Same footprint as the number pad, so switching fields never changes the keypad height.
+          <div className="mt-2 grid h-[240px] grid-cols-3 grid-rows-[1fr_1fr_1.15fr] gap-2">
+            <div role="radiogroup" aria-label="Reps in reserve" className="contents">
               {RIR_OPTIONS.map((o) => {
                 const on = value === String(o.v)
                 return (
@@ -198,30 +206,32 @@ export function Keypad({
                     key={o.v}
                     role="radio"
                     aria-checked={on}
-                    aria-label={o.v === 0 ? 'Failure, nothing left' : `${o.label} reps left`}
+                    aria-label={o.v === 0 ? 'Zero reps left, failure' : `${o.label} reps left`}
                     onClick={() => {
                       tap()
                       onInput(String(o.v), true)
                     }}
-                    className={`press flex h-[64px] flex-col items-center justify-center rounded-[14px] transition-colors ${
+                    className={`press num grid place-items-center rounded-[14px] text-[22px] font-[600] transition-colors ${
                       on ? 'bg-accent text-accent-ink' : 'bg-raised'
                     }`}
                   >
-                    <span className="num text-[18px] font-[650]">{o.label}</span>
-                    <span className={`text-[10.5px] font-[550] ${on ? 'text-accent-ink/70' : 'text-subtle'}`}>{o.hint}</span>
+                    {o.label}
                   </button>
                 )
               })}
             </div>
-            <p className="mt-2 px-1 text-[12px] leading-4 text-subtle">Reps in reserve — how many more you could have done. Optional.</p>
-            <div className="mt-2 grid grid-cols-2 gap-2">
-              <button onClick={() => { onInput('', true); onDone() }} className="press h-[54px] rounded-[14px] bg-raised text-[16px] font-[600] text-muted">
-                Skip
-              </button>
-              <button onClick={onDone} className="press flex h-[54px] items-center justify-center gap-2 rounded-[14px] bg-accent text-[16px] font-[650] text-accent-ink">
-                <Check className="size-5" strokeWidth={2.6} /> Log set
-              </button>
-            </div>
+            <button
+              onClick={() => {
+                onInput('', true)
+                onDone()
+              }}
+              className="press rounded-[14px] bg-raised text-[15px] font-[600] text-muted"
+            >
+              Skip
+            </button>
+            <button onClick={onDone} className="press col-span-2 flex items-center justify-center gap-2 rounded-[14px] bg-ink text-[16px] font-[650] text-black">
+              <Check aria-hidden className="size-5" strokeWidth={2.6} /> Log set
+            </button>
           </div>
         ) : (
           <div className="mt-2 grid grid-cols-4 gap-2">
