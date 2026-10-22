@@ -3,6 +3,7 @@ import { useState } from 'react'
 
 export function ExerciseThumb({ src, size = 44, className = '' }: { src?: string | null; size?: number; className?: string }) {
   const [failed, setFailed] = useState(false)
+  const [loaded, setLoaded] = useState(false)
   const style = { width: size, height: size }
   if (!src || failed) {
     return (
@@ -18,7 +19,8 @@ export function ExerciseThumb({ src, size = 44, className = '' }: { src?: string
       loading="lazy"
       decoding="async"
       onError={() => setFailed(true)}
-      className={`shrink-0 rounded-[12px] bg-white object-cover ${className}`}
+      onLoad={() => setLoaded(true)}
+      className={`shrink-0 rounded-[12px] object-cover transition-[opacity,background-color] duration-300 ${loaded ? 'bg-white opacity-100' : 'bg-raised opacity-0'} ${className}`}
       style={style}
     />
   )

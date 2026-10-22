@@ -3,9 +3,10 @@ import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx } from "../_generated/server";
 import { TEMPLATES } from "../data/templates";
 import { defineMutation, defineQuery } from "../lib/commands";
-import { exerciseLoader, exerciseSummary, fail, own, readableExercise, type Ctx } from "../lib/util";
+import { exerciseLoader, exerciseSummary, fail, orphanedGroups, own, readableExercise, type Ctx } from "../lib/util";
 import { weekBoundaries } from "../lib/time";
 import { getProfile } from "./profile";
+import { statsFor } from "./workouts";
 
 const WORK_SEC_PER_SET = 45;
 
@@ -19,7 +20,12 @@ export async function loadDayDetail(ctx: Ctx, day: Doc<"programDays">) {
   for (const slot of slots) {
     const e = await load(slot.exerciseId);
     if (!e) continue;
-    exercises.push({ ...slot, exercise: exerciseSummary(e) });
+    const stats = await statsFor(ctx, day.userId, e._id);
+    exercises.push({
+      ...slot,
+      exercise: exerciseSummary(e),
+      last: stats?.lastSets.length ? { sets: stats.lastSets, at: stats.lastDoneAt ?? null } : null,
+    });
   }
   // Target-muscle split by working sets (primary groups only).
   const groupSets = new Map<string, number>();
@@ -244,6 +250,31 @@ async function reindexDay(ctx: MutationCtx, dayId: Id<"programDays">) {
   return slots;
 }
 
+async function normalizeDayGroups(ctx: MutationCtx, dayId: Id<"programDays">) {
+  const slots = await ctx.db
+    .query("programExercises")
+    .withIndex("by_programDayId_and_order", (q) => q.eq("programDayId", dayId))
+    .take(60);
+  for (const r of orphanedGroups(slots)) await ctx.db.patch(r._id, { group: undefined });
+}
+
+export const renameProgram = defineMutation({
+  name: "rename_program",
+  description: "Rename the active program (or a specific program by id).",
+  args: { name: v.string(), programId: v.optional(v.id("programs")) },
+  audit: true,
+  run: async (ctx, { userId }, { name, programId }) => {
+    const id = programId ?? (await activeProgram(ctx, userId))?._id;
+    if (!id) fail("No program");
+    const program = await own(ctx, userId, "programs", id);
+    const clean = name.trim().slice(0, 60);
+    if (!clean) fail("Name required");
+    await ctx.db.patch(program._id, { name: clean });
+    return null;
+  },
+  summarize: (a) => `Renamed program to “${a.name}”`,
+});
+
 export const updateDay = defineMutation({
   name: "update_program_day",
   description: "Rename a program day, move it to another weekday (0=Sun..6=Sat), or switch it between workout and rest.",
@@ -385,6 +416,7 @@ export const removeSlot = defineMutation({
     const slot = await own(ctx, userId, "programExercises", slotId);
     await ctx.db.delete(slot._id);
     await reindexDay(ctx, slot.programDayId);
+    await normalizeDayGroups(ctx, slot.programDayId);
     return null;
   },
   summarize: () => "Removed exercise from plan",
@@ -415,6 +447,7 @@ export const moveSlot = defineMutation({
     const target = Math.max(0, Math.min(position, slots.length));
     slots.splice(target, 0, slot);
     for (const [i, s] of slots.entries()) if (s.order !== i || s._id === slot._id) await ctx.db.patch(s._id, { order: i });
+    await normalizeDayGroups(ctx, slot.programDayId);
     return null;
   },
   summarize: () => "Reordered plan",

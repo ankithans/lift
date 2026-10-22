@@ -4,8 +4,9 @@ const LB_PER_KG = 2.20462262185
 
 export function toDisplayWeight(kg: number | null | undefined, unit: Unit) {
   if (kg === null || kg === undefined) return null
-  const value = unit === 'lb' ? kg * LB_PER_KG : kg
-  return Math.round(value * 100) / 100
+  // lb shows to the nearest 0.5 (plates/dumbbells); kg keeps 1.25 kg plates exact.
+  if (unit === 'lb') return Math.round(kg * LB_PER_KG * 2) / 2
+  return Math.round(kg * 100) / 100
 }
 
 export function fromDisplayWeight(value: number, unit: Unit) {

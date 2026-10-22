@@ -23,6 +23,7 @@ export const TOOLS: AnyCommand[] = [
   programs.listTemplates,
   programs.startProgram,
   programs.createEmptyProgram,
+  programs.renameProgram,
   programs.updateDay,
   programs.arrangeWeek,
   programs.addSlot,

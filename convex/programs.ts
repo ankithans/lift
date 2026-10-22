@@ -7,6 +7,7 @@ export const week = userQuery(c.getWeek);
 export const templates = userQuery(c.listTemplates);
 export const startFromTemplate = userMutation(c.startProgram);
 export const createEmpty = userMutation(c.createEmptyProgram);
+export const rename = userMutation(c.renameProgram);
 export const updateDay = userMutation(c.updateDay);
 export const arrangeWeek = userMutation(c.arrangeWeek);
 export const addExercise = userMutation(c.addSlot);

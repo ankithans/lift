@@ -4,6 +4,7 @@ import { useAction, useMutation, useQuery } from 'convex/react'
 import { Bot, Check, ChevronRight, Copy, KeyRound, LogOut, Plus, Trash2 } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { api } from '../../../convex/_generated/api'
+import type { Id } from '../../../convex/_generated/dataModel'
 import { Avatar } from '#/components/Avatar'
 import { PageHeader } from '#/components/PageHeader'
 import { Sheet } from '#/components/Sheet'
@@ -78,7 +79,10 @@ function Settings() {
           <ChevronRight className="size-5 text-subtle" />
         </Link>
         <Link to="/welcome" className="press flex min-h-14 items-center justify-between gap-4 py-2">
-          <div className="text-[16px] font-[540]">Switch program</div>
+          <div className="min-w-0">
+            <div className="text-[16px] font-[540]">Switch program</div>
+            <div className="text-[13px] text-subtle">Your history and PRs stay</div>
+          </div>
           <ChevronRight className="size-5 text-subtle" />
         </Link>
         <Row label="Units">
@@ -120,6 +124,7 @@ function AiAccess() {
   const [name, setName] = useState('Claude')
   const [token, setToken] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [revoking, setRevoking] = useState<{ _id: Id<'apiTokens'>; name: string } | null>(null)
 
   const claudeCmd = token ? `claude mcp add --transport http lift ${MCP_URL} --header "Authorization: Bearer ${token}"` : ''
   const codexToml = token
@@ -152,7 +157,7 @@ function AiAccess() {
                 {t.name} <span className="num text-[13px] text-subtle">{t.prefix}…</span>
               </span>
               <span className="text-[12px] text-subtle">{t.lastUsedAt ? `used ${fmtRelativeDay(t.lastUsedAt).toLowerCase()}` : 'never used'}</span>
-              <button className="icon-btn text-subtle" aria-label={`Revoke token ${t.name}`} onClick={() => revoke({ tokenId: t._id })}>
+              <button className="icon-btn text-subtle" aria-label={`Revoke token ${t.name}`} onClick={() => setRevoking(t)}>
                 <Trash2 className="size-4" />
               </button>
             </li>
@@ -163,6 +168,21 @@ function AiAccess() {
         </button>
       </div>
 
+      <Sheet open={revoking !== null} onClose={() => setRevoking(null)} title={revoking ? `Revoke “${revoking.name}”?` : ''}>
+        <p className="text-[15px] leading-[22px] text-muted">Agents using this token stop working immediately. You can create a new one any time.</p>
+        <div className="mt-5 grid grid-cols-2 gap-2 pb-2">
+          <button className="btn btn-secondary" onClick={() => setRevoking(null)}>Cancel</button>
+          <button
+            className="btn bg-danger/15 text-danger"
+            onClick={async () => {
+              if (revoking) await revoke({ tokenId: revoking._id })
+              setRevoking(null)
+            }}
+          >
+            Revoke
+          </button>
+        </div>
+      </Sheet>
       <Sheet open={open} onClose={() => setOpen(false)} title={token ? 'Connect your agent' : 'New access token'} size={token ? 'tall' : 'auto'}>
         {!token ? (
           <form

@@ -163,8 +163,7 @@ export function ExerciseBody({ data, compact = false }: { data: ExerciseData; co
                         {s.sets.map((x, i) => (
                           <span key={i} className={x.isPr ? 'text-pr' : ''}>
                             {x.isPr && <span className="sr-only">Personal record: </span>}
-                            {x.weightKg ? `${fmtWeight(x.weightKg, unit)}×` : ''}
-                            {x.reps ?? (x.durationSec ? `${fmtNum(x.durationSec)}s` : '—')}
+                            {x.durationSec && !x.reps ? `${fmtNum(x.durationSec)}s` : `${x.weightKg ? fmtWeight(x.weightKg, unit) : 'BW'}×${x.reps ?? '—'}`}
                           </span>
                         ))}
                       </div>

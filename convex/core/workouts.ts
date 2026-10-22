@@ -4,7 +4,7 @@ import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx } from "../_generated/server";
 import { setKind } from "../schema";
 import { defineMutation, defineQuery } from "../lib/commands";
-import { e1rm, exerciseLoader, exerciseSummary, fail, own, readableExercise, round1, type Ctx } from "../lib/util";
+import { e1rm, exerciseLoader, exerciseSummary, fail, orphanedGroups, own, readableExercise, round1, setScore, type Ctx } from "../lib/util";
 import { getProfile } from "./profile";
 
 // ---------------------------------------------------------------------------
@@ -46,7 +46,7 @@ export async function loadWorkout(ctx: Ctx, workout: Doc<"workouts">) {
       sets: await setsOf(ctx, we._id),
       // For completed workouts the stats may point at this very workout; then "previous" is unknown here.
       previous: fromThisWorkout ? [] : (stats?.lastSets ?? []),
-      best: stats?.bestE1rmKg ? { e1rmKg: stats.bestE1rmKg, weightKg: stats.bestWeightKg ?? null, reps: stats.bestReps ?? null } : null,
+      best: stats && (stats.bestE1rmKg || stats.bestReps) ? { e1rmKg: stats.bestE1rmKg ?? null, weightKg: stats.bestWeightKg ?? null, reps: stats.bestReps ?? null } : null,
     });
   }
   const programDay = workout.programDayId ? await ctx.db.get(workout.programDayId) : null;
@@ -198,6 +198,10 @@ const nullableNumber = v.optional(v.union(v.number(), v.null()));
 
 function cleanValues(args: { weightKg?: number | null; reps?: number | null; rir?: number | null; durationSec?: number | null }) {
   const out: Partial<Doc<"sets">> = {};
+  // Reject typos instead of silently clamping them into PRs.
+  if (args.weightKg != null && (args.weightKg < 0 || args.weightKg > 1000)) fail("That weight looks wrong (max 1000 kg).");
+  if (args.reps != null && (args.reps < 0 || args.reps > 500)) fail("That rep count looks wrong (max 500).");
+  if (args.durationSec != null && (args.durationSec < 0 || args.durationSec > 6 * 3600)) fail("That duration looks wrong (max 6 hours).");
   const num = (x: number | null | undefined, max: number) =>
     x === null ? undefined : Math.max(0, Math.min(max, round1(x as number)));
   // Weight keeps gram precision so lb entries (135 lb = 61.235 kg) round-trip exactly.
@@ -211,8 +215,57 @@ function cleanValues(args: { weightKg?: number | null; reps?: number | null; rir
 
 async function afterHistoryEdit(ctx: MutationCtx, workout: Doc<"workouts">, exerciseIds: Id<"exercises">[]) {
   if (workout.status !== "completed") return;
-  await ctx.db.patch(workout._id, { stats: await computeStats(ctx, workout) });
-  for (const id of new Set(exerciseIds)) await recomputeExerciseStats(ctx, workout.userId, id);
+  for (const id of new Set(exerciseIds)) {
+    await rebuildPrs(ctx, workout.userId, id);
+    await recomputeExerciseStats(ctx, workout.userId, id);
+  }
+  const fresh = (await ctx.db.get(workout._id))!;
+  await ctx.db.patch(workout._id, { stats: await computeStats(ctx, fresh) });
+}
+
+async function normalizeGroups(ctx: MutationCtx, workoutId: Id<"workouts">) {
+  for (const r of orphanedGroups(await exercisesOf(ctx, workoutId))) await ctx.db.patch(r._id, { group: undefined });
+}
+
+/**
+ * Re-flag PRs for one exercise across the user's whole history, in time order:
+ * a workout's best set is a PR when it beats every earlier workout.
+ */
+export async function rebuildPrs(ctx: MutationCtx, userId: Id<"users">, exerciseId: Id<"exercises">) {
+  const byWorkout = new Map<Id<"workouts">, Doc<"sets">[]>();
+  let n = 0;
+  for await (const s of ctx.db
+    .query("sets")
+    .withIndex("by_userId_and_exerciseId_and_doneAt", (q) => q.eq("userId", userId).eq("exerciseId", exerciseId).gt("doneAt", 0))) {
+    byWorkout.set(s.workoutId, [...(byWorkout.get(s.workoutId) ?? []), s]);
+    if (++n > 4000) break;
+  }
+  const workouts = [];
+  for (const id of byWorkout.keys()) {
+    const w = await ctx.db.get(id);
+    if (w && w.status === "completed") workouts.push(w);
+  }
+  workouts.sort((a, b) => a.startedAt - b.startedAt);
+  let best: number | null = null;
+  const touched = new Set<Id<"workouts">>();
+  for (const w of workouts) {
+    const sets = byWorkout.get(w._id)!;
+    const eligible = sets.filter((s) => s.done && s.kind !== "warmup");
+    const top = eligible.reduce<Doc<"sets"> | null>((a, b) => (!a || setScore(b) > setScore(a) ? b : a), null);
+    const topScore = top ? setScore(top) : 0;
+    for (const s of sets) {
+      const isPr = best !== null && top?._id === s._id && topScore > best + 0.01;
+      if (Boolean(s.isPr) !== isPr) {
+        await ctx.db.patch(s._id, { isPr });
+        touched.add(w._id);
+      }
+    }
+    if (top) best = Math.max(best ?? 0, topScore);
+  }
+  for (const id of touched) {
+    const w = (await ctx.db.get(id))!;
+    await ctx.db.patch(id, { stats: await computeStats(ctx, w) });
+  }
 }
 
 export const updateSet = defineMutation({
@@ -255,13 +308,14 @@ export const completeSet = defineMutation({
     const merged = { ...set, ...patch };
     let isPr = false;
     const stats = await statsFor(ctx, userId, set.exerciseId);
-    const score = e1rm(merged.weightKg, merged.reps);
-    if (set.kind !== "warmup" && stats && stats.totalSets > 0 && score > 0 && score > (stats.bestE1rmKg ?? 0) + 0.01) {
+    const score = setScore(merged);
+    const priorBest = stats?.bestScore ?? (stats?.bestE1rmKg ? 1000 + stats.bestE1rmKg : 0);
+    if (set.kind !== "warmup" && stats && stats.totalSets > 0 && score > 0 && score > priorBest + 0.01) {
       const siblings = await ctx.db
         .query("sets")
         .withIndex("by_workoutExerciseId_and_order", (q) => q.eq("workoutExerciseId", set.workoutExerciseId))
         .take(40);
-      isPr = siblings.every((s) => s._id === set._id || !s.isPr || e1rm(s.weightKg, s.reps) < score);
+      isPr = siblings.every((s) => s._id === set._id || !s.isPr || setScore(s) < score);
       if (isPr) for (const s of siblings) if (s.isPr && s._id !== set._id) await ctx.db.patch(s._id, { isPr: false });
     }
     await ctx.db.patch(set._id, { ...patch, isPr });
@@ -292,7 +346,11 @@ export const uncompleteSet = defineMutation({
     const set = await own(ctx, userId, "sets", setId);
     await ctx.db.patch(set._id, { done: false, doneAt: undefined, isPr: false });
     const workout = (await ctx.db.get(set.workoutId))!;
-    if (workout.status === "active" && workout.restEndsAt) await ctx.db.patch(workout._id, { restEndsAt: undefined });
+    // Only cancel the rest timer this very set started.
+    const restStart = workout.restEndsAt ? workout.restEndsAt - (workout.restTotalSec ?? 0) * 1000 : null;
+    if (workout.status === "active" && restStart !== null && set.doneAt !== undefined && Math.abs(set.doneAt - restStart) < 3000) {
+      await ctx.db.patch(workout._id, { restEndsAt: undefined });
+    }
     await afterHistoryEdit(ctx, workout, [set.exerciseId]);
     return null;
   },
@@ -380,6 +438,7 @@ export const removeWorkoutExercise = defineMutation({
     const we = await own(ctx, userId, "workoutExercises", workoutExerciseId);
     for (const s of await setsOf(ctx, we._id)) await ctx.db.delete(s._id);
     await ctx.db.delete(we._id);
+    await normalizeGroups(ctx, we.workoutId);
     const workout = (await ctx.db.get(we.workoutId))!;
     await afterHistoryEdit(ctx, workout, [we.exerciseId]);
     return null;
@@ -395,7 +454,12 @@ export const swapWorkoutExercise = defineMutation({
   run: async (ctx, { userId }, { workoutExerciseId, exerciseId }) => {
     const we = await own(ctx, userId, "workoutExercises", workoutExerciseId);
     const exercise = await readableExercise(ctx, userId, exerciseId);
-    await ctx.db.patch(we._id, { exerciseId: exercise._id });
+    await ctx.db.patch(we._id, {
+      exerciseId: exercise._id,
+      repLow: exercise.defaults.repLow || undefined,
+      repHigh: exercise.defaults.repHigh || undefined,
+      restSec: exercise.defaults.restSec || we.restSec,
+    });
     for (const s of await setsOf(ctx, we._id)) {
       await ctx.db.patch(s._id, {
         exerciseId: exercise._id,
@@ -436,6 +500,7 @@ export const updateWorkoutExercise = defineMutation({
       rows.splice(Math.max(0, Math.min(position, rows.length)), 0, we);
       for (const [i, r] of rows.entries()) if (r.order !== i) await ctx.db.patch(r._id, { order: i });
     }
+    await normalizeGroups(ctx, we.workoutId);
     return null;
   },
 });
@@ -489,7 +554,7 @@ export async function recomputeExerciseStats(ctx: MutationCtx, userId: Id<"users
     if (!statusCache.has(id)) statusCache.set(id, await ctx.db.get(id));
     return statusCache.get(id)!;
   };
-  let best = { e1rm: 0, weightKg: 0, reps: 0, at: 0 };
+  let best = { score: 0, e1rm: 0, weightKg: 0, reps: 0, at: 0 };
   let totalSets = 0;
   let last: Doc<"workouts"> | null = null;
   for await (const s of ctx.db
@@ -501,8 +566,8 @@ export async function recomputeExerciseStats(ctx: MutationCtx, userId: Id<"users
     if (!w || w.status !== "completed") continue;
     if (!last) last = w; // sets arrive newest first
     totalSets++;
-    const score = e1rm(s.weightKg, s.reps) || (s.reps ?? 0) / 1000;
-    if (score > best.e1rm) best = { e1rm: score, weightKg: s.weightKg ?? 0, reps: s.reps ?? 0, at: s.doneAt ?? 0 };
+    const score = setScore(s);
+    if (score > best.score) best = { score, e1rm: e1rm(s.weightKg, s.reps), weightKg: s.weightKg ?? 0, reps: s.reps ?? 0, at: s.doneAt ?? 0 };
     if (totalSets > 3000) break;
   }
   let lastSets: Doc<"exerciseStats">["lastSets"] = [];
@@ -524,6 +589,7 @@ export async function recomputeExerciseStats(ctx: MutationCtx, userId: Id<"users
     lastDoneAt: last ? (last.finishedAt ?? last.startedAt) : undefined,
     lastSets,
     bestE1rmKg: best.e1rm >= 1 ? round1(best.e1rm) : undefined,
+    bestScore: best.score || undefined,
     bestWeightKg: best.weightKg || undefined,
     bestReps: best.reps || undefined,
     bestSetAt: best.at || undefined,
@@ -541,11 +607,12 @@ async function markPrs(ctx: MutationCtx, workout: Doc<"workouts">) {
     const all = await setsOf(ctx, we._id);
     const sets = all.filter((s) => s.done && s.kind !== "warmup");
     const stats = await statsFor(ctx, workout.userId, we.exerciseId);
-    const prior = stats && stats.totalSets > 0 && stats.lastWorkoutId !== workout._id ? (stats.bestE1rmKg ?? 0) : null;
+    const prior =
+      stats && stats.totalSets > 0 && stats.lastWorkoutId !== workout._id ? (stats.bestScore ?? (stats.bestE1rmKg ? 1000 + stats.bestE1rmKg : 0)) : null;
     let top: Doc<"sets"> | null = null;
-    for (const s of sets) if (!top || e1rm(s.weightKg, s.reps) > e1rm(top.weightKg, top.reps)) top = s;
+    for (const s of sets) if (!top || setScore(s) > setScore(top)) top = s;
     for (const s of all) {
-      const isPr = prior !== null && top?._id === s._id && e1rm(s.weightKg, s.reps) > prior + 0.01;
+      const isPr = prior !== null && top?._id === s._id && setScore(s) > prior + 0.01;
       if (isPr) count++;
       if (Boolean(s.isPr) !== isPr) await ctx.db.patch(s._id, { isPr });
     }
@@ -584,6 +651,7 @@ export const finishWorkout = defineMutation({
   audit: true,
   run: async (ctx, { userId }, { workoutId, notes }) => {
     const workout = await own(ctx, userId, "workouts", workoutId);
+    if (workout.status === "completed") return workout._id; // retried after a lost response
     if (workout.status !== "active") fail("Workout is not active");
     await finalizeWorkout(ctx, workout, Date.now(), notes);
     return workout._id;

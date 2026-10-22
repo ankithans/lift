@@ -1,6 +1,6 @@
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useMutation, useQuery } from 'convex/react'
-import { Check, MoreHorizontal, Pencil, Trash2, Trophy } from 'lucide-react'
+import { Check, MoreHorizontal, Pencil, Plus, Trash2, Trophy } from 'lucide-react'
 import { useState } from 'react'
 import { api } from '../../../../convex/_generated/api'
 import type { Id } from '../../../../convex/_generated/dataModel'
@@ -10,6 +10,7 @@ import { Sheet, SheetAction } from '#/components/Sheet'
 import { BlockSkeleton } from '#/components/Skeletons'
 import { fmtDate, fmtDuration, fmtNum, fmtVolume, fmtWeight, fromDisplayWeight, toDisplayWeight } from '#/lib/format'
 import { useUnit } from '#/lib/me'
+import { toast } from '#/lib/toast'
 import { useTitle } from '#/lib/useTitle'
 import { setLabel, toBlocks } from '#/lib/workout'
 
@@ -24,7 +25,15 @@ function WorkoutDetail() {
   const unit = useUnit()
   const navigate = useNavigate()
   const workout = useQuery(api.workouts.get, { workoutId: workoutId as Id<'workouts'> })
-  const updateSet = useMutation(api.workouts.updateSet)
+  const updateSetMut = useMutation(api.workouts.updateSet)
+  const removeSet = useMutation(api.workouts.removeSet)
+  const addSet = useMutation(api.workouts.addSet)
+  const completeSet = useMutation(api.workouts.completeSet)
+  const updateSet = (args: Parameters<typeof updateSetMut>[0]) =>
+    updateSetMut(args).catch((err: unknown) => {
+      const data = (err as { data?: unknown })?.data
+      toast(typeof data === 'string' ? data : 'Could not save that change.', { tone: 'error' })
+    })
   const remove = useMutation(api.workouts.remove)
   const [editing, setEditing] = useState(false)
   const [menu, setMenu] = useState<null | 'options' | 'delete'>(null)
@@ -127,6 +136,8 @@ function WorkoutDetail() {
                         <div className="flex flex-1 items-center gap-2">
                           {we.exercise.tracking !== 'reps' && we.exercise.tracking !== 'duration' && (
                             <NumField
+                              key={`w-${unit}-${set.weightKg}`}
+                              label={`Set ${i + 1} weight`}
                               value={toDisplayWeight(set.weightKg, unit)}
                               suffix={unit}
                               decimal
@@ -134,10 +145,18 @@ function WorkoutDetail() {
                             />
                           )}
                           {we.exercise.tracking === 'duration' ? (
-                            <NumField value={set.durationSec ?? null} suffix="s" onCommit={(v) => updateSet({ setId: set._id, durationSec: v })} />
+                            <NumField key={`d-${set.durationSec}`} label={`Set ${i + 1} seconds`} value={set.durationSec ?? null} suffix="s" onCommit={(v) => updateSet({ setId: set._id, durationSec: v })} />
                           ) : (
-                            <NumField value={set.reps ?? null} suffix="reps" onCommit={(v) => updateSet({ setId: set._id, reps: v })} />
+                            <NumField key={`r-${set.reps}`} label={`Set ${i + 1} reps`} value={set.reps ?? null} suffix="reps" onCommit={(v) => updateSet({ setId: set._id, reps: v })} />
                           )}
+                          <NumField key={`rir-${set.rir}`} label={`Set ${i + 1} reps in reserve`} value={set.rir ?? null} suffix="RIR" narrow onCommit={(v) => updateSet({ setId: set._id, rir: v })} />
+                          <button
+                            className="icon-btn -mr-2 shrink-0 text-subtle hover:text-danger"
+                            aria-label={`Delete set ${i + 1}`}
+                            onClick={() => void removeSet({ setId: set._id })}
+                          >
+                            <Trash2 className="size-4" />
+                          </button>
                         </div>
                       ) : (
                         <span className="num flex-1 text-[16px] font-[560]">
@@ -152,6 +171,23 @@ function WorkoutDetail() {
                       {set.isPr && <Trophy className="size-4 text-pr" aria-label="Personal record" />}
                     </div>
                   ))}
+                  {editing && (
+                    <button
+                      className="press flex h-12 w-full items-center justify-center gap-1.5 text-[14px] font-[600] text-muted hover:text-ink"
+                      onClick={async () => {
+                        const last = we.sets[we.sets.length - 1]
+                        const id = await addSet({ workoutExerciseId: we._id })
+                        await completeSet({
+                          setId: id,
+                          weightKg: last?.weightKg ?? null,
+                          reps: last?.reps ?? (we.exercise.tracking === 'duration' ? null : 1),
+                          durationSec: last?.durationSec ?? (we.exercise.tracking === 'duration' ? 30 : null),
+                        })
+                      }}
+                    >
+                      <Plus aria-hidden className="size-4" /> Add set
+                    </button>
+                  )}
                 </div>
               </article>
             ))}
@@ -203,16 +239,20 @@ function NumField({
   value,
   suffix,
   decimal,
+  narrow,
+  label,
   onCommit,
 }: {
   value: number | null
   suffix: string
   decimal?: boolean
+  narrow?: boolean
+  label: string
   onCommit: (v: number | null) => void
 }) {
   const [text, setText] = useState(value === null ? '' : fmtNum(value))
   return (
-    <label className="flex h-11 flex-1 items-center gap-1 rounded-[10px] bg-raised px-3 focus-within:ring-1 focus-within:ring-line-strong">
+    <label className={`flex h-11 items-center ${narrow ? 'w-[76px] shrink-0' : 'min-w-0 flex-1'} gap-1 rounded-[10px] bg-raised px-3 focus-within:ring-1 focus-within:ring-line-strong`}>
       <input
         value={text}
         inputMode={decimal ? 'decimal' : 'numeric'}
@@ -222,6 +262,7 @@ function NumField({
           if (n === null || Number.isFinite(n)) onCommit(n)
         }}
         onFocus={(e) => e.currentTarget.select()}
+        aria-label={label}
         className="num w-full min-w-0 bg-transparent text-[16px] font-[600] outline-none"
       />
       <span className="text-[12px] text-subtle">{suffix}</span>

@@ -1,9 +1,8 @@
 import { v } from "convex/values";
-import type { Doc, Id } from "./_generated/dataModel";
+import type { Id } from "./_generated/dataModel";
 import { internalMutation, type MutationCtx } from "./_generated/server";
 import { ensureProfileFor } from "./core/profile";
-import { insertCompletedWorkout, recomputeExerciseStats } from "./core/workouts";
-import { e1rm } from "./lib/util";
+import { insertCompletedWorkout, rebuildPrs, recomputeExerciseStats } from "./core/workouts";
 
 /** Exactly one account must own the email; refuse ambiguous matches. */
 async function userByEmail(ctx: MutationCtx, email: string) {
@@ -182,39 +181,14 @@ export const rebuildStats = internalMutation({
 });
 
 async function rebuild(ctx: MutationCtx, userId: Id<"users">) {
-  const best = new Map<Id<"exercises">, number>();
-  let prs = 0;
   const exerciseIds = new Set<Id<"exercises">>();
-  for await (const w of ctx.db.query("workouts").withIndex("by_userId_and_startedAt", (q) => q.eq("userId", userId))) {
-    if (w.status !== "completed") continue;
-    const sets = await ctx.db
-      .query("sets")
-      .withIndex("by_workoutId", (q) => q.eq("workoutId", w._id))
-      .take(400);
-    const byExercise = new Map<Id<"exercises">, Doc<"sets">[]>();
-    for (const s of sets) {
-      if (!s.done || s.kind === "warmup") continue;
-      byExercise.set(s.exerciseId, [...(byExercise.get(s.exerciseId) ?? []), s]);
-    }
-    let workoutPrs = 0;
-    for (const [exerciseId, list] of byExercise) {
-      exerciseIds.add(exerciseId);
-      const top = list.reduce((a, b) => (e1rm(b.weightKg, b.reps) > e1rm(a.weightKg, a.reps) ? b : a));
-      const prior = best.get(exerciseId);
-      const score = e1rm(top.weightKg, top.reps);
-      for (const s of list) {
-        const isPr = prior !== undefined && s._id === top._id && score > prior + 0.01;
-        if (isPr) workoutPrs++;
-        if (Boolean(s.isPr) !== isPr) await ctx.db.patch(s._id, { isPr });
-      }
-      if (score > (prior ?? 0)) best.set(exerciseId, score);
-      else if (prior === undefined) best.set(exerciseId, score);
-    }
-    if (w.stats && w.stats.prs !== workoutPrs) await ctx.db.patch(w._id, { stats: { ...w.stats, prs: workoutPrs } });
-    prs += workoutPrs;
+  for (const r of await ctx.db.query("exerciseStats").withIndex("by_userId_and_exerciseId", (q) => q.eq("userId", userId)).take(2000)) exerciseIds.add(r.exerciseId);
+  for await (const s of ctx.db.query("sets").withIndex("by_userId_and_doneAt", (q) => q.eq("userId", userId).gt("doneAt", 0))) exerciseIds.add(s.exerciseId);
+  for (const id of exerciseIds) {
+    await rebuildPrs(ctx, userId, id);
+    await recomputeExerciseStats(ctx, userId, id);
   }
-  for (const id of exerciseIds) await recomputeExerciseStats(ctx, userId, id);
-  return { exercises: exerciseIds.size, prs };
+  return { exercises: exerciseIds.size };
 }
 
 /** Delete a user and everything they own (used for QA accounts / account deletion requests). */

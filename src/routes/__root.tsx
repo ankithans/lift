@@ -47,7 +47,16 @@ function RootDocument({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const [mounted, setMounted] = useState(false)
-  useEffect(() => setMounted(true), [])
+  useEffect(() => {
+    setMounted(true)
+    if ('serviceWorker' in navigator) void navigator.serviceWorker.register('/sw.js').catch(() => {})
+    // Interrupted view transitions reject harmlessly; keep them out of error reports.
+    const onRejection = (e: PromiseRejectionEvent) => {
+      if (String(e.reason?.message ?? e.reason).includes('Transition was skipped')) e.preventDefault()
+    }
+    window.addEventListener('unhandledrejection', onRejection)
+    return () => window.removeEventListener('unhandledrejection', onRejection)
+  }, [])
   if (!mounted) return <Splash />
   return (
     <ConvexAuthProvider client={getConvex()}>

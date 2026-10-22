@@ -5,6 +5,7 @@ import {
   ArrowUp,
   Check,
   ChevronDown,
+  CloudOff,
   Info,
   Link2,
   Link2Off,
@@ -18,7 +19,7 @@ import {
   Trophy,
   X,
 } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useEffect, useMemo, useRef, useState } from 'react'
 import { api } from '../../../convex/_generated/api'
 import type { Id } from '../../../convex/_generated/dataModel'
 import { ExerciseInfo } from '#/components/ExerciseDetail'
@@ -27,30 +28,45 @@ import { ExerciseThumb } from '#/components/ExerciseThumb'
 import { Keypad, type KeypadField, type KeypadTab } from '#/components/Keypad'
 import { Sheet, SheetAction } from '#/components/Sheet'
 import { BlockSkeleton } from '#/components/Skeletons'
-import { chime, tap } from '#/lib/haptics'
-import { fmtClock, fmtNum, fmtReps, fmtVolume, fmtWeight, fromDisplayWeight, toDisplayWeight } from '#/lib/format'
+import { announce } from '#/lib/announce'
+import { useOnline } from '#/lib/convex'
+import { askNotifyPermission, chime, notify, tap, unlockAudio } from '#/lib/haptics'
+import { fmtClock, fmtDuration, fmtNum, fmtReps, fmtVolume, fmtWeight, fromDisplayWeight, toDisplayWeight, type Unit } from '#/lib/format'
 import { useUnit } from '#/lib/me'
 import { toast } from '#/lib/toast'
-import { announce } from '#/lib/announce'
-
-const reducedMotion = () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 import { useNow } from '#/lib/useNow'
 import {
   type ActiveWorkout,
   type WorkoutExercise,
   type WorkoutSet,
   patchActiveSet,
+  previousFor,
   restAfter,
   setLabel,
-  previousFor,
   suggestFor,
   toBlocks,
+  workingIndex,
 } from '#/lib/workout'
 
 export const Route = createFileRoute('/_app/workout')({
-  head: () => ({ meta: [{ title: 'Workout · Lift' }] }), component: LiveWorkout })
+  head: () => ({ meta: [{ title: 'Workout · Lift' }] }),
+  component: LiveWorkout,
+})
 
-type Editing = { setId: Id<'sets'>; weId: Id<'workoutExercises'>; field: KeypadField; draft: string; fresh: boolean }
+const reducedMotion = () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+type Editing = {
+  setId: Id<'sets'>
+  weId: Id<'workoutExercises'>
+  field: KeypadField
+  draft: string
+  /** Value shown when the field opened; unchanged drafts are never re-saved. */
+  initial: string
+  fresh: boolean
+  /** Draft the user already confirmed despite the "looks off" warning. */
+  warned?: string
+}
+
 type Menu =
   | { type: 'exercise'; we: WorkoutExercise; index: number }
   | { type: 'set'; set: WorkoutSet; we: WorkoutExercise; label: string }
@@ -62,6 +78,8 @@ type Menu =
   | { type: 'finish' }
   | { type: 'discard' }
   | null
+
+type MainField = Exclude<KeypadField, 'rir'>
 
 function useWakeLock(enabled: boolean) {
   useEffect(() => {
@@ -84,50 +102,61 @@ function useWakeLock(enabled: boolean) {
   }, [enabled])
 }
 
-type RestState = { remaining: number; total: number; over: boolean; dismiss: () => void }
+type Rest = { endsAt: number | null; total: number; endedAt: number | null; dismiss: () => void }
 
 /**
- * Rest timer state, tracked at the screen level so it keeps counting (and alerts)
- * while the keypad is open. Only a natural expiry alerts — not Skip or un-ticking.
+ * Rest timer. Driven by a single timeout (not a ticking clock) so the screen
+ * doesn't re-render while resting. Only a natural expiry alerts — chime when
+ * visible, a system notification when Lift is in the background.
  */
-function useRest(workout: ActiveWorkout | null | undefined): RestState {
-  const endsAt = workout?.restEndsAt
-  const now = useNow(250, Boolean(endsAt))
-  const remaining = endsAt ? (endsAt - now) / 1000 : 0
-  const [overAt, setOverAt] = useState<number | null>(null)
-  const fired = useRef<number | null>(null)
-  const expired = Boolean(endsAt && remaining <= 0)
+function useRest(workout: ActiveWorkout | null | undefined): Rest {
+  const endsAt = workout?.restEndsAt ?? null
   const total = workout?.restTotalSec ?? 0
-  // Announce the start of a rest once (not every tick).
+  const [endedAt, setEndedAt] = useState<number | null>(null)
+  const fired = useRef<number | null>(null)
   const announced = useRef<number | null>(null)
-  useEffect(() => {
-    if (!endsAt || endsAt <= Date.now() || announced.current === endsAt) return
-    announced.current = endsAt
-    const m = Math.floor(total / 60)
-    const s = total % 60
-    announce(`Rest started, ${m ? `${m} minute${m > 1 ? 's' : ''}` : ''}${m && s ? ' ' : ''}${s ? `${s} seconds` : ''}.`)
-  }, [endsAt, total])
+
   useEffect(() => {
     if (!endsAt) return
-    if (!expired) {
-      setOverAt(null)
-      return
-    }
-    if (fired.current === endsAt) return
-    fired.current = endsAt
-    if (Date.now() - endsAt < 5000) {
-      if (document.visibilityState === 'visible') chime()
+    const fire = () => {
+      if (fired.current === endsAt) return
+      fired.current = endsAt
+      if (Date.now() - endsAt > 10 * 60_000) return // long gone: no alarm
+      setEndedAt(endsAt)
       tap('success')
       announce('Rest complete. Next set when you are ready.')
-      setOverAt(Date.now())
+      if (document.visibilityState === 'visible') chime()
+      else void notify('Rest over', 'Time for your next set.')
     }
-  }, [endsAt, expired])
+    if (endsAt <= Date.now()) {
+      fire()
+      return
+    }
+    setEndedAt(null)
+    if (announced.current !== endsAt) {
+      announced.current = endsAt
+      const m = Math.floor(total / 60)
+      const s = total % 60
+      announce(`Rest started, ${m ? `${m} minute${m > 1 ? 's' : ''}` : ''}${m && s ? ' ' : ''}${s ? `${s} seconds` : ''}.`)
+    }
+    const t = setTimeout(fire, endsAt - Date.now())
+    // Background tabs throttle timers; re-check as soon as we're visible again.
+    const onVisible = () => document.visibilityState === 'visible' && endsAt <= Date.now() && fire()
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      clearTimeout(t)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
+  }, [endsAt, total])
+
+  // "Rest over" lingers a few minutes as a quiet reminder, then goes away.
   useEffect(() => {
-    if (overAt === null) return
-    const t = setTimeout(() => setOverAt(null), 4000)
+    if (endedAt === null) return
+    const t = setTimeout(() => setEndedAt(null), 5 * 60_000)
     return () => clearTimeout(t)
-  }, [overAt])
-  return { remaining: Math.max(0, remaining), total: workout?.restTotalSec ?? 0, over: overAt !== null, dismiss: () => setOverAt(null) }
+  }, [endedAt])
+
+  return { endsAt: endsAt && endsAt > Date.now() - 500 ? endsAt : null, total, endedAt, dismiss: () => setEndedAt(null) }
 }
 
 function tabsFor(tracking: WorkoutExercise['exercise']['tracking']): KeypadField[] {
@@ -143,15 +172,65 @@ function fieldLabel(f: KeypadField, tracking: string, unit: string) {
   return 'RIR'
 }
 
+/** Plate-sized steps: bigger jumps for barbells and machines in lb. */
+function stepFor(we: WorkoutExercise, field: KeypadField, unit: Unit) {
+  if (field === 'duration') return 5
+  if (field !== 'weight') return 1
+  if (unit === 'kg') return 2.5
+  const eq = we.exercise.equipment.join(' ').toLowerCase()
+  return /barbell|smith|machine|leg press|hack/.test(eq) ? 5 : 2.5
+}
+
+/** Where the keypad goes after logging: next exercise in a superset round, else this exercise's next set. */
+function nextTarget(w: ActiveWorkout, we: WorkoutExercise, setIndex: number) {
+  const idx = w.exercises.findIndex((x) => x._id === we._id)
+  const undoneAt = (x: WorkoutExercise, k: number) => {
+    const i = x.sets.findIndex((s, j) => !s.done && s.kind !== 'warmup' && workingIndex(x, j) === k)
+    return i >= 0 ? { we: x, index: i } : null
+  }
+  if (we.group) {
+    let start = idx
+    while (start > 0 && w.exercises[start - 1].group === we.group) start--
+    let end = idx
+    while (end < w.exercises.length - 1 && w.exercises[end + 1].group === we.group) end++
+    const members = w.exercises.slice(start, end + 1)
+    if (members.length > 1) {
+      const k = workingIndex(we, setIndex)
+      for (const m of members.slice(idx - start + 1)) {
+        const hit = undoneAt(m, k)
+        if (hit) return hit
+      }
+      for (const m of members) {
+        const hit = undoneAt(m, k + 1)
+        if (hit) return hit
+      }
+      return null
+    }
+  }
+  const j = we.sets.findIndex((s, i) => i > setIndex && !s.done)
+  return j >= 0 ? { we, index: j } : null
+}
+
 function LiveWorkout() {
   const workout = useQuery(api.workouts.active)
   const navigate = useNavigate()
   const unit = useUnit()
+  const online = useOnline()
   const [editing, setEditing] = useState<Editing | null>(null)
   const [menu, setMenu] = useState<Menu>(null)
-  const finishing = useRef(false)
+  const [expanded, setExpanded] = useState<Set<string>>(new Set())
+  const [prFlash, setPrFlash] = useState(0)
+  const lastToggle = useRef(new Map<string, number>())
   useWakeLock(Boolean(workout))
   const rest = useRest(workout)
+
+  // PR/info toasts sit below the workout header instead of covering Finish.
+  useEffect(() => {
+    document.documentElement.style.setProperty('--toast-top', '72px')
+    return () => {
+      document.documentElement.style.removeProperty('--toast-top')
+    }
+  }, [])
 
   // Mutations with optimistic updates for instant feel.
   const updateSet = useMutation(api.workouts.updateSet).withOptimisticUpdate((store, args) => {
@@ -173,7 +252,11 @@ function LiveWorkout() {
     })
   })
   const uncompleteSet = useMutation(api.workouts.uncompleteSet).withOptimisticUpdate((store, args) => {
-    patchActiveSet(store, args.setId, { done: false, doneAt: undefined, isPr: false }, () => ({ restEndsAt: undefined }))
+    const cur = store.getQuery(api.workouts.active, {})
+    const set = cur?.exercises.flatMap((x) => x.sets).find((s) => s._id === args.setId)
+    const restStart = cur?.restEndsAt ? cur.restEndsAt - (cur.restTotalSec ?? 0) * 1000 : null
+    const startedRest = restStart !== null && set?.doneAt !== undefined && Math.abs(set.doneAt - restStart) < 3000
+    patchActiveSet(store, args.setId, { done: false, doneAt: undefined, isPr: false }, () => (startedRest ? { restEndsAt: undefined } : {}))
   })
   const restMut = useMutation(api.workouts.rest).withOptimisticUpdate((store, args) => {
     const cur = store.getQuery(api.workouts.active, {})
@@ -231,45 +314,91 @@ function LiveWorkout() {
     return { text: field === 'weight' ? fmtNum(toDisplayWeight(sv, unit)) : String(sv), suggested: true }
   }
 
-  const toServer = (field: KeypadField, text: string): number | null => {
+  const toServer = (we: WorkoutExercise, field: KeypadField, text: string): number | null => {
     if (text === '' || text === '.') return null
     const n = Number.parseFloat(text)
     if (!Number.isFinite(n)) return null
-    return field === 'weight' ? fromDisplayWeight(n, unit) : n
+    if (field === 'weight') {
+      // 0 kg on a loaded lift means "not entered", not an empty bar.
+      if (n === 0 && we.exercise.tracking === 'weight_reps') return null
+      return fromDisplayWeight(n, unit)
+    }
+    return n
   }
 
-  const argKey = (f: KeypadField) => (f === 'weight' ? 'weightKg' : f === 'reps' ? 'reps' : f === 'rir' ? 'rir' : 'durationSec') as
-    | 'weightKg'
-    | 'reps'
-    | 'rir'
-    | 'durationSec'
+  const argKey = (f: KeypadField) =>
+    (f === 'weight' ? 'weightKg' : f === 'reps' ? 'reps' : f === 'rir' ? 'rir' : 'durationSec') as 'weightKg' | 'reps' | 'rir' | 'durationSec'
+
+  /** A typo like 12000 kg would become a permanent PR — ask once before keeping it. */
+  const implausible = (we: WorkoutExercise, field: KeypadField, text: string): string | null => {
+    const n = Number.parseFloat(text)
+    if (!Number.isFinite(n)) return null
+    if (field === 'weight') {
+      const kg = fromDisplayWeight(n, unit)
+      const ref = Math.max(we.best?.weightKg ?? 0, ...we.previous.map((p) => p.weightKg ?? 0))
+      if (kg > 1000) return `That’s over 1000 kg — fix the number.`
+      // Relative to this lifter's own history when there is one; generous otherwise.
+      const limit = ref > 0 ? Math.max(ref * 2.5, ref + 40) : 300
+      if (kg > limit) return `${fmtNum(n)} ${unit} is far above your usual. Tap again to keep it.`
+    }
+    if (field === 'reps' && n > 60) return `${n} reps is a lot. Tap again to keep it.`
+    if (field === 'duration' && n > 3600) return `That’s over an hour. Tap again to keep it.`
+    return null
+  }
+
+  /** Returns false (and shows a warning) if the draft needs a second confirmation. */
+  const passes = (e: Editing): boolean => {
+    const we = weById.get(e.weId)
+    if (!we || e.draft === e.initial) return true
+    const w = implausible(we, e.field, e.draft)
+    if (!w) return true
+    if (w.startsWith('That’s over 1000')) {
+      setEditing({ ...e, warned: undefined })
+      toast(w, { tone: 'error' })
+      return false
+    }
+    if (e.warned === e.draft) return true
+    setEditing({ ...e, warned: e.draft })
+    tap('heavy')
+    return false
+  }
 
   function openKeypad(we: WorkoutExercise, set: WorkoutSet, index: number, field: KeypadField) {
     tap()
-    commitEditing()
+    if (editing && !commitEditing()) return
     const { text } = displayValue(we, set, index, field)
-    setEditing({ setId: set._id, weId: we._id, field, draft: text, fresh: true })
+    setEditing({ setId: set._id, weId: we._id, field, draft: text, initial: text, fresh: true })
     requestAnimationFrame(() => {
       document.getElementById(`set-${set._id}`)?.scrollIntoView({ block: 'center', behavior: reducedMotion() ? 'auto' : 'smooth' })
     })
   }
 
-  function commitEditing(e: Editing | null = editing) {
-    if (!e) return
+  /** Save the open field if it changed. Returns false if the value needs confirming first. */
+  function commitEditing(e: Editing | null = editing): boolean {
+    if (!e) return true
     const we = weById.get(e.weId)
     const set = we?.sets.find((s) => s._id === e.setId)
-    if (!we || !set) return
-    const value = toServer(e.field, e.draft)
-    const current = serverValue(set, e.field)
-    if ((value ?? undefined) !== current) void updateSet({ setId: set._id, [argKey(e.field)]: value })
+    if (!we || !set) return true
+    if (e.draft === e.initial) return true
+    if (!passes(e)) return false
+    const value = toServer(we, e.field, e.draft)
+    if ((value ?? undefined) !== serverValue(set, e.field)) {
+      updateSet({ setId: set._id, [argKey(e.field)]: value }).catch((err: unknown) =>
+        toast(errorText(err, 'Could not save that value.'), { tone: 'error' }),
+      )
+    }
+    return true
   }
 
   async function logSet(we: WorkoutExercise, set: WorkoutSet, index: number, e: Editing | null) {
+    unlockAudio()
     // Ticking a different set must not throw away what was being typed elsewhere.
-    if (e && e.setId !== set._id) commitEditing(e)
+    if (e && e.setId !== set._id && !commitEditing(e)) return
+    const own = e && e.setId === set._id ? e : null
+    if (own && !passes(own)) return
     const values: Record<string, number | null> = {}
     for (const f of tabsFor(we.exercise.tracking)) {
-      if (e && e.setId === set._id && e.field === f) values[argKey(f)] = toServer(f, e.draft)
+      if (own && own.field === f && own.draft !== own.initial) values[argKey(f)] = toServer(we, f, own.draft)
       else {
         const v = serverValue(set, f)
         if (v !== undefined) values[argKey(f)] = v
@@ -280,34 +409,60 @@ function LiveWorkout() {
         }
       }
     }
-    // Require the essential value(s) before logging.
+    // Require the essential value before logging.
     const missing: KeypadField | null =
-      we.exercise.tracking === 'duration'
-        ? values.durationSec == null ? 'duration' : null
-        : values.reps == null
-          ? 'reps'
-          : null
+      we.exercise.tracking === 'duration' ? (values.durationSec == null ? 'duration' : null) : values.reps == null ? 'reps' : null
     if (missing) {
+      setEditing(null)
       openKeypad(we, set, index, missing)
       return
     }
-    setEditing(null)
     tap('success')
+    rest.dismiss()
+    askNotifyPermission()
+
+    // Keep the keypad open on the next set (superset partner first), prefilled.
+    if (own) {
+      const patched = { ...we, sets: we.sets.map((s) => (s._id === set._id ? { ...s, ...clean(values), done: true } : s)) }
+      const w2 = { ...workout!, exercises: workout!.exercises.map((x) => (x._id === we._id ? patched : x)) }
+      const next = nextTarget(w2, patched, index)
+      if (next) {
+        const nwe = next.we._id === we._id ? patched : next.we
+        const nset = nwe.sets[next.index]
+        const field = tabsFor(nwe.exercise.tracking)[0]
+        const { text } = displayValue(nwe, nset, next.index, field)
+        setEditing({ setId: nset._id, weId: nwe._id, field, draft: text, initial: text, fresh: true })
+        requestAnimationFrame(() =>
+          document.getElementById(`set-${nset._id}`)?.scrollIntoView({ block: 'center', behavior: reducedMotion() ? 'auto' : 'smooth' }),
+        )
+      } else setEditing(null)
+    } else if (e?.setId === set._id) setEditing(null)
+
     try {
       const res = await completeSet({ setId: set._id, ...values })
       if (res.isPr) {
         tap('heavy')
-        toast(`New PR · ${we.exercise.name}`, { tone: 'pr' })
+        setPrFlash(Date.now())
+        toast(`New PR · ${we.exercise.name}`, {
+          tone: 'pr',
+          ms: 5000,
+          action: { label: 'Undo', run: () => void uncompleteSet({ setId: set._id }) },
+        })
       }
-    } catch {
-      toast('Could not save that set. Check your connection.', { tone: 'error' })
+    } catch (err) {
+      toast(errorText(err, 'Could not save that set. Check your connection.'), { tone: 'error' })
     }
   }
 
   function toggleSet(we: WorkoutExercise, set: WorkoutSet, index: number) {
+    // A double tap must not log and immediately un-log the set.
+    const last = lastToggle.current.get(set._id) ?? 0
+    if (Date.now() - last < 600) return
+    lastToggle.current.set(set._id, Date.now())
     if (set.done) {
       tap()
       void uncompleteSet({ setId: set._id })
+      announce(`Set ${index + 1} marked not done.`)
       return
     }
     void logSet(we, set, index, editing)
@@ -318,9 +473,11 @@ function LiveWorkout() {
   const editingSet = editingWe?.sets.find((s) => s._id === editing?.setId)
   const editingIndex = editingWe && editingSet ? editingWe.sets.indexOf(editingSet) : -1
   const fields = editingWe ? tabsFor(editingWe.exercise.tracking) : []
-  const mainFields = fields.filter((f): f is Exclude<KeypadField, 'rir'> => f !== 'rir')
+  const mainFields = fields.filter((f): f is MainField => f !== 'rir')
   const blockOf = editingWe ? blocks.find((b) => b.items.some((i) => i.we._id === editingWe._id)) : undefined
   const letter = blockOf?.items.find((i) => i.we._id === editingWe?._id)?.letter ?? null
+  // If the set being edited disappears (deleted elsewhere), close the keypad.
+  if (editing && !editingSet) queueMicrotask(() => setEditing(null))
 
   const keypadTabs: KeypadTab[] =
     editingWe && editingSet
@@ -331,6 +488,12 @@ function LiveWorkout() {
         }))
       : []
 
+  const switchField = (f: KeypadField) => {
+    if (!editing || !editingWe || !editingSet || !commitEditing()) return
+    const { text } = displayValue(editingWe, editingSet, editingIndex, f)
+    setEditing({ ...editing, field: f, draft: text, initial: text, fresh: true, warned: undefined })
+  }
+
   const nextField = () => {
     if (!editing || !editingWe || !editingSet) return
     const i = (mainFields as KeypadField[]).indexOf(editing.field)
@@ -338,13 +501,11 @@ function LiveWorkout() {
       void logSet(editingWe, editingSet, editingIndex, editing)
       return
     }
-    commitEditing()
-    const f = mainFields[i + 1]
-    setEditing({ ...editing, field: f, draft: displayValue(editingWe, editingSet, editingIndex, f).text, fresh: true })
+    switchField(mainFields[i + 1])
   }
 
   const openMenu = (m: Menu) => {
-    commitEditing()
+    if (!commitEditing()) return
     setEditing(null)
     setMenu(m)
   }
@@ -352,11 +513,33 @@ function LiveWorkout() {
   const doneSets = workout.exercises.reduce((n, we) => n + we.sets.filter((s) => s.done).length, 0)
   const totalSets = workout.exercises.reduce((n, we) => n + we.sets.length, 0)
 
+  // What's next (shown on the rest strip).
+  const upNext = (() => {
+    for (const we of workout.exercises) {
+      const i = we.sets.findIndex((s) => !s.done)
+      if (i < 0) continue
+      const s = suggestFor(we, i)
+      const what =
+        we.exercise.tracking === 'duration'
+          ? s.durationSec ? `${s.durationSec}s` : ''
+          : s.weightKg ? `${fmtWeight(s.weightKg, unit)} × ${s.reps ?? '?'}` : s.reps ? `${s.reps} reps` : ''
+      return { setId: we.sets[i]._id, text: `${we.exercise.name}${what ? ` · ${what}` : ''}` }
+    }
+    return null
+  })()
+
   return (
     <div className="min-h-dvh">
-      <Header workout={workout} done={doneSets} total={totalSets} onFinish={() => { commitEditing(); setEditing(null); setMenu({ type: 'finish' }) }} />
+      <Header
+        workout={workout}
+        done={doneSets}
+        total={totalSets}
+        online={online}
+        prFlash={prFlash}
+        onFinish={() => openMenu({ type: 'finish' })}
+      />
 
-      <main className={`mx-auto max-w-[680px] px-4 pt-3 ${editing ? 'pb-[440px]' : 'pb-[calc(var(--safe-bottom)+140px)]'}`}>
+      <main className={`mx-auto max-w-[680px] px-3 pt-3 min-[390px]:px-4 ${editing ? 'pb-[460px]' : 'pb-[calc(var(--safe-bottom)+150px)]'}`}>
         {workout.exercises.length === 0 && (
           <div className="py-16 text-center animate-fade">
             <h2 className="t-screen">Empty workout</h2>
@@ -368,36 +551,62 @@ function LiveWorkout() {
           {blocks.map((block, bi) => (
             <section
               key={block.items[0].we._id}
-              className={`animate-rise ${block.group ? 'rounded-[22px] bg-surface/60 py-1 pl-3' : ''}`}
+              aria-label={block.group ? `Superset: ${block.items.map((i) => i.we.exercise.name).join(' and ')}` : undefined}
+              className={`animate-rise ${block.group ? 'rounded-[22px] bg-surface/60 py-1 pl-2.5' : ''}`}
               style={{ animationDelay: `${Math.min(bi, 6) * 30}ms` }}
             >
               {block.group && (
                 <div className="flex items-center gap-2 px-1 pb-1 pt-3 text-accent">
-                  <Link2 className="size-3.5" />
+                  <Link2 aria-hidden className="size-3.5" />
                   <span className="t-eyebrow">Superset · {Math.max(...block.items.map((i) => i.we.sets.length))} rounds</span>
                 </div>
               )}
               <div className={block.group ? 'border-l-2 border-accent/25' : ''}>
-                {block.items.map(({ we, letter }) => (
-                  <ExerciseCard
-                    key={we._id}
-                    we={we}
-                    letter={letter}
-                    inSuperset={Boolean(block.group)}
-                    editing={editing}
-                    displayValue={displayValue}
-                    onCell={openKeypad}
-                    onToggle={toggleSet}
-                    onSetMenu={(set, label) => openMenu({ type: 'set', set, we, label })}
-                    onMenu={() => openMenu({ type: 'exercise', we, index: workout.exercises.indexOf(we) })}
-                    onInfo={() => openMenu({ type: 'info', we })}
-                    onRest={() => openMenu({ type: 'rest', we })}
-                    onAddSet={async () => {
-                      tap()
-                      await addSet({ workoutExerciseId: we._id })
-                    }}
-                  />
-                ))}
+                {block.items.map(({ we, letter }) => {
+                  const allDone = we.sets.length > 0 && we.sets.every((s) => s.done)
+                  const folded = allDone && !expanded.has(we._id) && editing?.weId !== we._id
+                  return folded ? (
+                    <FoldedCard
+                      key={we._id}
+                      we={we}
+                      letter={letter}
+                      inSuperset={Boolean(block.group)}
+                      onExpand={() => setExpanded(new Set(expanded).add(we._id))}
+                    />
+                  ) : (
+                    <ExerciseCard
+                      key={we._id}
+                      we={we}
+                      letter={letter}
+                      inSuperset={Boolean(block.group)}
+                      editing={editing}
+                      displayValue={displayValue}
+                      onCell={openKeypad}
+                      onToggle={toggleSet}
+                      onSetMenu={(set, label) => openMenu({ type: 'set', set, we, label })}
+                      onMenu={() => openMenu({ type: 'exercise', we, index: workout.exercises.indexOf(we) })}
+                      onInfo={() => openMenu({ type: 'info', we })}
+                      onRest={() => openMenu({ type: 'rest', we })}
+                      onCollapse={
+                        allDone
+                          ? () => {
+                              const n = new Set(expanded)
+                              n.delete(we._id)
+                              setExpanded(n)
+                            }
+                          : undefined
+                      }
+                      onAddSet={async () => {
+                        tap()
+                        try {
+                          await addSet({ workoutExerciseId: we._id })
+                        } catch (err) {
+                          toast(errorText(err, 'Could not add a set.'), { tone: 'error' })
+                        }
+                      }}
+                    />
+                  )
+                })}
               </div>
             </section>
           ))}
@@ -406,45 +615,38 @@ function LiveWorkout() {
         <button onClick={() => openMenu({ type: 'add' })} className="btn btn-secondary mt-6 w-full">
           <Plus className="size-5" /> Add exercise
         </button>
-        <button onClick={() => openMenu({ type: 'discard' })} className="mx-auto mt-6 block h-11 px-4 text-[14px] font-[560] text-danger/80 hover:text-danger">
+        <button onClick={() => openMenu({ type: 'discard' })} className="mx-auto mt-6 block h-11 px-4 text-[14px] font-[560] text-danger hover:underline">
           Discard workout
         </button>
       </main>
 
-      {!editing && <RestStrip rest={rest} onAdjust={(addSec) => restMut({ workoutId: workout._id, addSec })} onSkip={() => restMut({ workoutId: workout._id, skip: true })} />}
+      {!editing && (
+        <RestStrip
+          rest={rest}
+          upNext={upNext}
+          onAdjust={(addSec) => restMut({ workoutId: workout._id, addSec })}
+          onSkip={() => restMut({ workoutId: workout._id, skip: true })}
+        />
+      )}
 
       {editing && editingWe && editingSet && (
         <Keypad
-          context={`${editingWe.exercise.name} · Set ${setLabel(editingSet, editingIndex, letter)}${
-            editingWe.repLow ? ` · target ${fmtReps(editingWe.repLow, editingWe.repHigh)}` : ''
-          }`}
+          context={`${editingWe.exercise.name} · Set ${setLabel(editingSet, workingIndex(editingWe, editingIndex), letter)} of ${editingWe.sets.length}`}
+          target={editingWe.repLow || editingWe.repHigh ? { low: editingWe.repLow ?? 0, high: editingWe.repHigh ?? editingWe.repLow ?? 0 } : null}
+          warning={editing.warned && editing.warned === editing.draft ? implausible(editingWe, editing.field, editing.draft) : null}
           tabs={keypadTabs}
           field={editing.field}
           value={editing.draft}
           fresh={editing.fresh}
-          step={editing.field === 'weight' ? (unit === 'lb' ? 5 : 2.5) : editing.field === 'duration' ? 5 : 1}
+          step={stepFor(editingWe, editing.field, unit)}
           nextLabel={editing.field === mainFields[mainFields.length - 1] ? 'Log set' : 'Next'}
-          accessory={
-            rest.remaining > 0 ? (
-              <span className="num flex h-8 items-center gap-1.5 rounded-full bg-accent-dim px-3 text-[13px] font-[650] text-accent">
-                <Timer className="size-3.5" /> {fmtClock(rest.remaining)}
-              </span>
-            ) : rest.over ? (
-              <span className="flex h-8 items-center gap-1.5 rounded-full bg-accent px-3 text-[13px] font-[650] text-accent-ink animate-pop">
-                <Check className="size-3.5" strokeWidth={2.8} /> Rest done
-              </span>
-            ) : null
-          }
+          accessory={<RestPill rest={rest} />}
           onInput={(draft, fresh) => setEditing({ ...editing, draft, fresh })}
-          onField={(f) => {
-            commitEditing()
-            setEditing({ ...editing, field: f, draft: displayValue(editingWe, editingSet, editingIndex, f).text, fresh: true })
-          }}
+          onField={switchField}
           onNext={nextField}
           onDone={() => void logSet(editingWe, editingSet, editingIndex, editing)}
           onClose={() => {
-            commitEditing()
-            setEditing(null)
+            if (commitEditing()) setEditing(null)
           }}
         />
       )}
@@ -481,8 +683,10 @@ function LiveWorkout() {
             ).map(([kind, label, hint]) => (
               <SheetAction
                 key={kind}
-                icon={menu.set.kind === kind ? <Check className="size-4 text-accent" strokeWidth={2.6} /> : <span className="text-[13px] font-[700]">{kind[0].toUpperCase()}</span>}
-                label={label}
+                icon={
+                  menu.set.kind === kind ? <Check className="size-4 text-accent" strokeWidth={2.6} /> : <span className="text-[13px] font-[700]">{kind[0].toUpperCase()}</span>
+                }
+                label={`${label}${menu.set.kind === kind ? ' (current)' : ''}`}
                 hint={hint}
                 onClick={() => {
                   void updateSet({ setId: menu.set._id, kind })
@@ -490,6 +694,16 @@ function LiveWorkout() {
                 }}
               />
             ))}
+            {menu.set.done && (
+              <SheetAction
+                icon={<X className="size-4" />}
+                label="Mark not done"
+                onClick={() => {
+                  void uncompleteSet({ setId: menu.set._id })
+                  setMenu(null)
+                }}
+              />
+            )}
             <SheetAction
               icon={<Trash2 className="size-4" />}
               label="Delete set"
@@ -550,6 +764,7 @@ function LiveWorkout() {
           setMenu(null)
           for (const p of picked) await addExercise({ workoutId: workout._id, exerciseId: p._id })
           tap('success')
+          announce(`Added ${picked.map((p) => p.name).join(', ')}.`)
           requestAnimationFrame(() => window.scrollTo({ top: document.body.scrollHeight, behavior: reducedMotion() ? 'auto' : 'smooth' }))
         }}
       />
@@ -572,13 +787,13 @@ function LiveWorkout() {
             workout={workout}
             done={doneSets}
             total={totalSets}
+            online={online}
             onFinish={async (notes) => {
-              finishing.current = true
               let id: Id<'workouts'>
               try {
                 id = await finish({ workoutId: workout._id, notes: notes || undefined })
-              } catch {
-                toast('Could not finish — check your connection and try again.', { tone: 'error' })
+              } catch (err) {
+                toast(errorText(err, 'Could not finish — check your connection and try again.'), { tone: 'error' })
                 return
               }
               tap('success')
@@ -610,11 +825,37 @@ function LiveWorkout() {
   )
 }
 
+function clean(values: Record<string, number | null>) {
+  const out: Partial<WorkoutSet> = {}
+  for (const [k, v] of Object.entries(values)) (out as Record<string, number | undefined>)[k] = v ?? undefined
+  return out
+}
+
+function errorText(err: unknown, fallback: string) {
+  const data = (err as { data?: unknown })?.data
+  return typeof data === 'string' ? data : fallback
+}
+
 // ---------------------------------------------------------------------------
 
-function Header({ workout, done, total, onFinish }: { workout: ActiveWorkout; done: number; total: number; onFinish: () => void }) {
+function Header({
+  workout,
+  done,
+  total,
+  online,
+  prFlash,
+  onFinish,
+}: {
+  workout: ActiveWorkout
+  done: number
+  total: number
+  online: boolean
+  prFlash: number
+  onFinish: () => void
+}) {
   const now = useNow(1000)
   const pct = total ? done / total : 0
+  const gold = now - prFlash < 1400
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-black/80 pt-[var(--safe-top)] backdrop-blur-xl backdrop-saturate-150">
       <div className="mx-auto flex h-[60px] max-w-[680px] items-center gap-2 px-2">
@@ -623,8 +864,17 @@ function Header({ workout, done, total, onFinish }: { workout: ActiveWorkout; do
         </Link>
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-[16px] font-[650] tracking-[-0.01em]">{workout.title}</h1>
-          <div className="num text-[13px] text-muted">
-            {fmtClock((now - workout.startedAt) / 1000)} · {done}/{total} sets
+          <div className="num flex items-center gap-1.5 text-[13px] text-muted">
+            <span aria-hidden>{fmtClock((now - workout.startedAt) / 1000)}</span>
+            <span aria-hidden>·</span>
+            <span>
+              {done}/{total} sets
+            </span>
+            {!online && (
+              <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-warning/10 px-2 py-0.5 text-[12px] font-[600] text-warning" role="status">
+                <CloudOff aria-hidden className="size-3" /> Offline · saving when back
+              </span>
+            )}
           </div>
         </div>
         <button onClick={onFinish} className="btn btn-sm btn-primary mr-1">
@@ -632,13 +882,56 @@ function Header({ workout, done, total, onFinish }: { workout: ActiveWorkout; do
         </button>
       </div>
       <div className="h-[2px] bg-line" role="progressbar" aria-label="Sets done" aria-valuemin={0} aria-valuemax={total} aria-valuenow={done}>
-        <div className="h-full bg-accent transition-[width] duration-500 ease-out" style={{ width: `${pct * 100}%` }} />
+        <div
+          className={`h-full transition-[width,background-color] duration-500 ease-out ${gold ? 'bg-pr' : 'bg-accent'}`}
+          style={{ width: `${pct * 100}%` }}
+        />
       </div>
     </header>
   )
 }
 
-function ExerciseCard({
+function prevLabel(we: WorkoutExercise, i: number, unit: Unit) {
+  const t = we.exercise.tracking
+  const prev = previousFor(we, i)
+  if (!prev) return '—'
+  if (t === 'duration') return `${fmtNum(prev.durationSec)}s`
+  if (t === 'reps') return `${prev.reps ?? '—'} reps`
+  return prev.weightKg ? `${t === 'weighted_bodyweight' ? '+' : ''}${fmtWeight(prev.weightKg, unit)} × ${prev.reps ?? '—'}` : `BW × ${prev.reps ?? '—'}`
+}
+
+function FoldedCard({ we, letter, inSuperset, onExpand }: { we: WorkoutExercise; letter: string | null; inSuperset: boolean; onExpand: () => void }) {
+  const unit = useUnit()
+  const t = we.exercise.tracking
+  const summary = we.sets
+    .filter((s) => s.kind !== 'warmup')
+    .map((s) => (t === 'duration' ? `${fmtNum(s.durationSec)}s` : s.weightKg ? `${fmtWeight(s.weightKg, unit)}×${s.reps ?? '—'}` : `${s.reps ?? '—'}`))
+    .join(' · ')
+  const prs = we.sets.filter((s) => s.isPr).length
+  return (
+    <button
+      onClick={onExpand}
+      aria-expanded={false}
+      aria-label={`${we.exercise.name}, done: ${summary}${prs ? `, ${prs} personal record` : ''}. Show sets`}
+      className={`press flex w-full items-center gap-3 text-left ${inSuperset ? 'py-2.5 pl-3 pr-2' : 'card px-4 py-3'} animate-fade`}
+    >
+      <span className="grid size-9 shrink-0 place-items-center rounded-full bg-accent text-accent-ink">
+        <Check aria-hidden className="size-[18px]" strokeWidth={2.8} />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="flex items-center gap-2">
+          {letter && <span className="num grid size-5 shrink-0 place-items-center rounded-md bg-accent/15 text-[11px] font-[750] text-accent">{letter}</span>}
+          <span className="truncate text-[15px] font-[600] text-ink/90">{we.exercise.name}</span>
+          {prs > 0 && <Trophy aria-hidden className="size-3.5 shrink-0 text-pr" />}
+        </span>
+        <span className="num block truncate text-[13px] text-muted">{summary}</span>
+      </span>
+      <ChevronDown aria-hidden className="size-5 shrink-0 text-subtle" />
+    </button>
+  )
+}
+
+const ExerciseCard = memo(function ExerciseCard({
   we,
   letter,
   inSuperset,
@@ -651,6 +944,7 @@ function ExerciseCard({
   onInfo,
   onRest,
   onAddSet,
+  onCollapse,
 }: {
   we: WorkoutExercise
   letter: string | null
@@ -664,45 +958,69 @@ function ExerciseCard({
   onInfo: () => void
   onRest: () => void
   onAddSet: () => void
+  onCollapse?: () => void
 }) {
   const unit = useUnit()
   const t = we.exercise.tracking
   const cols: KeypadField[] = t === 'reps' ? ['reps', 'rir'] : t === 'duration' ? ['duration'] : ['weight', 'reps', 'rir']
   const allDone = we.sets.length > 0 && we.sets.every((s) => s.done)
-  const grid = cols.length === 3 ? 'grid-cols-[44px_minmax(0,1fr)_62px_62px_42px_46px]' : cols.length === 2 ? 'grid-cols-[44px_minmax(0,1fr)_72px_52px_46px]' : 'grid-cols-[44px_minmax(0,1fr)_88px_46px]'
+  // Below 390px the "Previous" column moves under each row so inputs keep their size.
+  const grid =
+    cols.length === 3
+      ? 'grid-cols-[40px_minmax(0,1fr)_minmax(0,1fr)_40px_44px] min-[390px]:grid-cols-[44px_minmax(0,1fr)_62px_62px_42px_46px]'
+      : cols.length === 2
+        ? 'grid-cols-[40px_minmax(0,1fr)_52px_44px] min-[390px]:grid-cols-[44px_minmax(0,1fr)_72px_52px_46px]'
+        : 'grid-cols-[40px_minmax(0,1fr)_44px] min-[390px]:grid-cols-[44px_minmax(0,1fr)_88px_46px]'
+  const best = we.best
+    ? we.best.weightKg
+      ? `${fmtWeight(we.best.weightKg, unit)}×${we.best.reps}`
+      : we.best.reps
+        ? `${we.best.reps} reps`
+        : null
+    : null
 
   return (
-    <article className={`${inSuperset ? 'pl-3 pr-1' : 'card'} pb-2 pt-4`}>
-      <div className={`flex items-start gap-3 ${inSuperset ? '' : 'px-4'}`}>
+    <article className={`${inSuperset ? 'pl-2.5 pr-1' : 'card'} pb-2 pt-4`}>
+      <div className={`flex items-start gap-3 ${inSuperset ? '' : 'px-3 min-[390px]:px-4'}`}>
         <button onClick={onInfo} className="press shrink-0" aria-label={`About ${we.exercise.name}`}>
           <ExerciseThumb src={we.exercise.thumbnailUrl} size={46} />
         </button>
         <button onClick={onInfo} className="min-w-0 flex-1 pt-0.5 text-left">
-          <div className="flex items-center gap-2">
-            {letter && <span className="num grid size-5 shrink-0 place-items-center rounded-md bg-accent/15 text-[11px] font-[750] text-accent">{letter}</span>}
-            <h2 className={`truncate text-[17px] font-[620] tracking-[-0.015em] ${allDone ? 'text-muted' : ''}`}>{we.exercise.name}</h2>
+          <div className="flex items-start gap-2">
+            {letter && <span className="num mt-0.5 grid size-5 shrink-0 place-items-center rounded-md bg-accent/15 text-[11px] font-[750] text-accent">{letter}</span>}
+            <h2 className={`line-clamp-2 text-[17px] font-[620] leading-[22px] tracking-[-0.015em] ${allDone ? 'text-muted' : ''}`}>{we.exercise.name}</h2>
           </div>
-          <div className="num mt-0.5 flex items-center gap-1.5 text-[13px] text-subtle">
+          <div className="num mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[13px] text-muted">
             {we.repLow ? <span>{fmtReps(we.repLow, we.repHigh)} reps</span> : null}
-            {we.best && t !== 'duration' ? (
+            {best && t !== 'duration' ? (
               <span className="inline-flex items-center gap-1">
-                · <Trophy className="size-3" /> {fmtWeight(we.best.weightKg, unit)}×{we.best.reps}
+                · <Trophy aria-hidden className="size-3" />
+                <span className="sr-only">best</span> {best}
               </span>
             ) : null}
-            {allDone && <span className="inline-flex items-center gap-1 text-accent">· <Check className="size-3.5" strokeWidth={2.6} /> Done</span>}
+            {allDone && (
+              <span className="inline-flex items-center gap-1 text-accent">
+                · <Check aria-hidden className="size-3.5" strokeWidth={2.6} /> Done
+              </span>
+            )}
           </div>
         </button>
-        <button onClick={onMenu} className="icon-btn -mr-1 -mt-1 shrink-0" aria-label="Exercise options">
+        {onCollapse && (
+          <button onClick={onCollapse} className="icon-btn -mt-1 shrink-0" aria-label="Collapse" aria-expanded>
+            <ChevronDown className="size-5 rotate-180" />
+          </button>
+        )}
+        <button onClick={onMenu} className="icon-btn -mr-1 -mt-1 shrink-0" aria-label={`${we.exercise.name} options`}>
           <MoreHorizontal className="size-5" />
         </button>
       </div>
 
       {we.notes && <p className={`mt-2 text-[14px] italic leading-5 text-muted ${inSuperset ? '' : 'px-4'}`}>“{we.notes}”</p>}
 
-      <div className={`mt-3 ${inSuperset ? '' : 'px-2'}`}>
-        <div className={`grid ${grid} items-center gap-1 px-2 pb-1 text-[11px] font-[650] uppercase tracking-[0.08em] text-subtle`}>
+      <div className={`mt-3 ${inSuperset ? '' : 'px-1 min-[390px]:px-2'}`}>
+        <div aria-hidden className={`grid ${grid} items-center gap-1 px-1 pb-1 text-[11px] font-[650] uppercase tracking-[0.08em] text-subtle min-[390px]:px-2`}>
           <span className="text-center">Set</span>
-          <span className="pl-1">Previous</span>
+          <span className="pl-1 max-[389px]:hidden">Previous</span>
           {cols.map((c) => (
             <span key={c} className="text-center">
               {c === 'weight' ? (t === 'weighted_bodyweight' ? `+${unit}` : unit) : c === 'reps' ? 'Reps' : c === 'rir' ? 'RIR' : 'Sec'}
@@ -711,22 +1029,13 @@ function ExerciseCard({
           <span />
         </div>
         {we.sets.map((set, i) => {
-          const label = setLabel(set, we.sets.filter((s, j) => j < i && s.kind === 'working').length, letter)
-          const prev = previousFor(we, i)
-          const prevText = prev
-            ? t === 'duration'
-              ? `${fmtNum(prev.durationSec)}s`
-              : t === 'reps'
-                ? `${prev.reps ?? '—'} reps`
-                : prev.weightKg
-                  ? `${t === 'weighted_bodyweight' ? '+' : ''}${fmtWeight(prev.weightKg, unit)} × ${prev.reps ?? '—'}`
-                  : `BW × ${prev.reps ?? '—'}`
-            : '—'
+          const label = setLabel(set, workingIndex(we, i), letter)
+          const prevText = prevLabel(we, i, unit)
           return (
             <div
               key={set._id}
               id={`set-${set._id}`}
-              className={`grid ${grid} min-h-[56px] items-center gap-1 rounded-[14px] px-2 transition-colors duration-200 ${
+              className={`grid ${grid} min-h-[56px] items-center gap-1 rounded-[14px] px-1 transition-colors duration-200 min-[390px]:px-2 ${
                 set.done ? 'bg-accent/[0.07]' : editing?.setId === set._id ? 'bg-raised/70' : ''
               }`}
             >
@@ -744,7 +1053,7 @@ function ExerciseCard({
                   </span>
                 )}
               </button>
-              <span className="num truncate pl-1 text-[13px] text-subtle">
+              <span className="num truncate pl-1 text-[13px] text-muted max-[389px]:hidden">
                 <span className="sr-only">Previous </span>
                 {prevText}
               </span>
@@ -755,12 +1064,18 @@ function ExerciseCard({
                   <button
                     key={c}
                     onClick={() => onCell(we, set, i, c)}
-                    aria-label={`${c === 'weight' ? (t === 'weighted_bodyweight' ? `Added ${unit}` : unit === 'kg' ? 'Kilograms' : 'Pounds') : c === 'reps' ? 'Reps' : c === 'rir' ? 'Reps in reserve' : 'Seconds'} ${v.text || 'empty'}${v.suggested && v.text ? ', suggested from last time' : ''}, set ${label}`}
-                    className={`press num h-11 rounded-[12px] text-center text-[19px] font-[620] tracking-[-0.01em] transition-colors ${
+                    aria-label={`${
+                      c === 'weight' ? (t === 'weighted_bodyweight' ? `Added ${unit}` : unit === 'kg' ? 'Kilograms' : 'Pounds') : c === 'reps' ? 'Reps' : c === 'rir' ? 'Reps in reserve' : 'Seconds'
+                    } ${v.text || 'empty'}${v.suggested && v.text ? ', suggested from last time' : ''}, set ${label}`}
+                    className={`press num h-11 min-w-0 rounded-[12px] text-center text-[19px] font-[620] tracking-[-0.01em] transition-colors ${
                       active ? 'bg-ink text-black' : set.done ? 'text-ink' : 'bg-raised hover:bg-pressed'
-                    } ${v.suggested && !active ? 'text-subtle italic font-[500]' : ''}`}
+                    } ${v.suggested && !active ? 'font-[500] italic text-subtle' : ''}`}
                   >
-                    {active ? editing.draft || '0' : v.text || (c === 'rir' ? <span className="text-subtle">–</span> : <span className="text-subtle">{c === 'reps' && we.repLow ? fmtReps(we.repLow, we.repHigh) : '–'}</span>)}
+                    {active
+                      ? editing.draft || '0'
+                      : v.text || (
+                          <span className="text-subtle">{c === 'reps' && we.repLow ? fmtReps(we.repLow, we.repHigh) : '–'}</span>
+                        )}
                   </button>
                 )
               })}
@@ -774,23 +1089,33 @@ function ExerciseCard({
               >
                 <Check aria-hidden className={`size-5 ${set.done ? 'animate-pop' : ''}`} strokeWidth={2.8} />
               </button>
+              <span aria-hidden className="num col-span-full -mt-1 hidden pb-1.5 pl-[44px] text-[12px] text-muted max-[389px]:block">
+                Last: {prevText}
+              </span>
             </div>
           )
         })}
       </div>
 
       <div className={`mt-1 flex items-center ${inSuperset ? '' : 'px-2'}`}>
-        <button onClick={onAddSet} className="press flex h-11 flex-1 items-center justify-center gap-1.5 rounded-xl text-[14px] font-[600] text-muted hover:bg-raised hover:text-ink">
-          <Plus className="size-4" /> Add set
+        <button
+          onClick={onAddSet}
+          className="press flex h-11 flex-1 items-center justify-center gap-1.5 rounded-xl text-[14px] font-[600] text-muted hover:bg-raised hover:text-ink"
+        >
+          <Plus aria-hidden className="size-4" /> Add set
         </button>
-        <span className="h-5 w-px bg-line" />
-        <button onClick={onRest} className="press num flex h-11 flex-1 items-center justify-center gap-1.5 rounded-xl text-[14px] font-[600] text-muted hover:bg-raised hover:text-ink">
-          <Timer className="size-4" /> {we.restSec ? fmtClock(we.restSec) : 'Off'}
+        <span aria-hidden className="h-5 w-px bg-line" />
+        <button
+          onClick={onRest}
+          aria-label={`Rest after each set: ${we.restSec ? fmtClock(we.restSec) : 'off'}. Change`}
+          className="press num flex h-11 flex-1 items-center justify-center gap-1.5 rounded-xl text-[14px] font-[600] text-muted hover:bg-raised hover:text-ink"
+        >
+          <Timer aria-hidden className="size-4" /> {we.restSec ? fmtClock(we.restSec) : 'Off'}
         </button>
       </div>
     </article>
   )
-}
+})
 
 function ExerciseMenu({
   workout,
@@ -809,12 +1134,14 @@ function ExerciseMenu({
   update: (args: { workoutExerciseId: Id<'workoutExercises'>; group?: string | null; position?: number }) => Promise<null>
   remove: () => void
 }) {
+  const prev = workout.exercises[index - 1]
   const next = workout.exercises[index + 1]
-  const grouped = Boolean(we.group && workout.exercises.filter((x) => x.group === we.group).length > 1)
+  // Grouped only if an adjacent exercise shares the group (what the screen shows).
+  const grouped = Boolean(we.group && (prev?.group === we.group || next?.group === we.group))
   return (
     <div className="space-y-1 pb-2">
       <SheetAction icon={<Info className="size-4" />} label="Form & history" onClick={() => open({ type: 'info', we })} />
-      <SheetAction icon={<Repeat className="size-4" />} label="Replace exercise" hint="Keeps your sets" onClick={() => open({ type: 'swap', we })} />
+      <SheetAction icon={<Repeat className="size-4" />} label="Replace exercise" hint="Keeps your logged sets" onClick={() => open({ type: 'swap', we })} />
       {grouped ? (
         <SheetAction
           icon={<Link2Off className="size-4" />}
@@ -822,8 +1149,6 @@ function ExerciseMenu({
           onClick={async () => {
             close()
             await update({ workoutExerciseId: we._id, group: null })
-            const rest = workout.exercises.filter((x) => x.group === we.group && x._id !== we._id)
-            if (rest.length === 1) await update({ workoutExerciseId: rest[0]._id, group: null })
           }}
         />
       ) : next ? (
@@ -856,7 +1181,9 @@ function NoteEditor({ initial, onSave }: { initial: string; onSave: (s: string) 
   const [text, setText] = useState(initial)
   return (
     <div className="pb-2">
+      <label htmlFor="exercise-note" className="sr-only">Note</label>
       <textarea
+        id="exercise-note"
         autoFocus
         value={text}
         onChange={(e) => setText(e.target.value)}
@@ -871,60 +1198,104 @@ function NoteEditor({ initial, onSave }: { initial: string; onSave: (s: string) 
   )
 }
 
-function RestStrip({ rest, onAdjust, onSkip }: { rest: RestState; onAdjust: (s: number) => void; onSkip: () => void }) {
-  const { remaining, total, over } = rest
-  if (!(remaining > 0) && !over) return null
-  const pct = total > 0 ? Math.max(0, Math.min(1, remaining / total)) : 0
+/** Compact rest countdown that lives in the keypad header. Ticks on its own. */
+function RestPill({ rest }: { rest: Rest }) {
+  const now = useNow(1000, Boolean(rest.endsAt))
+  const remaining = rest.endsAt ? (rest.endsAt - now) / 1000 : 0
+  if (remaining > 0) {
+    return (
+      <span className="num flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-accent-dim px-3 text-[13px] font-[650] text-accent">
+        <Timer aria-hidden className="size-3.5" />
+        <span className="sr-only">Rest </span>
+        {fmtClock(remaining)}
+      </span>
+    )
+  }
+  if (rest.endedAt) {
+    return (
+      <span className="flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-accent px-3 text-[13px] font-[650] text-accent-ink animate-pop">
+        <Check aria-hidden className="size-3.5" strokeWidth={2.8} /> Rest done
+      </span>
+    )
+  }
+  return null
+}
+
+function RestStrip({
+  rest,
+  upNext,
+  onAdjust,
+  onSkip,
+}: {
+  rest: Rest
+  upNext: { setId: string; text: string } | null
+  onAdjust: (s: number) => void
+  onSkip: () => void
+}) {
+  const now = useNow(rest.endsAt ? 250 : 1000, Boolean(rest.endsAt || rest.endedAt))
+  const remaining = rest.endsAt ? (rest.endsAt - now) / 1000 : 0
+  if (!(remaining > 0) && !rest.endedAt) return null
+  const pct = rest.total > 0 ? Math.max(0, Math.min(1, remaining / rest.total)) : 0
   const R = 19
   const C = 2 * Math.PI * R
+  const goNext = () =>
+    upNext && document.getElementById(`set-${upNext.setId}`)?.scrollIntoView({ block: 'center', behavior: reducedMotion() ? 'auto' : 'smooth' })
 
   return (
     <aside aria-label="Rest timer" className="fixed inset-x-0 bottom-0 z-40 px-3 pb-[calc(var(--safe-bottom)+12px)]">
-      <div className="mx-auto flex h-[68px] max-w-[560px] items-center gap-3 rounded-[22px] border border-line-strong bg-raised/95 pl-3 pr-2 shadow-[0_16px_50px_-10px_#000] backdrop-blur-xl animate-[rise_240ms_cubic-bezier(0.22,1,0.36,1)_both]">
-        {over && !(remaining > 0) ? (
-          <>
-            <span className="grid size-11 place-items-center rounded-full bg-accent text-accent-ink animate-pop">
-              <Check className="size-5" strokeWidth={2.8} />
-            </span>
-            <div className="flex-1">
-              <div className="text-[15px] font-[650]">Rest complete</div>
-              <div className="text-[13px] text-muted">Next set when you’re ready.</div>
-            </div>
-            <button onClick={rest.dismiss} className="icon-btn" aria-label="Dismiss">
-              <X className="size-5" />
-            </button>
-          </>
-        ) : (
-          <>
-            <svg aria-hidden width="46" height="46" viewBox="0 0 46 46" className="-rotate-90 shrink-0">
-              <circle cx="23" cy="23" r={R} fill="none" stroke="#2a2a2d" strokeWidth="3.5" />
-              <circle
-                cx="23"
-                cy="23"
-                r={R}
-                fill="none"
-                stroke="var(--color-accent)"
-                strokeWidth="3.5"
-                strokeLinecap="round"
-                strokeDasharray={C}
-                strokeDashoffset={C * (1 - pct)}
-                style={{ transition: 'stroke-dashoffset 250ms linear' }}
-              />
-            </svg>
-            <div className="min-w-0 flex-1">
-              <div className="text-[12px] font-[600] text-subtle">Rest</div>
-              <div aria-hidden className="num text-[24px] font-[680] leading-7 tracking-[-0.02em]">{fmtClock(remaining)}</div>
-            </div>
-            <button onClick={() => onAdjust(-15)} aria-label="15 seconds less" className="press num h-11 rounded-full px-3 text-[14px] font-[650] text-muted hover:bg-pressed">
-              −15
-            </button>
-            <button onClick={() => onAdjust(15)} aria-label="15 seconds more" className="press num h-11 rounded-full px-3 text-[14px] font-[650] text-muted hover:bg-pressed">
-              +15
-            </button>
-            <button onClick={onSkip} className="press h-11 rounded-full bg-ink px-4 text-[14px] font-[650] text-black">
-              Skip
-            </button>
-          </>
+      <div className="mx-auto max-w-[560px] overflow-hidden rounded-[22px] border border-line-strong bg-raised/95 shadow-[0_16px_50px_-10px_#000] backdrop-blur-xl animate-[rise_240ms_cubic-bezier(0.22,1,0.36,1)_both]">
+        <div className="flex h-[68px] items-center gap-3 pl-3 pr-2">
+          {!(remaining > 0) ? (
+            <>
+              <span className="grid size-11 shrink-0 place-items-center rounded-full bg-accent text-accent-ink animate-pop">
+                <Check aria-hidden className="size-5" strokeWidth={2.8} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="text-[15px] font-[650]">Rest over</div>
+                <div className="num text-[13px] text-muted">{fmtClock((now - (rest.endedAt ?? now)) / 1000)} ago</div>
+              </div>
+              <button onClick={rest.dismiss} className="icon-btn" aria-label="Dismiss">
+                <X className="size-5" />
+              </button>
+            </>
+          ) : (
+            <>
+              <svg aria-hidden width="46" height="46" viewBox="0 0 46 46" className="shrink-0 -rotate-90">
+                <circle cx="23" cy="23" r={R} fill="none" stroke="#2a2a2d" strokeWidth="3.5" />
+                <circle
+                  cx="23"
+                  cy="23"
+                  r={R}
+                  fill="none"
+                  stroke="var(--color-accent)"
+                  strokeWidth="3.5"
+                  strokeLinecap="round"
+                  strokeDasharray={C}
+                  strokeDashoffset={C * (1 - pct)}
+                  style={{ transition: 'stroke-dashoffset 250ms linear' }}
+                />
+              </svg>
+              <div className="min-w-0 flex-1">
+                <div className="text-[12px] font-[600] text-muted">Rest</div>
+                <div aria-hidden className="num text-[24px] font-[680] leading-7 tracking-[-0.02em]">{fmtClock(remaining)}</div>
+              </div>
+              <button onClick={() => onAdjust(-15)} aria-label="15 seconds less" className="press num h-11 rounded-full px-3 text-[14px] font-[650] text-muted hover:bg-pressed">
+                −15
+              </button>
+              <button onClick={() => onAdjust(15)} aria-label="15 seconds more" className="press num h-11 rounded-full px-3 text-[14px] font-[650] text-muted hover:bg-pressed">
+                +15
+              </button>
+              <button onClick={onSkip} className="press h-11 rounded-full bg-ink px-4 text-[14px] font-[650] text-black">
+                Skip
+              </button>
+            </>
+          )}
+        </div>
+        {upNext && (
+          <button onClick={goNext} className="flex h-9 w-full items-center gap-2 border-t border-line px-4 text-left text-[13px] text-muted hover:text-ink">
+            <span className="shrink-0 font-[650] text-subtle">Next</span>
+            <span className="num min-w-0 truncate">{upNext.text}</span>
+          </button>
         )}
       </div>
     </aside>
@@ -935,18 +1306,21 @@ function FinishPanel({
   workout,
   done,
   total,
+  online,
   onFinish,
   onCancel,
 }: {
   workout: ActiveWorkout
   done: number
   total: number
+  online: boolean
   onFinish: (notes: string) => Promise<void>
   onCancel: () => void
 }) {
   const unit = useUnit()
   const [notes, setNotes] = useState(workout.notes ?? '')
   const [busy, setBusy] = useState(false)
+  const [slow, setSlow] = useState(false)
   const volume = workout.exercises.reduce(
     (n, we) => n + we.sets.filter((s) => s.done && s.kind !== 'warmup').reduce((m, s) => m + (s.weightKg ?? 0) * (s.reps ?? 0), 0),
     0,
@@ -957,19 +1331,19 @@ function FinishPanel({
     <div className="pb-2">
       <dl className="grid grid-cols-3 gap-2">
         {[
-          ['Time', fmtClock((Date.now() - workout.startedAt) / 1000)],
+          ['Duration', fmtDuration((Date.now() - workout.startedAt) / 1000)],
           ['Sets', `${done}`],
           [`Volume ${unit}`, fmtVolume(volume, unit)],
         ].map(([k, v]) => (
           <div key={k} className="rounded-[16px] bg-raised px-3 py-3">
-            <dt className="text-[12px] font-[550] text-subtle">{k}</dt>
+            <dt className="text-[12px] font-[550] text-muted">{k}</dt>
             <dd className="num mt-0.5 text-[20px] font-[680] tracking-[-0.02em]">{v}</dd>
           </div>
         ))}
       </dl>
       {prs > 0 && (
         <p className="mt-3 flex items-center gap-2 text-[14px] font-[600] text-pr">
-          <Trophy className="size-4" /> {prs} new personal record{prs > 1 ? 's' : ''}
+          <Trophy aria-hidden className="size-4" /> {prs} new personal record{prs > 1 ? 's' : ''}
         </p>
       )}
       {skipped > 0 && (
@@ -977,7 +1351,9 @@ function FinishPanel({
           {skipped} planned set{skipped > 1 ? 's' : ''} not logged — {skipped > 1 ? 'they' : 'it'}’ll be left out.
         </p>
       )}
+      <label htmlFor="finish-notes" className="sr-only">Notes</label>
       <textarea
+        id="finish-notes"
         value={notes}
         onChange={(e) => setNotes(e.target.value)}
         rows={2}
@@ -991,17 +1367,25 @@ function FinishPanel({
           disabled={busy || done === 0}
           onClick={async () => {
             setBusy(true)
+            const t = setTimeout(() => setSlow(true), 5000)
             try {
               await onFinish(notes.trim())
             } finally {
+              clearTimeout(t)
               setBusy(false)
+              setSlow(false)
             }
           }}
         >
           {busy ? <Loader2 className="size-5 animate-spin" /> : <Check className="size-5" strokeWidth={2.6} />} Finish
         </button>
       </div>
-      {done === 0 && <p className="mt-3 text-center text-[13px] text-subtle">Log at least one set, or discard the workout.</p>}
+      {(slow || (busy && !online)) && (
+        <p role="status" className="mt-3 text-center text-[13px] text-warning">
+          Still saving… keep Lift open. It finishes as soon as you’re back online.
+        </p>
+      )}
+      {done === 0 && <p className="mt-3 text-center text-[13px] text-muted">Log at least one set, or discard the workout.</p>}
     </div>
   )
 }

@@ -196,6 +196,7 @@ export default defineSchema({
       }),
     ),
     bestE1rmKg: v.optional(v.number()),
+    bestScore: v.optional(v.number()),
     bestWeightKg: v.optional(v.number()),
     bestReps: v.optional(v.number()),
     bestSetAt: v.optional(v.number()),

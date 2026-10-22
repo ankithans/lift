@@ -9,8 +9,8 @@ import { ExerciseThumb } from '#/components/ExerciseThumb'
 import { PageHeader } from '#/components/PageHeader'
 import { Sheet } from '#/components/Sheet'
 import { BlockSkeleton } from '#/components/Skeletons'
-import { fmtClock, WEEKDAYS_LONG } from '#/lib/format'
-import { useMe } from '#/lib/me'
+import { fmtClock, fmtRelativeDay, fmtWeight, WEEKDAYS_LONG } from '#/lib/format'
+import { useMe, useUnit } from '#/lib/me'
 import { useTitle } from '#/lib/useTitle'
 import { tap } from '#/lib/haptics'
 
@@ -20,6 +20,7 @@ function DayPreview() {
   const { dayId } = Route.useParams()
   const day = useQuery(api.programs.day, { dayId: dayId as Id<'programDays'> })
   const me = useMe()
+  const unit = useUnit()
   const start = useMutation(api.workouts.start)
   const navigate = useNavigate()
   const [busy, setBusy] = useState(false)
@@ -95,9 +96,15 @@ function DayPreview() {
                   <ExerciseThumb src={e.exercise.thumbnailUrl} size={52} />
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-[16px] font-[580]">{e.exercise.name}</div>
-                    <div className="num text-[14px] text-subtle">
+                    <div className="num text-[14px] text-muted">
                       {e.sets} sets · {e.repLow === e.repHigh ? e.repHigh : `${e.repLow}–${e.repHigh}`} reps · rest {fmtClock(e.restSec)}
                     </div>
+                    {e.last && (
+                      <div className="num truncate text-[13px] text-subtle">
+                        Last: {e.last.sets.map((x) => (x.durationSec && !x.reps ? `${x.durationSec}s` : `${x.weightKg ? fmtWeight(x.weightKg, unit) : 'BW'}×${x.reps ?? '—'}`)).join(' · ')}
+                        {e.last.at ? ` · ${fmtRelativeDay(e.last.at)}` : ''}
+                      </div>
+                    )}
                   </div>
                 </button>
               </li>

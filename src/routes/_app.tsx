@@ -40,6 +40,8 @@ function AppLayout() {
   }, [me, pathname, navigate])
 
   if (isLoading || !isAuthenticated || !me || !me.profile) return <Splash />
+  // Decide onboarding before rendering, so new accounts never flash an empty Train screen.
+  if (!me.profile.activeProgramId && !me.profile.onboardedAt && pathname !== '/welcome') return <Splash />
 
   return (
     <MeProvider value={me}>

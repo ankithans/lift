@@ -30,7 +30,7 @@ export function Toaster() {
   )
   if (typeof document === 'undefined') return null
   return createPortal(
-    <div role="status" aria-live="polite" className="pointer-events-none fixed inset-x-0 top-[calc(var(--safe-top)+10px)] z-[80] flex flex-col items-center gap-2 px-4">
+    <div role="status" aria-live="polite" className="pointer-events-none fixed inset-x-0 top-[calc(var(--safe-top)+var(--toast-top,10px))] z-[80] flex flex-col items-center gap-2 px-4">
       {list.map((t) => (
         <div
           key={t.id}

@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useMutation, useQuery } from 'convex/react'
 import type { FunctionReturnType } from 'convex/server'
-import { ArrowDown, ArrowUp, ChevronDown, Link2, Link2Off, Minus, MoreHorizontal, Plus, Repeat, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, ChevronDown, Link2, Link2Off, Minus, MoreHorizontal, Pencil, Plus, Repeat, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { api } from '../../../convex/_generated/api'
 import type { Id } from '../../../convex/_generated/dataModel'
@@ -31,6 +31,7 @@ function ProgramEditor() {
   const [dayMenu, setDayMenu] = useState<Day | null>(null)
   const [adding, setAdding] = useState<Day | null>(null)
   const [swapping, setSwapping] = useState<Slot | null>(null)
+  const [renaming, setRenaming] = useState(false)
   const addExercise = useMutation(api.programs.addExercise)
   const swap = useMutation(api.programs.swapExercise)
 
@@ -47,7 +48,16 @@ function ProgramEditor() {
 
   return (
     <main className="page">
-      <PageHeader back eyebrow="Program" title={program.name} />
+      <PageHeader
+        back
+        eyebrow="Program"
+        title={program.name}
+        action={
+          <button className="icon-btn" aria-label="Rename program" onClick={() => setRenaming(true)}>
+            <Pencil className="size-[18px]" />
+          </button>
+        }
+      />
       <p className="-mt-3 text-[15px] text-muted">{program.days.filter((d) => d.kind === 'workout').length} training days. Changes apply to future workouts.</p>
 
       <div className="mt-6 space-y-2">
@@ -103,6 +113,10 @@ function ProgramEditor() {
 
       <Sheet open={slotMenu !== null} onClose={() => setSlotMenu(null)} title={slotMenu?.slot.exercise.name}>
         {slotMenu && <SlotEditor key={slotMenu.slot._id} {...slotMenu} close={() => setSlotMenu(null)} onSwap={() => { setSwapping(slotMenu.slot); setSlotMenu(null) }} />}
+      </Sheet>
+
+      <Sheet open={renaming} onClose={() => setRenaming(false)} title="Rename program">
+        {renaming && <RenameProgram name={program.name} close={() => setRenaming(false)} />}
       </Sheet>
 
       <Sheet open={dayMenu !== null} onClose={() => setDayMenu(null)} title={dayMenu ? (dayMenu.weekday !== undefined ? WEEKDAYS_LONG[dayMenu.weekday] : dayMenu.title) : ''}>
@@ -262,5 +276,24 @@ function DayEditor({ day, close }: { day: Day; close: () => void }) {
         <p className="mt-2 text-[12px] text-subtle">Moving onto a taken day swaps the two.</p>
       </div>
     </div>
+  )
+}
+
+function RenameProgram({ name, close }: { name: string; close: () => void }) {
+  const rename = useMutation(api.programs.rename)
+  const [value, setValue] = useState(name)
+  return (
+    <form
+      className="flex gap-2 pb-2"
+      onSubmit={async (e) => {
+        e.preventDefault()
+        if (value.trim()) await rename({ name: value.trim() })
+        close()
+      }}
+    >
+      <label htmlFor="program-name" className="sr-only">Program name</label>
+      <input id="program-name" autoFocus value={value} onChange={(e) => setValue(e.target.value)} className="field" maxLength={60} />
+      <button className="btn btn-primary btn-sm h-[52px]">Save</button>
+    </form>
   )
 }

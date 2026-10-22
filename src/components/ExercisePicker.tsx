@@ -1,5 +1,5 @@
-import { useQuery } from 'convex/react'
-import { Check, Search, X } from 'lucide-react'
+import { useMutation, useQuery } from 'convex/react'
+import { Check, Loader2, Plus, Search, X } from 'lucide-react'
 import { useDeferredValue, useState } from 'react'
 import { api } from '../../convex/_generated/api'
 import type { Id } from '../../convex/_generated/dataModel'
@@ -42,12 +42,30 @@ export function ExercisePicker({
   const [q, setQ] = useState('')
   const [group, setGroup] = useState<string | null>(null)
   const [selected, setSelected] = useState<PickedExercise[]>([])
+  const [creating, setCreating] = useState(false)
   const query = useDeferredValue(q)
   const results = useQuery(api.library.search, open ? { query: query || undefined, group: group ?? undefined, limit: 120 } : 'skip')
 
   const close = () => {
     setSelected([])
+    setCreating(false)
     onClose()
+  }
+
+  if (creating) {
+    return (
+      <Sheet open={open} onClose={close} title="New exercise">
+        <CreateExercise
+          initialName={q.trim()}
+          onCancel={() => setCreating(false)}
+          onCreated={(item) => {
+            setCreating(false)
+            if (multi) setSelected([...selected, item])
+            else onPick([item])
+          }}
+        />
+      </Sheet>
+    )
   }
 
   return (
@@ -97,7 +115,12 @@ export function ExercisePicker({
           <ListSkeleton rows={8} />
         </div>
       ) : results.length === 0 ? (
-        <p className="py-12 text-center text-muted">No matches. Try another name.</p>
+        <div className="py-10 text-center">
+          <p className="text-muted">No exercise called “{q}”.</p>
+          <button className="btn btn-secondary mt-4" onClick={() => setCreating(true)}>
+            <Plus className="size-5" /> Create “{q.trim()}”
+          </button>
+        </div>
       ) : (
         <ul className="pt-1">
           {results.map((e) => {
@@ -136,8 +159,105 @@ export function ExercisePicker({
               </li>
             )
           })}
+          {q.trim() && (
+            <li>
+              <button onClick={() => setCreating(true)} className="press flex w-full items-center gap-3 rounded-2xl px-2 py-2 text-left text-accent hover:bg-raised">
+                <span className="grid size-11 place-items-center rounded-[12px] bg-accent-dim">
+                  <Plus aria-hidden className="size-5" />
+                </span>
+                <span className="text-[15px] font-[600]">Create “{q.trim()}”</span>
+              </button>
+            </li>
+          )}
         </ul>
       )}
     </Sheet>
+  )
+}
+
+const TRACKING = [
+  { value: 'weight_reps', label: 'Weight × reps' },
+  { value: 'reps', label: 'Bodyweight reps' },
+  { value: 'weighted_bodyweight', label: 'Bodyweight + load' },
+  { value: 'duration', label: 'Time' },
+] as const
+
+function CreateExercise({
+  initialName,
+  onCancel,
+  onCreated,
+}: {
+  initialName: string
+  onCancel: () => void
+  onCreated: (item: PickedExercise) => void
+}) {
+  const create = useMutation(api.library.create)
+  const [name, setName] = useState(initialName)
+  const [groups, setGroups] = useState<string[]>([])
+  const [tracking, setTracking] = useState<(typeof TRACKING)[number]['value']>('weight_reps')
+  const [busy, setBusy] = useState(false)
+  return (
+    <form
+      className="space-y-5 pb-2"
+      onSubmit={async (e) => {
+        e.preventDefault()
+        if (!name.trim()) return
+        setBusy(true)
+        try {
+          const id = await create({ name: name.trim(), primaryGroups: groups, tracking })
+          onCreated({ _id: id, name: name.trim() })
+        } finally {
+          setBusy(false)
+        }
+      }}
+    >
+      <div>
+        <label htmlFor="new-exercise-name" className="text-[14px] text-muted">Name</label>
+        <input id="new-exercise-name" autoFocus value={name} onChange={(e) => setName(e.target.value)} className="field mt-2" maxLength={80} />
+      </div>
+      <fieldset>
+        <legend className="text-[14px] text-muted">Main muscles</legend>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {GROUPS.filter((g) => !['Cardio', 'Rehab', 'Warm-up'].includes(g)).map((g) => {
+            const on = groups.includes(g)
+            return (
+              <button
+                type="button"
+                key={g}
+                className="chip"
+                data-on={on}
+                aria-pressed={on}
+                onClick={() => setGroups(on ? groups.filter((x) => x !== g) : [...groups, g])}
+              >
+                {g}
+              </button>
+            )
+          })}
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend className="text-[14px] text-muted">How you log it</legend>
+        <div role="radiogroup" className="mt-2 grid grid-cols-2 gap-2">
+          {TRACKING.map((t) => (
+            <button
+              type="button"
+              key={t.value}
+              role="radio"
+              aria-checked={tracking === t.value}
+              onClick={() => setTracking(t.value)}
+              className={`press h-12 rounded-[14px] text-[14px] font-[600] ${tracking === t.value ? 'bg-ink text-black' : 'bg-raised text-muted'}`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </fieldset>
+      <div className="grid grid-cols-2 gap-2">
+        <button type="button" className="btn btn-secondary" onClick={onCancel}>Back</button>
+        <button className="btn btn-primary" disabled={busy || !name.trim()}>
+          {busy && <Loader2 className="size-5 animate-spin" />} Create
+        </button>
+      </div>
+    </form>
   )
 }

@@ -134,14 +134,18 @@ function TodayLine({ day }: { day: Day }) {
 function useStartWorkout() {
   const startMut = useMutation(api.workouts.start)
   const navigate = useNavigate()
+  const me = useMe()
   const [busy, setBusy] = useState(false)
   return {
     busy,
     run: async (programDayId?: Id<'programDays'>) => {
       setBusy(true)
       tap('success')
+      // Workouts left open for 6h+ are closed out by the server; say so.
+      const stale = me.activeWorkout && Date.now() - me.activeWorkout.startedAt > 6 * 3600_000 ? me.activeWorkout : null
       try {
         await startMut(programDayId ? { programDayId } : {})
+        if (stale) toast(`Saved your unfinished ${stale.title} from ${fmtDate(stale.startedAt, { weekday: 'long' })}.`, { ms: 5000 })
         navigate({ to: '/workout' })
       } catch {
         toast('Could not start the workout. Check your connection.', { tone: 'error' })

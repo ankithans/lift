@@ -33,6 +33,8 @@ export function Keypad({
   step,
   nextLabel,
   accessory,
+  target,
+  warning,
 }: {
   context: string
   tabs: KeypadTab[]
@@ -49,6 +51,10 @@ export function Keypad({
   nextLabel: string
   /** Optional slot in the header row (e.g. the rest countdown). */
   accessory?: ReactNode
+  /** Rep target; the chip turns mint while the typed reps are inside it. */
+  target?: { low: number; high: number } | null
+  /** Shown when the value looks like a typo; the next confirm keeps it anyway. */
+  warning?: string | null
 }) {
   const decimal = field === 'weight'
   const activeTab = useRef<HTMLButtonElement>(null)
@@ -115,7 +121,20 @@ export function Keypad({
     <section role="group" aria-label={`Keypad, ${context}`} className="fixed inset-x-0 bottom-0 z-50 animate-[rise_220ms_cubic-bezier(0.22,1,0.36,1)_both]">
       <div className="mx-auto max-w-[640px] rounded-t-[26px] border border-b-0 border-line bg-[#0b0b0c]/95 px-3 pb-[calc(var(--safe-bottom)+10px)] pt-3 shadow-[0_-24px_60px_-12px_#000] backdrop-blur-xl lg:mb-4 lg:rounded-[26px] lg:border-b">
         <div className="flex items-center gap-2 px-1">
-          <div className="min-w-0 flex-1 truncate text-[13px] font-[550] text-subtle">{context}</div>
+          <div className="min-w-0 flex-1 truncate text-[13px] font-[550] text-muted">{context}</div>
+          {target && (target.low || target.high) ? (
+            <span
+              className={`num flex h-8 shrink-0 items-center rounded-full px-2.5 text-[12px] font-[650] transition-colors ${
+                field === 'reps' && value && Number(value) >= target.low && Number(value) <= target.high
+                  ? 'bg-accent-dim text-accent'
+                  : field === 'reps' && value && Number(value) > target.high
+                    ? 'bg-accent-dim text-accent'
+                    : 'bg-surface text-muted'
+              }`}
+            >
+              {target.low === target.high ? target.high : `${target.low}–${target.high}`} reps
+            </span>
+          ) : null}
           {accessory}
           <button onClick={onClose} className="icon-btn" aria-label="Close keypad">
             <ChevronDown className="size-5" />
@@ -151,6 +170,11 @@ export function Keypad({
           })}
         </div>
 
+        {warning && (
+          <p role="alert" className="mt-2 rounded-[12px] bg-warning/10 px-3 py-2 text-[13px] font-[560] text-warning">
+            {warning}
+          </p>
+        )}
         {field === 'rir' ? (
           <div className="mt-2">
             <div role="radiogroup" aria-label="Reps in reserve" className="grid grid-cols-5 gap-2">

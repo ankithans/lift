@@ -54,8 +54,19 @@ function SignIn() {
     setError(null)
     try {
       await signIn('password', data)
-    } catch {
-      setError(flow === 'signIn' ? 'That email and password don’t match. New here? Create an account.' : 'Could not create the account. Use 8+ characters for the password.')
+    } catch (err) {
+      const msg = String((err as Error)?.message ?? '')
+      setError(
+        flow === 'signIn'
+          ? /InvalidAccountId/.test(msg)
+            ? 'No account with that email yet. Tap “Create an account”.'
+            : /TooManyFailedAttempts/.test(msg)
+              ? 'Too many attempts. Wait a few minutes and try again.'
+              : 'That email and password don’t match.'
+          : /already exists/i.test(msg)
+            ? 'An account with that email already exists. Sign in instead.'
+            : 'Could not create the account. Use a valid email and 8+ characters for the password.',
+      )
     } finally {
       setBusy(null)
     }
