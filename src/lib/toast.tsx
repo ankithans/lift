@@ -38,7 +38,7 @@ export function Toaster() {
       className="pointer-events-none fixed inset-x-0 z-[80] flex flex-col items-center gap-2 px-4"
       style={
         overlays > 0
-          ? { top: 'calc(var(--safe-top) + 12px)' }
+          ? { top: 'calc(var(--safe-top) + var(--music-video-space, 0px) + 12px)' }
           : { bottom: 'calc(var(--safe-bottom) + var(--toast-bottom, calc(var(--tabbar-h, 64px) + var(--dock, 0px) + 12px)))' }
       }
     >

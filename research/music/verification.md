@@ -1,5 +1,7 @@
 # Music verification and handoff
 
+> Superseded for placement and mobile playback: see [the mobile correction and verification](mobile-fix.md). The earlier desktop-only checks below did not establish phone playback.
+
 22 October 2026. Branch `feature/music`, base `main` at `af58069`. No push, merge or production code deployment. Only this worktree was changed. The main checkout was read only to copy gitignored environment/history fixtures.
 
 ## Automated verification

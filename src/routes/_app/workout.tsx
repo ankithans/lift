@@ -24,7 +24,7 @@ import {
   X,
   Zap,
 } from 'lucide-react'
-import { memo, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { memo, useEffect, useMemo, useRef, useState } from 'react'
 import { WorkoutMusic } from '#/components/music/WorkoutMusic'
 import { api } from '../../../convex/_generated/api'
 import type { Id } from '../../../convex/_generated/dataModel'
@@ -243,6 +243,7 @@ function LiveWorkout() {
   const unit = useUnit()
   const [editing, setEditing] = useState<Editing | null>(null)
   const [menu, setMenu] = useState<Menu>(null)
+  const [musicHeight, setMusicHeight] = useState(0)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [prFlash, setPrFlash] = useState(0)
   const lastToggle = useRef(new Map<string, number>())
@@ -252,7 +253,8 @@ function LiveWorkout() {
   const rest = useRest(workout, quietUntil)
 
   // Toasts sit just above whatever occupies the bottom: keypad, rest strip, or nothing.
-  const bottomLayer = editing ? 430 : rest.endsAt || rest.endedAt ? 96 : 16
+  const restVisible = Boolean(rest.endsAt || rest.endedAt)
+  const bottomLayer = editing ? 430 : (restVisible ? 96 : 16) + musicHeight
   useEffect(() => {
     document.documentElement.style.setProperty('--toast-bottom', `${bottomLayer}px`)
     return () => {
@@ -618,10 +620,9 @@ function LiveWorkout() {
         online={online}
         prFlash={prFlash}
         onFinish={() => openMenu({ type: 'finish' })}
-        music={<WorkoutMusic open={menu?.type === 'music'} hidden={Boolean(editing)} onOpen={() => openMenu({ type: 'music' })} onClose={() => setMenu(null)} />}
       />
 
-      <main className={`mx-auto max-w-[680px] px-3 pt-3 min-[390px]:px-4 ${editing ? 'pb-[460px]' : 'pb-[calc(var(--safe-bottom)+150px)]'}`}>
+      <main className="mx-auto max-w-[680px] px-3 pt-3 min-[390px]:px-4" style={{ paddingBottom: editing ? 460 : `calc(var(--safe-bottom) + ${150 + musicHeight}px)` }}>
         {workout.exercises.length === 0 && (
           <div className="py-16 text-center animate-fade">
             <h2 className="t-screen">Empty workout</h2>
@@ -702,6 +703,7 @@ function LiveWorkout() {
         <button onClick={() => openMenu({ type: 'add' })} className="btn btn-secondary mt-6 w-full">
           <Plus className="size-5" /> Add exercise
         </button>
+        <WorkoutMusic open={menu?.type === 'music'} editing={Boolean(editing)} sheetOpen={Boolean(menu)} restVisible={restVisible} onHeight={setMusicHeight} onOpen={() => openMenu({ type: 'music' })} onClose={() => setMenu(null)} />
         <button onClick={() => openMenu({ type: 'discard' })} className="mx-auto mt-6 block h-11 px-4 text-[14px] font-[560] text-danger hover:underline">
           Discard workout
         </button>
@@ -971,7 +973,6 @@ function Header({
   online,
   prFlash,
   onFinish,
-  music,
 }: {
   workout: ActiveWorkout
   done: number
@@ -979,7 +980,6 @@ function Header({
   online: boolean
   prFlash: number
   onFinish: () => void
-  music: ReactNode
 }) {
   const now = useNow(1000)
   const pct = total ? done / total : 0
@@ -1010,7 +1010,6 @@ function Header({
           Finish
         </button>
       </div>
-      {music}
       <div className="h-[2px] bg-line" role="progressbar" aria-label="Sets done" aria-valuemin={0} aria-valuemax={total} aria-valuenow={done}>
         <div
           className={`h-full transition-[width,background-color] duration-500 ease-out ${gold ? 'bg-pr' : 'bg-accent'}`}

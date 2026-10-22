@@ -1,5 +1,7 @@
 # Music in Lift
 
+> Superseded for placement and mobile playback: see [the mobile correction and verification](mobile-fix.md). The earlier desktop-only checks below did not establish phone playback.
+
 Research started 22 October 2026, before implementation. The workout owner's header/keypad contract supersedes the original bottom mini-player brief.
 
 ## Ranked findings and decisions

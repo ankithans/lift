@@ -117,7 +117,7 @@ export function Sheet({
 
   return createPortal(
     <div
-      className={`fixed inset-0 z-[60] ${className}`}
+      className={`pointer-events-none fixed inset-0 z-[60] ${className}`}
       role="dialog"
       aria-modal="true"
       data-sheet-open={open ? '' : undefined}
@@ -125,13 +125,15 @@ export function Sheet({
     >
       <div
         onClick={onClose}
-        className={`absolute inset-0 bg-black/55 transition-opacity duration-150 ${visible ? 'opacity-100' : 'opacity-0'}`}
+        style={{ top: 'var(--music-video-space, 0px)' }}
+        className={`pointer-events-auto absolute inset-0 bg-black/55 transition-opacity duration-150 ${visible ? 'opacity-100' : 'opacity-0'}`}
       />
       <div className="pointer-events-none absolute inset-0 flex items-end justify-center md:items-center md:p-6">
         <div
           ref={panel}
           tabIndex={-1}
           style={{
+            maxHeight: 'min(92dvh, calc(100dvh - var(--music-video-space, 0px) - var(--safe-top)))',
             transform: visible ? `translateY(${drag}px)` : 'translateY(100%)',
             transition: startY.current !== null ? 'none' : `transform ${visible ? 240 : 180}ms cubic-bezier(0.22,1,0.36,1), opacity 160ms`,
           }}

@@ -14,3 +14,37 @@
   color: var(--color-ink);
 }
 .music-ui button:disabled { cursor: default; opacity: .45; }
+
+.music-capsule {
+  position: fixed;
+  z-index: 45;
+  left: 12px;
+  right: 12px;
+  margin-inline: auto;
+  display: flex;
+  align-items: center;
+  width: min(360px, calc(100% - 24px));
+  height: 48px;
+  border: 1px solid var(--color-line-strong);
+  border-radius: 18px;
+  background: var(--color-raised);
+  color: var(--color-ink);
+  box-shadow: 0 5px 24px #0005;
+  animation: music-appear 160ms ease-out;
+}
+.music-pip {
+  position: fixed;
+  right: max(12px, calc((100vw - 360px) / 2));
+  z-index: 45;
+  width: 202px;
+  border: 1px solid var(--color-line-strong);
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--color-raised);
+  color: var(--color-ink);
+  box-shadow: 0 5px 24px #0005;
+}
+.music-pip iframe { display: block; width: 200px; height: 200px; border: 0; }
+[data-theme='light'] .music-ui { --color-line-strong: #c8c8c8; --color-warning: #805300; }
+@keyframes music-appear { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .music-capsule { animation: none; } }
