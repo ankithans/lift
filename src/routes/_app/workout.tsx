@@ -24,7 +24,8 @@ import {
   X,
   Zap,
 } from 'lucide-react'
-import { memo, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { WorkoutMusic } from '#/components/music/WorkoutMusic'
 import { api } from '../../../convex/_generated/api'
 import type { Id } from '../../../convex/_generated/dataModel'
 import { ExerciseInfo } from '#/components/ExerciseDetail'
@@ -87,6 +88,7 @@ type Menu =
   | { type: 'rir' }
   | { type: 'finish' }
   | { type: 'discard' }
+  | { type: 'music' }
   | null
 
 type MainField = Exclude<KeypadField, 'rir'>
@@ -616,6 +618,7 @@ function LiveWorkout() {
         online={online}
         prFlash={prFlash}
         onFinish={() => openMenu({ type: 'finish' })}
+        music={<WorkoutMusic open={menu?.type === 'music'} hidden={Boolean(editing)} onOpen={() => openMenu({ type: 'music' })} onClose={() => setMenu(null)} />}
       />
 
       <main className={`mx-auto max-w-[680px] px-3 pt-3 min-[390px]:px-4 ${editing ? 'pb-[460px]' : 'pb-[calc(var(--safe-bottom)+150px)]'}`}>
@@ -968,6 +971,7 @@ function Header({
   online,
   prFlash,
   onFinish,
+  music,
 }: {
   workout: ActiveWorkout
   done: number
@@ -975,6 +979,7 @@ function Header({
   online: boolean
   prFlash: number
   onFinish: () => void
+  music: ReactNode
 }) {
   const now = useNow(1000)
   const pct = total ? done / total : 0
@@ -1005,6 +1010,7 @@ function Header({
           Finish
         </button>
       </div>
+      {music}
       <div className="h-[2px] bg-line" role="progressbar" aria-label="Sets done" aria-valuemin={0} aria-valuemax={total} aria-valuenow={done}>
         <div
           className={`h-full transition-[width,background-color] duration-500 ease-out ${gold ? 'bg-pr' : 'bg-accent'}`}

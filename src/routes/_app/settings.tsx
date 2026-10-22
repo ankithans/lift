@@ -12,6 +12,7 @@ import { fmtClock, fmtRelativeDay, WEEKDAYS_LONG } from '#/lib/format'
 import { useMe } from '#/lib/me'
 import { toast } from '#/lib/toast'
 import { WhoopSettings } from '#/components/whoop/WhoopConnection'
+import { MusicConnections } from '#/components/music/MusicConnections'
 import { clearWhoopCache } from '#/components/whoop/useWhoop'
 
 
@@ -107,6 +108,7 @@ function Settings() {
 
       <h2 className="mb-1 mt-7 text-[13px] font-[500] text-muted">Connections</h2>
       <WhoopSettings />
+      <MusicConnections />
       <Row label="AI access" onClick={() => setSheet('ai')} />
 
       <h2 className="mb-1 mt-7 text-[13px] font-[500] text-muted">Account</h2>
