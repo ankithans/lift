@@ -27,7 +27,7 @@ export function WhoopDayButton({view,day,dateAt}:{view:WhoopView;day?:WhoopDay;d
   const [open,setOpen]=useState(false)
   const activities=day?.activities??[]
   return <><button onClick={()=>setOpen(true)} className="whoop flex min-h-8 min-w-8 shrink-0 items-center justify-center gap-0.5 rounded-lg px-1 text-[11px] text-muted hover:bg-raised" aria-label={`WHOOP details for ${dayKey(dateAt,view.timezone)}${activities.length?`, ${activities.length} activities`:''}`}>
-    {activities.length?<><SportIcon sport={activities[0].sport} className="size-3.5"/><span className="num">{activities.length>1?`+${activities.length-1}`:valueLabel(activities[0].metrics.strain,'',1)}</span></>:<Activity aria-hidden className="size-3.5"/>}
+    {activities.length?<><SportIcon sport={activities[0].sport} className="size-3.5"/><span className="num">{valueLabel(activities[0].metrics.strain,'',1)}{activities.length>1?` +${activities.length-1}`:''}</span></>:<Activity aria-hidden className="size-3.5"/>}
   </button><WhoopDetails view={view} open={open} onClose={()=>setOpen(false)} date={dayKey(dateAt,view.timezone)}/></>
 }
 export function WhoopWeekSummary({view,dates}:{view:WhoopView;dates:number[]}) {
@@ -39,7 +39,7 @@ export function WhoopWeekSummary({view,dates}:{view:WhoopView;dates:number[]}) {
   // Split line at missing days instead of implying observations through a gap.
   const line=days.map((d,i)=>{const n=d.day?.metrics.strain;return d.date<=today&&n!==undefined?`${i===0||days[i-1].day?.metrics.strain===undefined?'M':'L'}${i*40+20},${44-n/21*40}`:''}).join(' ')
   return <div className="whoop mb-2 mt-4">
-    <button className="w-full rounded-[14px] bg-surface px-3 py-3 text-left" onClick={()=>setOpen(true)} aria-label="WHOOP week averages and trends">
+    <button className="w-full rounded-[14px] bg-surface px-3 py-3 text-left" onClick={()=>setOpen(true)} aria-label={`WHOOP week averages and trends. Recovery ${valueLabel(recovery, '%')}, strain ${valueLabel(strain, '', 1)}, sleep ${sleepLabel(sleep)}.`}>
       <span className="mb-2 flex items-center justify-between text-[11px] text-muted"><span>{!view.online?'Offline · saved data':view.data?.status==='syncing'?'WHOOP · syncing…':view.stale?'WHOOP · stale data':dates[0] > view.now ? 'WHOOP · upcoming week' : dates[dates.length-1] < view.now ? 'WHOOP · week summary' : 'WHOOP · week so far'}</span><ChevronRight aria-hidden className="size-3.5"/></span>
       <span className="grid grid-cols-3 gap-2 text-[11px] text-muted">{[[valueLabel(recovery,'%'),'Avg recovery'],[valueLabel(strain,'',1),'Avg strain'],[sleepLabel(sleep),'Avg sleep']].map(([v,k])=><span key={k}><span className="num block text-[17px] font-[550] leading-6 text-ink">{v}</span>{k}</span>)}</span>
       <span aria-hidden className="relative mt-3 block h-12">

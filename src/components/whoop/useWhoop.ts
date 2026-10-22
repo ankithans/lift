@@ -10,7 +10,7 @@ import { toast } from '#/lib/toast'
 const PREFIX = 'lift:whoop:'
 export type WhoopView = { data: WhoopWeek | undefined; online: boolean; stale: boolean; timezone: string; now: number }
 export function clearWhoopCache() {
-  try { Object.keys(localStorage).filter(k => k.startsWith(PREFIX)).forEach(k => localStorage.removeItem(k)) } catch { /* Private storage may be unavailable. */ }
+  try { Object.keys(localStorage).filter(k => k.startsWith(PREFIX) && !k.includes('dismiss')).forEach(k => localStorage.removeItem(k)) } catch { /* Private storage may be unavailable. */ }
 }
 export function useWhoop(start: number, end: number): WhoopView {
   const me = useMe()
@@ -33,8 +33,9 @@ export function useWhoop(start: number, end: number): WhoopView {
     if (data.status === 'disconnected') { clearWhoopCache(); setCached(undefined); return }
     try {
       localStorage.setItem(key, JSON.stringify(data))
+      localStorage.setItem(`${PREFIX}latest`, JSON.stringify(data))
       // Keep a bounded cache (8 weeks), with no tokens or provider identifiers.
-      const keys = Object.keys(localStorage).filter(k => k.startsWith(PREFIX) && !k.includes('dismiss')).sort((a,b) => Number(b.split(':')[3])-Number(a.split(':')[3]))
+      const keys = Object.keys(localStorage).filter(k => k.startsWith(PREFIX) && !k.includes('dismiss') && !k.endsWith(':latest')).sort((a,b) => Number(b.split(':')[3])-Number(a.split(':')[3]))
       keys.slice(8).forEach(k => localStorage.removeItem(k))
     } catch { /* Display live data even when the browser cannot cache it. */ }
     setCached(data)
@@ -43,8 +44,11 @@ export function useWhoop(start: number, end: number): WhoopView {
     const url = new URL(location.href)
     const outcome = url.searchParams.get('whoop')
     if (!outcome) return
+    const reason = url.searchParams.get('whoop_reason')
+    if (import.meta.env.DEV && reason && /^(authorize|token|profile|store)_(\d{3}|invalid_response)$/.test(reason)) console.warn('WHOOP callback stage:', reason)
     toast(outcome === 'connected' ? 'WHOOP connected. Importing your last 60 days.' : outcome === 'cancelled' ? 'WHOOP connection cancelled.' : 'Could not connect WHOOP. Please try again.', { tone: outcome === 'error' ? 'error' : undefined })
     url.searchParams.delete('whoop')
+    url.searchParams.delete('whoop_reason')
     history.replaceState(history.state, '', url)
   }, [])
   const current = data ?? (!online ? cached : undefined)

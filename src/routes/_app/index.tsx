@@ -234,7 +234,7 @@ function WeekSection({
   useEffect(() => setOrder(days), [days])
   const [editing, setEditing] = useState(false)
   const sensorConnected = Boolean(whoop.data && whoop.data.status !== 'disconnected')
-  const rowHeight = sensorConnected && !editing ? WHOOP_ROW_H : ROW_H
+  const rowHeight = sensorConnected ? WHOOP_ROW_H : ROW_H
   const [drag, setDrag] = useState<DragState | null>(null)
   const [moveFrom, setMoveFrom] = useState<number | null>(null)
   const [settle, setSettle] = useState<{ key: number; offsets: Record<number, number> } | null>(null)
@@ -277,7 +277,7 @@ function WeekSection({
     // Both contents travel along their direct path; the dragged one from where it was let go.
     setSettle({
       key: Date.now(),
-      offsets: { [to]: releaseY !== undefined ? releaseY - (to - from) * ROW_H : (from - to) * ROW_H, [from]: (to - from) * ROW_H },
+      offsets: { [to]: releaseY !== undefined ? releaseY - (to - from) * rowHeight : (from - to) * rowHeight, [from]: (to - from) * rowHeight },
     })
     setChanged({ key: Date.now(), rows: [from, to] })
     const outcome =
@@ -288,7 +288,7 @@ function WeekSection({
         label: 'Undo',
         run: () => {
           void commit(before, next)
-          setSettle({ key: Date.now(), offsets: { [from]: (to - from) * ROW_H, [to]: (from - to) * ROW_H } })
+          setSettle({ key: Date.now(), offsets: { [from]: (to - from) * rowHeight, [to]: (from - to) * rowHeight } })
           setChanged({ key: Date.now(), rows: [from, to] })
           announce('Move undone.')
         },
@@ -312,7 +312,7 @@ function WeekSection({
       if (e.pointerId !== drag.pointerId) return
       const dy = e.clientY - startY.current
       // Target = slot under the card's centre, with hysteresis so it doesn't flicker on a boundary.
-      const raw = drag.from + dy / ROW_H
+      const raw = drag.from + dy / rowHeight
       let to = drag.to
       if (Math.abs(raw - drag.to) > 0.6) to = Math.max(0, Math.min(days.length - 1, Math.round(raw)))
       if (to !== drag.to && movable(to)) tap()
@@ -375,7 +375,7 @@ function WeekSection({
           </div>
         )}
       </div>
-      {sensorConnected && !editing && <WhoopWeekSummary view={whoop} dates={days.map(d => d.start)} />}
+      {sensorConnected && <WhoopWeekSummary view={whoop} dates={days.map(d => d.start)} />}
       {editing && <p className="mb-2 text-[13px] text-muted animate-fade">Drag a workout onto another day to swap them.</p>}
 
       <ol

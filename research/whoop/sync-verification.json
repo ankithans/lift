@@ -1,0 +1,28 @@
+{
+  "deployment": "giddy-goldfish-291",
+  "beforeForcedRefresh": {
+    "backfilledAt": 1792680279603,
+    "counts": {
+      "cycle": 61,
+      "recovery": 60,
+      "sleep": 68,
+      "workout": 56
+    },
+    "lastSyncedAt": 1792680279603,
+    "refreshCount": 0,
+    "status": "connected"
+  },
+  "afterForcedRefresh": {
+    "backfilledAt": 1792680279603,
+    "counts": {
+      "cycle": 61,
+      "recovery": 60,
+      "sleep": 68,
+      "workout": 56
+    },
+    "lastSyncedAt": 1792680350827,
+    "refreshCount": 1,
+    "refreshedAt": 1792680345408,
+    "status": "connected"
+  }
+}

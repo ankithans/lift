@@ -1,3 +1,4 @@
+import { WhoopOfflineSummary } from '#/components/whoop/WhoopOffline'
 import { CloudOff } from 'lucide-react'
 import { fmtWeight, type Unit } from '#/lib/format'
 import type { ActiveWorkout } from '#/lib/workout'
@@ -24,6 +25,7 @@ export function OfflineWorkout() {
           </p>
         </div>
       </div>
+      <WhoopOfflineSummary />
       {snap ? (
         <section className="mt-6">
           <h1 className="t-screen">{snap.title}</h1>

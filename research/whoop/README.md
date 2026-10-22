@@ -64,7 +64,7 @@ Sat 24   Pull                                 ›
                        Arrange week
 ```
 
-Uniform slot height: **76px connected, 60px arranging/disconnected**. All slots, including future/rest days, share the mode's height. Metric text is 12px tabular, single-line and truncates. A separate 32px minimum sensor/activity control is a sibling of the existing day navigation button; it opens the day sheet, preserving row navigation, weekday prefix and `data-handle`. Arrange hides the summary, metrics and activity controls, and uses the original 60px math for drop and settle.
+Uniform slot height: **76px connected (including Arrange), 60px disconnected**. All slots, including future/rest days, share the mode's height. Metric text is 12px tabular, single-line and truncates. A separate 32px minimum sensor/activity control is a sibling of the existing day navigation button; it opens the day sheet, preserving row navigation, weekday prefix and `data-handle`. Arrange hides date-row metrics and activity controls. The week summary remains in place, so entering Arrange does not remove a block above the drag surface. Drop and settle both use the same mode-wide row height (76px connected, 60px disconnected).
 
 The week mini chart has recovery bars (0–100), blue strain line (0–21), explicit legend, today label and empty stubs; averages include only available readings and show their sample counts in the sheet. Today's incomplete strain is labelled “so far.” Missing values are dashes; no synthetic zero. Averages follow the displayed week. 14-day detail reuses `LineChart`, with accessible dated values available in a table.
 
@@ -83,4 +83,13 @@ Offline readings are cached per signed-in Lift user and week; disconnect/sign-ou
 - [v2 webhooks and signature specification](https://developer.whoop.com/docs/developing/webhooks/)
 - [Account/device requirements](https://developer.whoop.com/docs/developing/support/)
 
-The initial implementation uses the 30-minute cron and manual sync; no webhook is registered. The OAuth callback is `/whoop/callback`. No production deployment or production environment mutation is authorized.
+The integration uses a 30-minute cron, manual sync and signed v2 webhooks. Recovery webhook sleep UUIDs are resolved through their cycle before fetching the specific recovery record. The OAuth callback is `/whoop/callback`. The Lift developer app is configured with both dev and production callbacks, all requested read scopes plus offline access, and the production v2 webhook URL. Credentials and app URLs are installed on both deployments. Production code deployment remains with the parent thread; this worktree only pushes functions to dev.
+
+
+## Completed account and live verification
+
+WHOOP API Terms were accepted after explicit approval. The developer app is **Lift**, under **Lift by Ankit Hans**. Real OAuth consent completed against `giddy-goldfish-291`; the 60-day paginated backfill imported 61 cycles, 60 recoveries, 68 sleeps and 56 workouts. An explicitly forced refresh rotated the token, then the next incremental sync completed successfully. No tokens are returned by the app queries or diagnostics.
+
+Credentials are outside git: macOS Keychain account `ankithans1947@gmail.com`, services `whoop.com`, `whoop-lift-client-id`, `whoop-lift-client-secret`. Both Convex deployments have `WHOOP_CLIENT_ID`, `WHOOP_CLIENT_SECRET`, `WHOOP_WEBHOOK_SECRET`, `WHOOP_APP_URL`, and `WHOOP_REDIRECT_URI`. WHOOP signs webhooks with the app client secret. Dev redirects to `http://localhost:3027`; prod redirects to `https://lift.ankithans.com`. Users authorize each Lift deployment separately.
+
+See [verification.md](verification.md) for commands, real-data evidence, interaction checks and screenshot coverage. The host redesign currently uses a dark shell; WHOOP inherits its tokens and includes contrast-adjusted bands for the host's `data-theme="light"` tokens. Browser light preference alone does not switch that shell.
