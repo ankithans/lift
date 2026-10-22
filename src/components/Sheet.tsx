@@ -14,6 +14,7 @@ export function Sheet({
   children,
   footer,
   size = 'auto',
+  className = '',
 }: {
   open: boolean
   onClose: () => void
@@ -21,6 +22,7 @@ export function Sheet({
   children: ReactNode
   footer?: ReactNode
   size?: 'auto' | 'tall'
+  className?: string
 }) {
   const [mounted, setMounted] = useState(open)
   const [visible, setVisible] = useState(false)
@@ -115,7 +117,7 @@ export function Sheet({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[60]"
+      className={`fixed inset-0 z-[60] ${className}`}
       role="dialog"
       aria-modal="true"
       data-sheet-open={open ? '' : undefined}

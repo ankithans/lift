@@ -65,6 +65,11 @@ export async function token(ctx: ActionCtx, original: Doc<'musicConnections'>): 
         return t.accessToken;
       } catch (e) {
         if (e instanceof ConvexError) throw e;
+        if (e instanceof ProviderError && e.status === 429) {
+          await ctx.runMutation(internal.musicStore.releaseRefresh, { connectionId: c._id, lease });
+          await ctx.runMutation(internal.musicStore.mark, { connectionId: c._id, blockedUntil: Date.now() + e.retryMs });
+          return problem('RATE_LIMITED');
+        }
         // Ambiguous transport failures may have rotated the token: reconnect instead of replay.
         await ctx.runMutation(internal.musicStore.mark, { connectionId: c._id, revoked: true });
         return problem('RECONNECT');

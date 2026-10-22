@@ -20,7 +20,7 @@ export const library = action({
     if (cached) return cached;
     try {
       const query = new URLSearchParams({ part: 'snippet', maxResults: '50', ...(a.cursor ? { pageToken: a.cursor } : {}) });
-      let notice: string | undefined;
+      let notice: string | undefined = a.collection === 'liked' ? 'These are liked YouTube videos and may include non-music videos. Your YouTube Music library can differ.' : undefined;
       let raw: unknown;
       if (a.collection === 'playlists') {
         query.set('mine', 'true');

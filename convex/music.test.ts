@@ -18,7 +18,7 @@ async function fixture() {
   });
   return { t, ...ids, owner: t.withIdentity({ subject: `${ids.userId}|session` }), stranger: t.withIdentity({ subject: `${ids.other}|session` }) };
 }
-afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); });
+afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); vi.useRealTimers(); });
 
 describe('music ownership and OAuth', () => {
   test('queries never expose tokens; public actions derive owner; SDK access is owner-only', async () => {
@@ -55,6 +55,25 @@ describe('music ownership and OAuth', () => {
   });
 });
 describe('music refresh and cache fencing', () => {
+  test('concurrent SDK requests make one refresh request and persist its rotated token', async () => {
+    vi.stubEnv('SPOTIFY_CLIENT_ID', 'test-id'); vi.stubEnv('SPOTIFY_CLIENT_SECRET', 'test-secret'); vi.stubEnv('SPOTIFY_APP_URL', 'https://lift.ankithans.com');
+    const { t, owner, connectionId } = await fixture();
+    await t.run(ctx => ctx.db.patch(connectionId, { expiresAt: 0 }));
+    const fetcher = vi.fn(async () => new Response(JSON.stringify({ access_token: 'renewed', refresh_token: 'rotated', expires_in: 3600 }), { status: 200 }));
+    vi.stubGlobal('fetch', fetcher);
+    const result = await Promise.all([owner.action(api.spotify.sdkToken, {}), owner.action(api.spotify.sdkToken, {})]);
+    expect(result.map(x => x.accessToken)).toEqual(['renewed', 'renewed']); expect(fetcher).toHaveBeenCalledTimes(1);
+    expect((await t.run(ctx => ctx.db.get(connectionId)))?.refreshToken).toBe('rotated');
+  });
+  test('a refresh 429 retains usable credentials and releases the lease with a cooldown', async () => {
+    vi.stubEnv('SPOTIFY_CLIENT_ID', 'test-id'); vi.stubEnv('SPOTIFY_CLIENT_SECRET', 'test-secret'); vi.stubEnv('SPOTIFY_APP_URL', 'https://lift.ankithans.com');
+    const { t, owner, connectionId } = await fixture();
+    await t.run(ctx => ctx.db.patch(connectionId, { expiresAt: 0 }));
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('{}', { status: 429, headers: { 'retry-after': '60' } })));
+    await expect(owner.action(api.spotify.sdkToken, {})).rejects.toThrow('RATE_LIMITED');
+    const c = await t.run(ctx => ctx.db.get(connectionId));
+    expect(c?.status).toBe('connected'); expect(c?.refreshLease).toBeUndefined(); expect(c?.refreshToken).toBe('server-refresh'); expect(c?.blockedUntil).toBeGreaterThan(Date.now());
+  });
   test('one refresh lease, optional refresh token preservation, rotation and interrupted refresh', async () => {
     const { t, connectionId } = await fixture();
     await t.run(ctx => ctx.db.patch(connectionId, { expiresAt: 0 }));

@@ -1,0 +1,16 @@
+/* The host is dark by default. Music also follows its optional explicit light theme. */
+[data-theme='light'] .music-ui {
+  --color-canvas: #fff;
+  --color-surface: #fafafa;
+  --color-raised: #ededed;
+  --color-pressed: #e3e3e3;
+  --color-line: #d6d6d6;
+  --color-ink: #171717;
+  --color-muted: #595959;
+  --color-accent: #146c40;
+  --color-accent-ink: #fff;
+  --color-accent-dim: #146c401a;
+  --color-danger: #b42318;
+  color: var(--color-ink);
+}
+.music-ui button:disabled { cursor: default; opacity: .45; }

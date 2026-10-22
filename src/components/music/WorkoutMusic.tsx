@@ -10,6 +10,7 @@ import { useOnline } from '#/lib/convex'
 import { ConnectMusic } from './MusicConnections'
 import { loadSpotify, musicError, PROVIDERS, type Item, type Source, type SpotifyPlayer } from './providers'
 import { YouTubePlayer } from './YouTubePlayer'
+import './music.css'
 
 type Collection = 'liked' | 'top' | 'playlists' | 'recent' | 'playlist' | 'queue'
 const LABELS = { liked: 'Liked', top: 'Top', playlists: 'Playlists', recent: 'Recent', playlist: 'Playlist', queue: 'Queue' }
@@ -33,6 +34,9 @@ export function WorkoutMusic({ open, hidden, onOpen, onClose }: { open: boolean;
   const [queue, setQueue] = useState<Item[]>([]), [index, setIndex] = useState(-1), [ytPlaying, setYtPlaying] = useState(false)
   const [visible, setVisible] = useState(true)
   const requestId = useRef(0)
+  const playbackVersion = useRef(0)
+  const refreshTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const sdkTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const spotifyLibrary = useAction(api.spotify.library), youtubeLibrary = useAction(api.youtube.library)
   const getPlayback = useAction(api.spotify.playback), getDevices = useAction(api.spotify.devices), getQueue = useAction(api.spotify.queue)
   const control = useAction(api.spotify.control), getSdkToken = useAction(api.spotify.sdkToken)
@@ -45,7 +49,7 @@ export function WorkoutMusic({ open, hidden, onOpen, onClose }: { open: boolean;
     alive.current = true
     const change = () => setVisible(document.visibilityState === 'visible')
     document.addEventListener('visibilitychange', change)
-    return () => { alive.current = false; document.removeEventListener('visibilitychange', change); sdk.current?.disconnect(); sdk.current = null }
+    return () => { alive.current = false; clearTimeout(refreshTimer.current); clearTimeout(sdkTimer.current); document.removeEventListener('visibilitychange', change); sdk.current?.disconnect(); sdk.current = null }
   }, [])
   useEffect(() => {
     const params = new URLSearchParams(location.search)
@@ -71,7 +75,8 @@ export function WorkoutMusic({ open, hidden, onOpen, onClose }: { open: boolean;
     let cancelled = false, timer: ReturnType<typeof setTimeout>
     const poll = async () => {
       let delay = 15_000
-      try { const result = await getPlayback({}); if (!cancelled) setPlayback(result) }
+      const version = playbackVersion.current
+      try { const result = await getPlayback({}); if (!cancelled && version === playbackVersion.current) setPlayback(result) }
       catch (e) { delay = 60_000; if (!cancelled) setError(musicError(e)) }
       if (!cancelled) timer = setTimeout(poll, delay)
     }
@@ -100,10 +105,17 @@ export function WorkoutMusic({ open, hidden, onOpen, onClose }: { open: boolean;
   const act = async (command: 'play' | 'pause' | 'next' | 'previous', uris?: string[], contextUri?: string, label?: string) => {
     if (busy || !online) return
     setBusy(true); setError('')
+    const version = ++playbackVersion.current
     try {
       await control({ command, deviceId, uris, contextUri })
       announce(label ?? (command === 'next' ? 'Skipped' : command === 'previous' ? 'Previous song' : command === 'pause' ? 'Paused' : 'Playing'))
-      setPlayback(await getPlayback({}))
+      // Spotify acknowledges controls before its read endpoint catches up.
+      // Reflect the accepted transport action immediately, then reconcile once.
+      if (command === 'pause' || command === 'play') setPlayback(old => old ? { ...old, playing: command === 'play' } : old)
+      clearTimeout(refreshTimer.current)
+      refreshTimer.current = setTimeout(() => {
+        void getPlayback({}).then(result => { if (alive.current && version === playbackVersion.current) setPlayback(result) }).catch(e => { if (alive.current) setError(musicError(e)) })
+      }, 1000)
     } catch (e) { setError(musicError(e)) }
     finally { setBusy(false) }
   }
@@ -141,14 +153,16 @@ export function WorkoutMusic({ open, hidden, onOpen, onClose }: { open: boolean;
       await loadSpotify()
       if (!alive.current || !window.Spotify) return
       const player = new window.Spotify.Player({ name: 'Lift · this browser', volume: 0.7, getOAuthToken: cb => {
-        void getSdkToken({}).then(t => { if (alive.current) cb(t.accessToken) }).catch(e => { if (alive.current) setError(musicError(e)) })
+        void getSdkToken({}).then(t => { if (alive.current) cb(t.accessToken) }).catch(e => { if (alive.current) { setError(musicError(e)); setSdkBusy(false); sdk.current?.disconnect(); sdk.current = null; clearTimeout(sdkTimer.current) } })
       } })
       sdk.current = player
-      const sdkError = () => { if (alive.current) { setError('Spotify could not start this browser player. Try your Spotify app or another device.'); setSdkBusy(false); player.disconnect(); sdk.current = null } }
+      const sdkError = () => { clearTimeout(sdkTimer.current); if (alive.current) { setError('Spotify could not start this browser player. Try your Spotify app or another device.'); setSdkBusy(false); player.disconnect(); sdk.current = null } }
+      sdkTimer.current = setTimeout(sdkError, 20_000)
       for (const event of ['initialization_error', 'authentication_error', 'playback_error']) player.addListener(event, sdkError)
       player.addListener('account_error', () => { if (alive.current) setPremiumDenied(true); sdkError() })
       player.addListener('ready', ({ device_id }) => {
         if (!alive.current || !device_id) return
+        clearTimeout(sdkTimer.current)
         setBrowserDevice(device_id); setDeviceId(device_id); setSdkBusy(false)
         void control({ command: 'transfer', deviceId: device_id }).then(() => { if (alive.current) announce('This browser is ready. Choose a favourite to play.') }).catch(e => { if (alive.current) setError(musicError(e)) })
       })
@@ -169,17 +183,17 @@ export function WorkoutMusic({ open, hidden, onOpen, onClose }: { open: boolean;
     <button className="icon-btn size-12" aria-label="Next song" disabled={controlsDisabled || (source === 'youtube' && index >= queue.length - 1)} onClick={() => transport('next')}><SkipForward aria-hidden className="size-6" /></button>
   </div>
   return <>
-    {!hidden && <div className="mx-auto flex max-w-[680px] justify-end px-4 pb-1" data-music-header>
+    {!hidden && <div className="music-ui mx-auto flex max-w-[680px] justify-end px-4 pb-1" data-music-header>
       {online ? <div className="flex min-h-11 max-w-full items-center gap-1 rounded-full bg-raised pl-3">
         <button className="flex min-h-11 min-w-0 items-center gap-2 pr-2 text-left" aria-label={item ? `Open music: ${item.title}, ${item.subtitle}` : 'Open workout music'} onClick={onOpen}>
           {item?.image ? <img src={item.image} alt="" className="size-7 shrink-0 rounded object-cover" /> : <Music2 aria-hidden className="size-4 text-muted" />}
-          <span className="max-w-[150px] truncate text-[13px]">{item?.title ?? 'Music'}</span>
+          <span className="min-w-0 max-w-[150px]"><span className="block truncate text-[13px]">{item?.title ?? 'Music'}</span>{item && <span className="block truncate text-[11px] text-muted">{item.subtitle}</span>}</span>
           {!item && <ChevronRight aria-hidden className="size-3 text-muted" />}
         </button>
         {item && source === 'spotify' && <><button className="icon-btn size-11" aria-label={playing ? 'Pause music' : 'Play music'} disabled={controlsDisabled} onClick={() => transport(playing ? 'pause' : 'play')}>{playing ? <Pause aria-hidden className="size-4" /> : <Play aria-hidden className="size-4" />}</button><button className="icon-btn size-11" aria-label="Next song" disabled={controlsDisabled} onClick={() => transport('next')}><SkipForward aria-hidden className="size-4" /></button></>}
       </div> : <span className="flex min-h-11 items-center gap-2 text-[12px] text-muted"><Music2 aria-hidden className="size-4" />Music offline</span>}
     </div>}
-    <Sheet open={open && !hidden} onClose={() => { setYtPlaying(false); onClose() }} title="Music" size="tall">
+    <Sheet className="music-ui" open={open && !hidden} onClose={() => { setYtPlaying(false); onClose() }} title="Music" size="tall">
       <div className="grid grid-cols-2 gap-1 rounded-xl bg-raised p-1" role="group" aria-label="Music source">
         {(Object.keys(PROVIDERS) as Source[]).map(p => <button key={p} aria-pressed={source === p} onClick={() => void selectSource(p)} className={`min-h-11 rounded-lg px-2 text-[14px] font-[550] ${source === p ? 'bg-surface text-ink' : 'text-muted'}`}>{PROVIDERS[p]}</button>)}
       </div>
@@ -220,7 +234,7 @@ export function WorkoutMusic({ open, hidden, onOpen, onClose }: { open: boolean;
         </li>)}</ul>
         {page?.next && <button className="btn btn-secondary mt-4 w-full" disabled={!online || loading} onClick={() => void load(page.next)}>{loading ? 'Loading…' : 'Load more'}</button>}
       </>}
-      {error && <div className="mt-4 rounded-xl border border-line p-3"><p role="alert" className="text-[13px] leading-5 text-muted">{error}</p><button className="mt-1 min-h-11 text-[13px] text-accent" disabled={!online || loading} onClick={() => void load()}>Try again</button></div>}
+      {error && <div className="mt-4 rounded-xl border border-line p-3"><p className="text-[13px] leading-5 text-muted">{error}</p><button className="mt-1 min-h-11 text-[13px] text-accent" disabled={!online || loading} onClick={() => void load()}>Try again</button></div>}
     </Sheet>
   </>
 }
