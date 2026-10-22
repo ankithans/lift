@@ -7,8 +7,11 @@ import { TOOL_BY_NAME } from "./tools/registry";
 import { sha256Hex } from "./tokens";
 
 import { callback as whoopCallback, webhook as whoopWebhook } from "./whoopHttp";
+import { spotifyCallback, youtubeCallback } from './musicHttp';
 
 const http = httpRouter();
+http.route({ path: '/spotify/callback', method: 'GET', handler: spotifyCallback });
+http.route({ path: '/youtube/callback', method: 'GET', handler: youtubeCallback });
 http.route({ path: "/whoop/callback", method: "GET", handler: whoopCallback });
 http.route({ path: "/whoop/webhook", method: "POST", handler: whoopWebhook });
 auth.addHttpRoutes(http);

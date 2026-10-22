@@ -30,11 +30,19 @@ import type { DataModel } from "./dataModel.js";
 type Env = {
   readonly CONVEX_CLOUD_URL: string;
   readonly CONVEX_SITE_URL: string;
+  readonly SPOTIFY_APP_URL: string | undefined;
+  readonly SPOTIFY_CLIENT_ID: string | undefined;
+  readonly SPOTIFY_CLIENT_SECRET: string | undefined;
+  readonly SPOTIFY_REDIRECT_URI: string | undefined;
   readonly WHOOP_APP_URL: string | undefined;
   readonly WHOOP_CLIENT_ID: string | undefined;
   readonly WHOOP_CLIENT_SECRET: string | undefined;
   readonly WHOOP_REDIRECT_URI: string | undefined;
   readonly WHOOP_WEBHOOK_SECRET: string | undefined;
+  readonly YOUTUBE_APP_URL: string | undefined;
+  readonly YOUTUBE_CLIENT_ID: string | undefined;
+  readonly YOUTUBE_CLIENT_SECRET: string | undefined;
+  readonly YOUTUBE_REDIRECT_URI: string | undefined;
 };
 
 /**

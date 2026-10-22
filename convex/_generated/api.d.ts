@@ -23,10 +23,16 @@ import type * as lib_commands from "../lib/commands.js";
 import type * as lib_time from "../lib/time.js";
 import type * as lib_util from "../lib/util.js";
 import type * as library from "../library.js";
+import type * as music from "../music.js";
+import type * as music_api from "../music/api.js";
+import type * as music_model from "../music/model.js";
+import type * as musicHttp from "../musicHttp.js";
+import type * as musicStore from "../musicStore.js";
 import type * as profile from "../profile.js";
 import type * as programs from "../programs.js";
 import type * as progress from "../progress.js";
 import type * as seed from "../seed.js";
+import type * as spotify from "../spotify.js";
 import type * as tokens from "../tokens.js";
 import type * as tools_registry from "../tools/registry.js";
 import type * as whoop from "../whoop.js";
@@ -37,6 +43,7 @@ import type * as whoopHttp from "../whoopHttp.js";
 import type * as whoopStore from "../whoopStore.js";
 import type * as whoopSync from "../whoopSync.js";
 import type * as workouts from "../workouts.js";
+import type * as youtube from "../youtube.js";
 
 import type {
   ApiFromModules,
@@ -60,10 +67,16 @@ declare const fullApi: ApiFromModules<{
   "lib/time": typeof lib_time;
   "lib/util": typeof lib_util;
   library: typeof library;
+  music: typeof music;
+  "music/api": typeof music_api;
+  "music/model": typeof music_model;
+  musicHttp: typeof musicHttp;
+  musicStore: typeof musicStore;
   profile: typeof profile;
   programs: typeof programs;
   progress: typeof progress;
   seed: typeof seed;
+  spotify: typeof spotify;
   tokens: typeof tokens;
   "tools/registry": typeof tools_registry;
   whoop: typeof whoop;
@@ -74,6 +87,7 @@ declare const fullApi: ApiFromModules<{
   whoopStore: typeof whoopStore;
   whoopSync: typeof whoopSync;
   workouts: typeof workouts;
+  youtube: typeof youtube;
 }>;
 
 /**
