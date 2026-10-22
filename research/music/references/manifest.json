@@ -1,0 +1,147 @@
+[
+  {
+    "file": "apple-music--now-playing.png",
+    "width": 413,
+    "height": 894,
+    "sha256": "ee039c3188d2b361b2baa23bd814c093eca7e9b69f91778d44aa15a665488873",
+    "source": "https://mobbin.com/screens/cb958c7e-d09c-4a3c-95dd-4f14b2dbd066",
+    "acquisition": "Visible phone crop from logged-in Mobbin in Chrome, 2026-10-22"
+  },
+  {
+    "file": "fitbod--keypad.png",
+    "width": 1125,
+    "height": 2556,
+    "sha256": "b813f31b0cd6a8cecac9bdd3ef2e149a04c38310e5838749307610d9886bf5df",
+    "archive": "Fitbod ios Jun 2022.zip",
+    "original": "Fitbod ios Jun 2022 93.png",
+    "source": "https://mobbin.com/apps/fitbod-ios-3bdabe9b-9287-43ff-9758-82b6558538a9/78b57dd0-e0fb-446f-b5ed-b90dc28cd58c/screens",
+    "acquisition": "Existing user-downloaded Mobbin phone archive, newly inspected via contact sheet and selected full phone"
+  },
+  {
+    "file": "future--workout-controls.png",
+    "width": 1180,
+    "height": 2676,
+    "sha256": "31a0c3190c4b3c88df86786f4c8a0c57a500539fca84d7ff81737708196b27af",
+    "archive": "Future Pro iOS Screens.zip",
+    "original": "Future Pro iOS Screens 1.png",
+    "source": "https://mobbin.com/apps/future-pro-ios-e5c0e84e-d7e7-46cd-9662-23bffc92ca32/f4ddb8cd-b304-5687-8b52-ea09c577dfae/screens",
+    "acquisition": "Existing user-downloaded Mobbin phone archive, newly inspected via contact sheet and selected full phone"
+  },
+  {
+    "file": "hevy--session.png",
+    "width": 1179,
+    "height": 2676,
+    "sha256": "a2eff3005526852faa4b2b9c23e10f4b3924e803e7ab153e980d13a29f1b8d3e",
+    "archive": "Hevy ios Oct 2025.zip",
+    "original": "Hevy ios Oct 2025 66.png",
+    "source": "https://mobbin.com/apps/hevy-ios-cf2a2ec4-b4c9-4a33-96b3-c316e7165a3b/2e8aa5bb-1d4e-46e1-a60c-43919883fbb7/screens",
+    "acquisition": "Existing user-downloaded Mobbin phone archive, newly inspected via contact sheet and selected full phone"
+  },
+  {
+    "file": "ladder--connect-music.png",
+    "width": 1180,
+    "height": 2676,
+    "sha256": "3a0b8d99c110af6ec0a46631b5ecd3b7a9c5001eb794c7561814f1e359b0d6df",
+    "archive": "Ladder ios Jul 2024.zip",
+    "original": "Ladder ios Jul 2024 41.png",
+    "source": "https://mobbin.com/apps/ladder-ios-74898326-8455-4641-a83d-03851ba164dc/b2fd8ade-0fd6-4e24-9cee-20941ca4b603/screens",
+    "acquisition": "Existing user-downloaded Mobbin phone archive, newly inspected via contact sheet and selected full phone"
+  },
+  {
+    "file": "ladder--queue.png",
+    "width": 1180,
+    "height": 2676,
+    "sha256": "8d8bf6c97f17c3a5dbe011795703206ab5417800866074dd0b8561185432285b",
+    "archive": "Ladder ios Jul 2024.zip",
+    "original": "Ladder ios Jul 2024 72.png",
+    "source": "https://mobbin.com/apps/ladder-ios-74898326-8455-4641-a83d-03851ba164dc/b2fd8ade-0fd6-4e24-9cee-20941ca4b603/screens",
+    "acquisition": "Existing user-downloaded Mobbin phone archive, newly inspected via contact sheet and selected full phone"
+  },
+  {
+    "file": "ladder--rest.png",
+    "width": 1180,
+    "height": 2676,
+    "sha256": "c3d901afee7e1fe8fdf3920c67181281954de84c80455b5ce2250e88919e809b",
+    "archive": "Ladder ios Jul 2024.zip",
+    "original": "Ladder ios Jul 2024 51.png",
+    "source": "https://mobbin.com/apps/ladder-ios-74898326-8455-4641-a83d-03851ba164dc/b2fd8ade-0fd6-4e24-9cee-20941ca4b603/screens",
+    "acquisition": "Existing user-downloaded Mobbin phone archive, newly inspected via contact sheet and selected full phone"
+  },
+  {
+    "file": "ladder--session.png",
+    "width": 1180,
+    "height": 2676,
+    "sha256": "05878e7f43120fc54f0ecd99806d0100cbc2b6794dab21dcb6b3e25e8b829601",
+    "archive": "Ladder ios Jul 2024.zip",
+    "original": "Ladder ios Jul 2024 46.png",
+    "source": "https://mobbin.com/apps/ladder-ios-74898326-8455-4641-a83d-03851ba164dc/b2fd8ade-0fd6-4e24-9cee-20941ca4b603/screens",
+    "acquisition": "Existing user-downloaded Mobbin phone archive, newly inspected via contact sheet and selected full phone"
+  },
+  {
+    "file": "nike-run-club--landscape-player.png",
+    "width": 249,
+    "height": 538,
+    "sha256": "e5e689f074584814a388cd5c3008cf134be929deb0c75a4681e25c4f7ce8992a",
+    "source": "https://mobbin.com/apps/nike-run-club-ios-449de884-1da3-4133-a57e-5106be737046/feeb6a15-da6e-4251-9d10-9abbc7eba89d/screens?filter=screenPatterns.Audio+Player",
+    "acquisition": "Visible phone crop from logged-in Mobbin in Chrome, 2026-10-22"
+  },
+  {
+    "file": "nike-training--session-controls.png",
+    "width": 1179,
+    "height": 2676,
+    "sha256": "25c611ced75c1dad42e7562808b30e90e44a33322e433e90b38c20577010bcb7",
+    "archive": "Nike Training Club iOS Screens.zip",
+    "original": "Nike Training Club iOS Screens 1.png",
+    "source": "https://mobbin.com/apps/nike-training-club-ios-07d6cbf7-4378-4a21-986a-e2aa83a6733a/34985bcb-464d-49f2-8cf3-fd2a5a1a996b/screens",
+    "acquisition": "Existing user-downloaded Mobbin phone archive, newly inspected via contact sheet and selected full phone"
+  },
+  {
+    "file": "peloton--session.png",
+    "width": 1179,
+    "height": 2676,
+    "sha256": "f9a890f45b2419fcf058a485bf83215b2077a18fb92b5050873d78216bc1ecaa",
+    "original": "Peloton Strength+ iOS 27.png",
+    "acquisition": "Existing user-downloaded Mobbin phone, newly inspected full size",
+    "source": "https://mobbin.com/screens/873ed5bd-5d41-49f7-9c36-42e1bd04282c"
+  },
+  {
+    "file": "runna--music-entry.png",
+    "width": 413,
+    "height": 894,
+    "sha256": "0e4b6492dcb078cafbdbbaeae6dfd6cc1ba8e3e7dd661553f083e33a951af871",
+    "source": "https://mobbin.com/screens/49b304a8-69ed-4f4e-9da9-df3f628c277c",
+    "acquisition": "Visible phone crop from logged-in Mobbin in Chrome, 2026-10-22"
+  },
+  {
+    "file": "runna--source-picker.png",
+    "width": 413,
+    "height": 894,
+    "sha256": "9bd95ae35aefba592cf4afd0b28d445ee1f083f88198251791568731c747db79",
+    "source": "https://mobbin.com/screens/a2736a00-6a24-48b9-8855-b632cbbaef4d",
+    "acquisition": "Visible phone crop from logged-in Mobbin in Chrome, 2026-10-22"
+  },
+  {
+    "file": "soundcloud--players.png",
+    "width": 800,
+    "height": 538,
+    "sha256": "e45665a4a14223716444fe541d935945aa8cf6b4da7ba260094dc29665792fca",
+    "source": "https://mobbin.com/apps/sound-cloud-ios-c8ee0aae-61ce-4c37-bdc4-9fb2a38e7245/1f7e3904-ea88-444b-a45b-7d13dedd63b8/screens?filter=screenPatterns.Audio+Player",
+    "acquisition": "Visible phone crop from logged-in Mobbin in Chrome, 2026-10-22"
+  },
+  {
+    "file": "spotify--now-playing.png",
+    "width": 413,
+    "height": 894,
+    "sha256": "b929e8f58da9a78ccfa73bb37819bd296337b03a3261da28c88b4ddfc09f9390",
+    "source": "https://mobbin.com/screens/67fde0ef-addf-4773-a3e9-f31ada2dbfb2",
+    "acquisition": "Visible phone crop from logged-in Mobbin in Chrome, 2026-10-22"
+  },
+  {
+    "file": "youtube-music--now-playing.png",
+    "width": 249,
+    "height": 538,
+    "sha256": "dde534a6f7046e3605e58f2db38c585bec5fad96232b0502057eeeec9cd69ee8",
+    "source": "https://mobbin.com/screens/d9b90824-ac50-4e7a-a306-28f3d2d0b39d",
+    "acquisition": "Visible phone crop from logged-in Mobbin in Chrome, 2026-10-22"
+  }
+]
