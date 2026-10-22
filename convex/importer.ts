@@ -5,6 +5,16 @@ import { ensureProfileFor } from "./core/profile";
 import { insertCompletedWorkout, recomputeExerciseStats } from "./core/workouts";
 import { e1rm } from "./lib/util";
 
+/** Exactly one account must own the email; refuse ambiguous matches. */
+async function userByEmail(ctx: MutationCtx, email: string) {
+  const users = await ctx.db
+    .query("users")
+    .withIndex("email", (q) => q.eq("email", email))
+    .take(2);
+  if (users.length > 1) throw new Error(`Multiple accounts use ${email}; resolve by user id.`);
+  return users[0] ?? null;
+}
+
 const setInput = v.object({
   weightKg: v.optional(v.number()),
   reps: v.optional(v.number()),
@@ -57,10 +67,7 @@ export const importHistory = internalMutation({
     ),
   },
   handler: async (ctx, args) => {
-    const user = await ctx.db
-      .query("users")
-      .withIndex("email", (q) => q.eq("email", args.email))
-      .first();
+    const user = await userByEmail(ctx, args.email);
     if (!user) throw new Error(`No user with email ${args.email}. Sign in to Lift once first.`);
     const userId = user._id;
     const profile = await ensureProfileFor(ctx, userId);
@@ -168,10 +175,7 @@ export const importHistory = internalMutation({
 export const rebuildStats = internalMutation({
   args: { email: v.string() },
   handler: async (ctx, { email }) => {
-    const user = await ctx.db
-      .query("users")
-      .withIndex("email", (q) => q.eq("email", email))
-      .first();
+    const user = await userByEmail(ctx, email);
     if (!user) throw new Error("No such user");
     return await rebuild(ctx, user._id);
   },
@@ -217,10 +221,7 @@ async function rebuild(ctx: MutationCtx, userId: Id<"users">) {
 export const deleteUserData = internalMutation({
   args: { email: v.string() },
   handler: async (ctx, { email }) => {
-    const user = await ctx.db
-      .query("users")
-      .withIndex("email", (q) => q.eq("email", email))
-      .first();
+    const user = await userByEmail(ctx, email);
     if (!user) return { deleted: 0 };
     const userId = user._id;
     let deleted = 0;

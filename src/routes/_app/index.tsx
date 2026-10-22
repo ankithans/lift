@@ -25,7 +25,8 @@ function Train() {
   const now = useNow(60_000)
   const [offset, setOffset] = useState(0)
   const boundaries = useMemo(() => weekBoundaries(now, weekStartsOn, offset), [now, weekStartsOn, offset])
-  const week = useQuery(api.programs.week, { boundaries, now })
+  // Day-granular `now` keeps the query args stable (no refetch flicker every minute).
+  const week = useQuery(api.programs.week, { boundaries, now: startOfDay(now) })
   const todayIndex = week?.days.findIndex((d) => d.isToday) ?? -1
   const [picked, setPicked] = useState<number | null>(null)
   const selectedIndex = picked ?? (todayIndex >= 0 ? todayIndex : 0)

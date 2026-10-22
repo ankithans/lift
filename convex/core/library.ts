@@ -46,12 +46,15 @@ export const searchExercises = defineQuery({
     const text = query?.trim();
     let rows: Doc<"exercises">[];
     if (text) {
-      rows = (
-        await ctx.db
-          .query("exercises")
-          .withSearchIndex("search_text", (q) => q.search("searchText", text))
-          .take(80)
-      ).filter((e) => e.userId === undefined || e.userId === userId);
+      const mine = await ctx.db
+        .query("exercises")
+        .withSearchIndex("search_text", (q) => q.search("searchText", text).eq("userId", userId))
+        .take(20);
+      const shared = await ctx.db
+        .query("exercises")
+        .withSearchIndex("search_text", (q) => q.search("searchText", text).eq("userId", undefined))
+        .take(80);
+      rows = [...mine, ...shared];
     } else {
       rows = (await allVisible(ctx, userId)).filter((e) => e.listed);
     }

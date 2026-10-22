@@ -145,7 +145,18 @@ export const startWorkout = defineMutation({
   audit: true,
   run: async (ctx, { userId, actor }, { programDayId, title }) => {
     const existing = await findActive(ctx, userId);
-    if (existing) return existing._id;
+    if (existing) {
+      // A workout left open for hours was forgotten: close it out instead of resuming it.
+      if (Date.now() - existing.startedAt < 6 * 3600 * 1000) return existing._id;
+      const sets = await ctx.db.query("sets").withIndex("by_workoutId", (q) => q.eq("workoutId", existing._id)).take(400);
+      const lastDone = Math.max(0, ...sets.filter((s) => s.done).map((s) => s.doneAt ?? 0));
+      if (lastDone > 0) await finalizeWorkout(ctx, existing, lastDone + 60_000);
+      else {
+        for (const s of sets) await ctx.db.delete(s._id);
+        for (const we of await exercisesOf(ctx, existing._id)) await ctx.db.delete(we._id);
+        await ctx.db.delete(existing._id);
+      }
+    }
     const day = programDayId ? await own(ctx, userId, "programDays", programDayId) : null;
     const workoutId = await ctx.db.insert("workouts", {
       userId,
@@ -167,7 +178,7 @@ export const startWorkout = defineMutation({
         await insertExercise(ctx, workout, exercise, {
           order,
           group: slot.group,
-          sets: slot.sets,
+          sets: Math.max(1, Math.min(12, slot.sets)),
           repLow: slot.repLow,
           repHigh: slot.repHigh,
           restSec: slot.restSec,
@@ -189,7 +200,9 @@ function cleanValues(args: { weightKg?: number | null; reps?: number | null; rir
   const out: Partial<Doc<"sets">> = {};
   const num = (x: number | null | undefined, max: number) =>
     x === null ? undefined : Math.max(0, Math.min(max, round1(x as number)));
-  if (args.weightKg !== undefined) out.weightKg = num(args.weightKg, 2000);
+  // Weight keeps gram precision so lb entries (135 lb = 61.235 kg) round-trip exactly.
+  if (args.weightKg !== undefined)
+    out.weightKg = args.weightKg === null ? undefined : Math.max(0, Math.min(2000, Math.round(args.weightKg * 1000) / 1000));
   if (args.reps !== undefined) out.reps = args.reps === null ? undefined : Math.round(num(args.reps, 1000)!);
   if (args.rir !== undefined) out.rir = args.rir === null ? undefined : Math.round(num(args.rir, 10)!);
   if (args.durationSec !== undefined) out.durationSec = num(args.durationSec, 86400);
@@ -236,12 +249,14 @@ export const completeSet = defineMutation({
     const set = await own(ctx, userId, "sets", setId);
     const workout = (await ctx.db.get(set.workoutId))!;
     const now = Date.now();
-    const patch = { ...cleanValues(values), done: true, doneAt: set.doneAt ?? now };
+    // Back-filling a finished workout keeps its sets inside that workout's time.
+    const doneAt = set.doneAt ?? (workout.status === "active" ? now : (workout.finishedAt ?? workout.startedAt));
+    const patch = { ...cleanValues(values), done: true, doneAt };
     const merged = { ...set, ...patch };
     let isPr = false;
     const stats = await statsFor(ctx, userId, set.exerciseId);
     const score = e1rm(merged.weightKg, merged.reps);
-    if (stats && stats.totalSets > 0 && score > 0 && score > (stats.bestE1rmKg ?? 0) + 0.01) {
+    if (set.kind !== "warmup" && stats && stats.totalSets > 0 && score > 0 && score > (stats.bestE1rmKg ?? 0) + 0.01) {
       const siblings = await ctx.db
         .query("sets")
         .withIndex("by_workoutExerciseId_and_order", (q) => q.eq("workoutExerciseId", set.workoutExerciseId))
@@ -256,10 +271,10 @@ export const completeSet = defineMutation({
       const we = (await ctx.db.get(set.workoutExerciseId))!;
       restSec = we.restSec;
       if (we.group) {
+        // Superset = adjacent exercises sharing a group; go straight to the next one.
         const all = await exercisesOf(ctx, workout._id);
-        const groupMembers = all.filter((x) => x.group === we.group);
-        const last = groupMembers[groupMembers.length - 1];
-        if (last && last._id !== we._id) restSec = 0; // move straight to the next exercise of the superset
+        const next = all[all.findIndex((x) => x._id === we._id) + 1];
+        if (next && next.group === we.group) restSec = 0;
       }
       if (restSec > 0) await ctx.db.patch(workout._id, { restEndsAt: now + restSec * 1000, restTotalSec: restSec });
     } else {
@@ -382,7 +397,11 @@ export const swapWorkoutExercise = defineMutation({
     const exercise = await readableExercise(ctx, userId, exerciseId);
     await ctx.db.patch(we._id, { exerciseId: exercise._id });
     for (const s of await setsOf(ctx, we._id)) {
-      await ctx.db.patch(s._id, { exerciseId: exercise._id, isPr: false });
+      await ctx.db.patch(s._id, {
+        exerciseId: exercise._id,
+        isPr: false,
+        ...(s.done ? {} : { weightKg: undefined, reps: undefined, rir: undefined, durationSec: undefined }),
+      });
     }
     const workout = (await ctx.db.get(we.workoutId))!;
     await afterHistoryEdit(ctx, workout, [we.exerciseId, exercise._id]);
@@ -519,12 +538,13 @@ async function markPrs(ctx: MutationCtx, workout: Doc<"workouts">) {
   const rows = await exercisesOf(ctx, workout._id);
   let count = 0;
   for (const we of rows) {
-    const sets = (await setsOf(ctx, we._id)).filter((s) => s.done && s.kind !== "warmup");
+    const all = await setsOf(ctx, we._id);
+    const sets = all.filter((s) => s.done && s.kind !== "warmup");
     const stats = await statsFor(ctx, workout.userId, we.exerciseId);
     const prior = stats && stats.totalSets > 0 && stats.lastWorkoutId !== workout._id ? (stats.bestE1rmKg ?? 0) : null;
     let top: Doc<"sets"> | null = null;
     for (const s of sets) if (!top || e1rm(s.weightKg, s.reps) > e1rm(top.weightKg, top.reps)) top = s;
-    for (const s of sets) {
+    for (const s of all) {
       const isPr = prior !== null && top?._id === s._id && e1rm(s.weightKg, s.reps) > prior + 0.01;
       if (isPr) count++;
       if (Boolean(s.isPr) !== isPr) await ctx.db.patch(s._id, { isPr });

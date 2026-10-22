@@ -1,5 +1,5 @@
 import { Check, ChevronDown, Delete, Minus, Plus } from 'lucide-react'
-import { useEffect } from 'react'
+import { useEffect, type ReactNode } from 'react'
 import { tap } from '#/lib/haptics'
 
 export type KeypadField = 'weight' | 'reps' | 'rir' | 'duration'
@@ -31,6 +31,7 @@ export function Keypad({
   onClose,
   step,
   nextLabel,
+  accessory,
 }: {
   context: string
   tabs: KeypadTab[]
@@ -45,6 +46,8 @@ export function Keypad({
   onClose: () => void
   step: number
   nextLabel: string
+  /** Optional slot in the header row (e.g. the rest countdown). */
+  accessory?: ReactNode
 }) {
   const decimal = field === 'weight'
 
@@ -78,6 +81,8 @@ export function Keypad({
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return
+      const t = e.target as HTMLElement | null
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return
       if (/^[0-9]$/.test(e.key)) {
         if (field === 'rir') onInput(String(Math.min(4, Number(e.key))), true)
         else press(e.key)
@@ -101,6 +106,7 @@ export function Keypad({
       <div className="mx-auto max-w-[640px] rounded-t-[26px] border border-b-0 border-line bg-[#0b0b0c]/95 px-3 pb-[calc(var(--safe-bottom)+10px)] pt-3 shadow-[0_-24px_60px_-12px_#000] backdrop-blur-xl lg:mb-4 lg:rounded-[26px] lg:border-b">
         <div className="flex items-center gap-2 px-1">
           <div className="min-w-0 flex-1 truncate text-[13px] font-[550] text-subtle">{context}</div>
+          {accessory}
           <button onClick={onClose} className="icon-btn size-9" aria-label="Close keypad">
             <ChevronDown className="size-5" />
           </button>

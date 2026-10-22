@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import type { Id } from "../_generated/dataModel";
 import type { MutationCtx } from "../_generated/server";
 import { defineMutation, defineQuery } from "../lib/commands";
@@ -67,6 +67,8 @@ export const updateProfile = defineMutation({
   },
   run: async (ctx, { userId }, patch) => {
     const profile = await ensureProfileFor(ctx, userId);
+    if (patch.weekStartsOn !== undefined && ![0, 1, 6].includes(patch.weekStartsOn)) throw new ConvexError("weekStartsOn must be 0, 1 or 6");
+    if (patch.defaultRestSec !== undefined) patch.defaultRestSec = Math.max(0, Math.min(900, patch.defaultRestSec));
     await ctx.db.patch(profile._id, patch);
     return null;
   },

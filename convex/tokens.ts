@@ -47,7 +47,7 @@ export const list = query({
     const rows = await ctx.db
       .query("apiTokens")
       .withIndex("by_userId", (q) => q.eq("userId", userId))
-      .take(50);
+      .take(500);
     return rows
       .filter((t) => !t.revokedAt)
       .map((t) => ({ _id: t._id, name: t.name, prefix: t.prefix, createdAt: t._creationTime, lastUsedAt: t.lastUsedAt ?? null }));

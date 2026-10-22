@@ -87,11 +87,9 @@ export const getWeek = defineQuery({
   args: { boundaries: v.optional(v.array(v.number())), now: v.optional(v.number()) },
   run: async (ctx, { userId }, args) => {
     const now = args.now ?? Date.now();
-    let boundaries = args.boundaries;
-    if (!boundaries) {
-      const profile = await getProfile(ctx, userId);
-      boundaries = weekBoundaries(now, profile?.timezone, profile?.weekStartsOn ?? 0);
-    }
+    const profile = await getProfile(ctx, userId);
+    const weekStartsOn = profile?.weekStartsOn ?? 0;
+    const boundaries = args.boundaries ?? weekBoundaries(now, profile?.timezone, weekStartsOn);
     if (boundaries.length !== 8) fail("boundaries must have 8 timestamps");
     const program = await activeProgram(ctx, userId);
     const days = program ? await programDays(ctx, program._id) : [];
@@ -107,8 +105,7 @@ export const getWeek = defineQuery({
     for (let i = 0; i < 7; i++) {
       const start = boundaries[i];
       const end = boundaries[i + 1];
-      const weekday = new Date(start + 12 * 3600_000).getUTCDay();
-      // Weekday from the client-supplied local midnight: noon UTC offset keeps it on the same calendar day for UTC±12.
+      const weekday = (weekStartsOn + i) % 7;
       const plannedDay = days.find((d) => d.weekday === weekday) ?? null;
       const planned = plannedDay ? await loadDayDetail(ctx, plannedDay) : null;
       const onThisDay = live.filter((w) => w.startedAt >= start && w.startedAt < end);
@@ -304,7 +301,7 @@ export const addSlot = defineMutation({
       exerciseId: exercise._id,
       order: position,
       group: args.group,
-      sets: args.sets ?? exercise.defaults.sets ?? 3,
+      sets: Math.max(1, Math.min(12, Math.round(args.sets ?? exercise.defaults.sets ?? 3))),
       repLow: args.repLow ?? (exercise.defaults.repLow || 8),
       repHigh: args.repHigh ?? (exercise.defaults.repHigh || 12),
       restSec: args.restSec ?? (exercise.defaults.restSec || 90),

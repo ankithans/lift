@@ -37,18 +37,32 @@ export function setLabel(set: WorkoutSet, index: number, letter: string | null) 
 
 export type Suggestion = { weightKg: number | null; reps: number | null; durationSec: number | null }
 
+/** Position among working (non-warm-up) sets; "previous" only stores working sets. */
+export function workingIndex(we: WorkoutExercise, index: number) {
+  return we.sets.slice(0, index).filter((s) => s.kind !== 'warmup').length
+}
+
+/** Last session's set matching this one, or null (warm-ups have no counterpart). */
+export function previousFor(we: WorkoutExercise, index: number) {
+  if (we.sets[index]?.kind === 'warmup') return null
+  return we.previous[workingIndex(we, index)] ?? null
+}
+
 /**
  * What to prefill for a set: the matching set from last session, unless the
  * person already deviated from last session's weight today (then carry today's).
  */
 export function suggestFor(we: WorkoutExercise, index: number): Suggestion {
-  const prevAt = (i: number) => we.previous[i] ?? we.previous[we.previous.length - 1] ?? null
+  const empty = { weightKg: null, reps: null, durationSec: null }
+  if (we.sets[index]?.kind === 'warmup') return empty
+  const prevAt = (i: number) => we.previous[workingIndex(we, i)] ?? we.previous[we.previous.length - 1] ?? null
   const prev = prevAt(index)
   let weightKg = prev?.weightKg ?? null
   let reps = prev?.reps ?? null
   const durationSec = prev?.durationSec ?? null
   for (let j = index - 1; j >= 0; j--) {
     const s = we.sets[j]
+    if (s.kind === 'warmup') continue
     if (s.weightKg === undefined && s.reps === undefined) continue
     const pj = prevAt(j)
     if (s.weightKg !== undefined && s.weightKg !== (pj?.weightKg ?? undefined)) weightKg = s.weightKg
@@ -81,10 +95,9 @@ export function patchActiveSet(
   store.setQuery(api.workouts.active, {}, { ...cur, ...extra, exercises })
 }
 
+/** Supersets are adjacent exercises sharing a group: no rest until the round's last one. */
 export function restAfter(w: ActiveWorkout, we: WorkoutExercise) {
-  if (we.group) {
-    const members = w.exercises.filter((x) => x.group === we.group)
-    if (members.length > 1 && members[members.length - 1]._id !== we._id) return 0
-  }
+  const next = w.exercises[w.exercises.findIndex((x) => x._id === we._id) + 1]
+  if (we.group && next && next.group === we.group) return 0
   return we.restSec
 }

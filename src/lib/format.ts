@@ -5,7 +5,7 @@ const LB_PER_KG = 2.20462262185
 export function toDisplayWeight(kg: number | null | undefined, unit: Unit) {
   if (kg === null || kg === undefined) return null
   const value = unit === 'lb' ? kg * LB_PER_KG : kg
-  return Math.round(value * 10) / 10
+  return Math.round(value * 100) / 100
 }
 
 export function fromDisplayWeight(value: number, unit: Unit) {
@@ -14,7 +14,7 @@ export function fromDisplayWeight(value: number, unit: Unit) {
 
 export function fmtNum(n: number | null | undefined) {
   if (n === null || n === undefined || Number.isNaN(n)) return '—'
-  return Number.isInteger(n) ? String(n) : n.toFixed(1).replace(/\.0$/, '')
+  return Number.isInteger(n) ? String(n) : String(Math.round(n * 100) / 100)
 }
 
 export function fmtWeight(kg: number | null | undefined, unit: Unit) {

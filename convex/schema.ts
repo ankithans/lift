@@ -83,7 +83,7 @@ export default defineSchema({
   })
     .index("by_slug", ["slug"])
     .index("by_userId_and_name", ["userId", "name"])
-    .searchIndex("search_text", { searchField: "searchText", filterFields: ["listed"] }),
+    .searchIndex("search_text", { searchField: "searchText", filterFields: ["listed", "userId"] }),
 
   programs: defineTable({
     userId: v.id("users"),

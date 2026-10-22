@@ -39,6 +39,7 @@ import {
   patchActiveSet,
   restAfter,
   setLabel,
+  previousFor,
   suggestFor,
   toBlocks,
 } from '#/lib/workout'
@@ -79,6 +80,41 @@ function useWakeLock(enabled: boolean) {
   }, [enabled])
 }
 
+type RestState = { remaining: number; total: number; over: boolean; dismiss: () => void }
+
+/**
+ * Rest timer state, tracked at the screen level so it keeps counting (and alerts)
+ * while the keypad is open. Only a natural expiry alerts — not Skip or un-ticking.
+ */
+function useRest(workout: ActiveWorkout | null | undefined): RestState {
+  const endsAt = workout?.restEndsAt
+  const now = useNow(250, Boolean(endsAt))
+  const remaining = endsAt ? (endsAt - now) / 1000 : 0
+  const [overAt, setOverAt] = useState<number | null>(null)
+  const fired = useRef<number | null>(null)
+  const expired = Boolean(endsAt && remaining <= 0)
+  useEffect(() => {
+    if (!endsAt) return
+    if (!expired) {
+      setOverAt(null)
+      return
+    }
+    if (fired.current === endsAt) return
+    fired.current = endsAt
+    if (Date.now() - endsAt < 5000) {
+      if (document.visibilityState === 'visible') chime()
+      tap('success')
+      setOverAt(Date.now())
+    }
+  }, [endsAt, expired])
+  useEffect(() => {
+    if (overAt === null) return
+    const t = setTimeout(() => setOverAt(null), 4000)
+    return () => clearTimeout(t)
+  }, [overAt])
+  return { remaining: Math.max(0, remaining), total: workout?.restTotalSec ?? 0, over: overAt !== null, dismiss: () => setOverAt(null) }
+}
+
 function tabsFor(tracking: WorkoutExercise['exercise']['tracking']): KeypadField[] {
   if (tracking === 'reps') return ['reps', 'rir']
   if (tracking === 'duration') return ['duration']
@@ -100,6 +136,7 @@ function LiveWorkout() {
   const [menu, setMenu] = useState<Menu>(null)
   const finishing = useRef(false)
   useWakeLock(Boolean(workout))
+  const rest = useRest(workout)
 
   // Mutations with optimistic updates for instant feel.
   const updateSet = useMutation(api.workouts.updateSet).withOptimisticUpdate((store, args) => {
@@ -213,6 +250,8 @@ function LiveWorkout() {
   }
 
   async function logSet(we: WorkoutExercise, set: WorkoutSet, index: number, e: Editing | null) {
+    // Ticking a different set must not throw away what was being typed elsewhere.
+    if (e && e.setId !== set._id) commitEditing(e)
     const values: Record<string, number | null> = {}
     for (const f of tabsFor(we.exercise.tracking)) {
       if (e && e.setId === set._id && e.field === f) values[argKey(f)] = toServer(f, e.draft)
@@ -289,6 +328,12 @@ function LiveWorkout() {
     setEditing({ ...editing, field: f, draft: displayValue(editingWe, editingSet, editingIndex, f).text, fresh: true })
   }
 
+  const openMenu = (m: Menu) => {
+    commitEditing()
+    setEditing(null)
+    setMenu(m)
+  }
+
   const doneSets = workout.exercises.reduce((n, we) => n + we.sets.filter((s) => s.done).length, 0)
   const totalSets = workout.exercises.reduce((n, we) => n + we.sets.length, 0)
 
@@ -328,10 +373,10 @@ function LiveWorkout() {
                     displayValue={displayValue}
                     onCell={openKeypad}
                     onToggle={toggleSet}
-                    onSetMenu={(set, label) => setMenu({ type: 'set', set, we, label })}
-                    onMenu={() => setMenu({ type: 'exercise', we, index: workout.exercises.indexOf(we) })}
-                    onInfo={() => setMenu({ type: 'info', we })}
-                    onRest={() => setMenu({ type: 'rest', we })}
+                    onSetMenu={(set, label) => openMenu({ type: 'set', set, we, label })}
+                    onMenu={() => openMenu({ type: 'exercise', we, index: workout.exercises.indexOf(we) })}
+                    onInfo={() => openMenu({ type: 'info', we })}
+                    onRest={() => openMenu({ type: 'rest', we })}
                     onAddSet={async () => {
                       tap()
                       await addSet({ workoutExerciseId: we._id })
@@ -343,15 +388,15 @@ function LiveWorkout() {
           ))}
         </div>
 
-        <button onClick={() => setMenu({ type: 'add' })} className="btn btn-secondary mt-6 w-full">
+        <button onClick={() => openMenu({ type: 'add' })} className="btn btn-secondary mt-6 w-full">
           <Plus className="size-5" /> Add exercise
         </button>
-        <button onClick={() => setMenu({ type: 'discard' })} className="mx-auto mt-6 block h-11 px-4 text-[14px] font-[560] text-danger/80 hover:text-danger">
+        <button onClick={() => openMenu({ type: 'discard' })} className="mx-auto mt-6 block h-11 px-4 text-[14px] font-[560] text-danger/80 hover:text-danger">
           Discard workout
         </button>
       </main>
 
-      {!editing && <RestStrip workout={workout} onAdjust={(addSec) => restMut({ workoutId: workout._id, addSec })} onSkip={() => restMut({ workoutId: workout._id, skip: true })} />}
+      {!editing && <RestStrip rest={rest} onAdjust={(addSec) => restMut({ workoutId: workout._id, addSec })} onSkip={() => restMut({ workoutId: workout._id, skip: true })} />}
 
       {editing && editingWe && editingSet && (
         <Keypad
@@ -364,6 +409,17 @@ function LiveWorkout() {
           fresh={editing.fresh}
           step={editing.field === 'weight' ? (unit === 'lb' ? 5 : 2.5) : editing.field === 'duration' ? 5 : 1}
           nextLabel={editing.field === mainFields[mainFields.length - 1] ? 'Log set' : 'Next'}
+          accessory={
+            rest.remaining > 0 ? (
+              <span className="num flex h-8 items-center gap-1.5 rounded-full bg-accent-dim px-3 text-[13px] font-[650] text-accent">
+                <Timer className="size-3.5" /> {fmtClock(rest.remaining)}
+              </span>
+            ) : rest.over ? (
+              <span className="flex h-8 items-center gap-1.5 rounded-full bg-accent px-3 text-[13px] font-[650] text-accent-ink animate-pop">
+                <Check className="size-3.5" strokeWidth={2.8} /> Rest done
+              </span>
+            ) : null
+          }
           onInput={(draft, fresh) => setEditing({ ...editing, draft, fresh })}
           onField={(f) => {
             commitEditing()
@@ -502,7 +558,13 @@ function LiveWorkout() {
             total={totalSets}
             onFinish={async (notes) => {
               finishing.current = true
-              const id = await finish({ workoutId: workout._id, notes: notes || undefined })
+              let id: Id<'workouts'>
+              try {
+                id = await finish({ workoutId: workout._id, notes: notes || undefined })
+              } catch {
+                toast('Could not finish — check your connection and try again.')
+                return
+              }
               tap('success')
               setMenu(null)
               navigate({ to: '/history/$workoutId', params: { workoutId: id }, search: { done: 1 }, replace: true })
@@ -634,7 +696,7 @@ function ExerciseCard({
         </div>
         {we.sets.map((set, i) => {
           const label = setLabel(set, we.sets.filter((s, j) => j < i && s.kind === 'working').length, letter)
-          const prev = we.previous[i]
+          const prev = previousFor(we, i)
           const prevText = prev
             ? t === 'duration'
               ? `${fmtNum(prev.durationSec)}s`
@@ -788,27 +850,8 @@ function NoteEditor({ initial, onSave }: { initial: string; onSave: (s: string) 
   )
 }
 
-function RestStrip({ workout, onAdjust, onSkip }: { workout: ActiveWorkout; onAdjust: (s: number) => void; onSkip: () => void }) {
-  const now = useNow(250, Boolean(workout.restEndsAt))
-  const remaining = workout.restEndsAt ? (workout.restEndsAt - now) / 1000 : 0
-  const total = workout.restTotalSec ?? 0
-  const wasResting = useRef(false)
-  const [over, setOver] = useState(false)
-
-  useEffect(() => {
-    if (remaining > 0) {
-      wasResting.current = true
-      setOver(false)
-    } else if (wasResting.current) {
-      wasResting.current = false
-      setOver(true)
-      if (document.visibilityState === 'visible') chime()
-      tap('success')
-      const t = setTimeout(() => setOver(false), 4000)
-      return () => clearTimeout(t)
-    }
-  }, [remaining > 0])
-
+function RestStrip({ rest, onAdjust, onSkip }: { rest: RestState; onAdjust: (s: number) => void; onSkip: () => void }) {
+  const { remaining, total, over } = rest
   if (!(remaining > 0) && !over) return null
   const pct = total > 0 ? Math.max(0, Math.min(1, remaining / total)) : 0
   const R = 19
@@ -826,7 +869,7 @@ function RestStrip({ workout, onAdjust, onSkip }: { workout: ActiveWorkout; onAd
               <div className="text-[15px] font-[650]">Rest complete</div>
               <div className="text-[13px] text-muted">Next set when you’re ready.</div>
             </div>
-            <button onClick={() => setOver(false)} className="icon-btn" aria-label="Dismiss">
+            <button onClick={rest.dismiss} className="icon-btn" aria-label="Dismiss">
               <X className="size-5" />
             </button>
           </>

@@ -174,7 +174,7 @@ function checkObject(fields: PropertyValidators, value: unknown, path: string): 
   }
   const record = value as Record<string, unknown>;
   for (const key of Object.keys(record)) {
-    if (!(key in fields)) return `${path}.${key} is not a known argument`;
+    if (!Object.hasOwn(fields, key)) return `${path}.${key} is not a known argument`;
   }
   for (const [key, v] of Object.entries(fields)) {
     const present = record[key] !== undefined;
