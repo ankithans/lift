@@ -1,8 +1,8 @@
 // Imports data/bws/history.json (Built With Science export) into Lift for one user.
 // Usage: node scripts/import-bws.mjs <email> [--prod] [--dry]
-//   --prod uses CONVEX_DEPLOY_KEY_PROD from ~/.config/lift/secrets.env
+//   --prod imports into production via the /admin endpoint (ADMIN_SECRET in ~/.config/lift/secrets.env)
 import { execFileSync } from 'node:child_process'
-import { readFileSync, existsSync } from 'node:fs'
+import { readFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -94,14 +94,16 @@ console.log(JSON.stringify({
 }, null, 2))
 if (dry) process.exit(0)
 
-const env = { ...process.env }
 if (prod) {
-  const secrets = resolve(process.env.HOME, '.config/lift/secrets.env')
-  if (!existsSync(secrets)) throw new Error('missing ~/.config/lift/secrets.env')
-  const vars = Object.fromEntries(readFileSync(secrets, 'utf8').split('\n').filter((l) => l.includes('=') && !l.startsWith('#')).map((l) => [l.slice(0, l.indexOf('=')), l.slice(l.indexOf('=') + 1).trim()]))
-  env.CONVEX_DEPLOY_KEY = vars.CONVEX_DEPLOY_KEY_PROD
-  delete env.CONVEX_DEPLOYMENT
+  // Prod deploy keys can't run internal functions; go through the secret-guarded /admin action.
+  const { writeFileSync } = await import('node:fs')
+  const file = '/tmp/lift-import-payload.json'
+  writeFileSync(file, JSON.stringify(payload))
+  const admin = (op, arg) => execFileSync('node', [resolve(root, 'scripts/admin.mjs'), op, arg], { encoding: 'utf8' })
+  console.log(admin('importHistory', '@' + file))
+  console.log(admin('rebuildStats', JSON.stringify({ email })))
+  process.exit(0)
 }
-const run = (fn, args) => execFileSync('npx', ['convex', 'run', ...(prod ? ['--prod'] : []), fn, JSON.stringify(args)], { cwd: root, env, encoding: 'utf8', maxBuffer: 1 << 26 })
+const run = (fn, args) => execFileSync('npx', ['convex', 'run', fn, JSON.stringify(args)], { cwd: root, encoding: 'utf8', maxBuffer: 1 << 26 })
 console.log(run('importer:importHistory', payload))
 console.log(run('importer:rebuildStats', { email }))

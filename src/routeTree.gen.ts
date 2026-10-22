@@ -24,6 +24,7 @@ import { Route as AppHistoryIndexRouteImport } from './routes/_app/history/index
 import { Route as AppHistoryWorkoutIdRouteImport } from './routes/_app/history/$workoutId'
 import { Route as AppLibraryIndexRouteImport } from './routes/_app/library/index'
 import { Route as AppLibrarySlugRouteImport } from './routes/_app/library/$slug'
+import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
 const AppRoute = AppRouteImport.update({
   id: '/_app',
@@ -99,6 +100,11 @@ const AppLibrarySlugRoute = AppLibrarySlugRouteImport.update({
   path: '/library/$slug',
   getParentRoute: () => AppRoute,
 } as any)
+const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
+  id: '/api/auth/$',
+  path: '/api/auth/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
@@ -113,6 +119,7 @@ export interface FileRoutesByFullPath {
   '/day/$dayId': typeof AppDayDayIdRoute
   '/history/$workoutId': typeof AppHistoryWorkoutIdRoute
   '/library/$slug': typeof AppLibrarySlugRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
   '/history/': typeof AppHistoryIndexRoute
   '/library/': typeof AppLibraryIndexRoute
 }
@@ -129,6 +136,7 @@ export interface FileRoutesByTo {
   '/day/$dayId': typeof AppDayDayIdRoute
   '/history/$workoutId': typeof AppHistoryWorkoutIdRoute
   '/library/$slug': typeof AppLibrarySlugRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
   '/history': typeof AppHistoryIndexRoute
   '/library': typeof AppLibraryIndexRoute
 }
@@ -147,6 +155,7 @@ export interface FileRoutesById {
   '/_app/day/$dayId': typeof AppDayDayIdRoute
   '/_app/history/$workoutId': typeof AppHistoryWorkoutIdRoute
   '/_app/library/$slug': typeof AppLibrarySlugRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
   '/_app/history/': typeof AppHistoryIndexRoute
   '/_app/library/': typeof AppLibraryIndexRoute
 }
@@ -165,6 +174,7 @@ export interface FileRouteTypes {
     | '/day/$dayId'
     | '/history/$workoutId'
     | '/library/$slug'
+    | '/api/auth/$'
     | '/history/'
     | '/library/'
   fileRoutesByTo: FileRoutesByTo
@@ -181,6 +191,7 @@ export interface FileRouteTypes {
     | '/day/$dayId'
     | '/history/$workoutId'
     | '/library/$slug'
+    | '/api/auth/$'
     | '/history'
     | '/library'
   id:
@@ -198,6 +209,7 @@ export interface FileRouteTypes {
     | '/_app/day/$dayId'
     | '/_app/history/$workoutId'
     | '/_app/library/$slug'
+    | '/api/auth/$'
     | '/_app/history/'
     | '/_app/library/'
   fileRoutesById: FileRoutesById
@@ -207,6 +219,7 @@ export interface RootRouteChildren {
   McpRoute: typeof McpRoute
   PrivacyRoute: typeof PrivacyRoute
   SigninRoute: typeof SigninRoute
+  ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -316,6 +329,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppLibrarySlugRouteImport
       parentRoute: typeof AppRoute
     }
+    '/api/auth/$': {
+      id: '/api/auth/$'
+      path: '/api/auth/$'
+      fullPath: '/api/auth/$'
+      preLoaderRoute: typeof ApiAuthSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -354,6 +374,7 @@ const rootRouteChildren: RootRouteChildren = {
   McpRoute: McpRoute,
   PrivacyRoute: PrivacyRoute,
   SigninRoute: SigninRoute,
+  ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
