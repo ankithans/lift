@@ -1,5 +1,5 @@
 import { useAction, useQuery } from 'convex/react'
-import { ChevronLeft, ChevronRight, ExternalLink, ListMusic, Music2, Pause, Play, SkipBack, SkipForward, Speaker, MoveUpRight, MoveDownRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ExternalLink, ListMusic, Music2, Pause, Play, SkipBack, SkipForward, Speaker } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { api } from '../../../convex/_generated/api'
@@ -30,7 +30,7 @@ export function WorkoutMusic({ open, editing, sheetOpen, restVisible, onOpen, on
   const [loading, setLoading] = useState(false), [error, setError] = useState('')
   const [deviceOpen, setDeviceOpen] = useState(false)
   const [queue, setQueue] = useState<Item[]>([]), [index, setIndex] = useState(-1), [ytPlaying, setYtPlaying] = useState(false)
-  const [topDock, setTopDock] = useState(false), [mounted, setMounted] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const [sheetMounted, setSheetMounted] = useState(false)
   const youtube = useRef<YouTubeHandle>(null)
   const requestId = useRef(0), sourceChosen = useRef(false)
@@ -45,9 +45,8 @@ export function WorkoutMusic({ open, editing, sheetOpen, restVisible, onOpen, on
   const busy = source === 'spotify' && spotify.busy
   const video = source === 'youtube' && youtubeConnected && Boolean(item)
   const modal = sheetOpen || sheetMounted
-  const dockedTop = topDock || editing || modal
   const capsuleVisible = connected && Boolean(item) && !editing && !modal
-  const capsuleHeight = capsuleVisible ? 60 + (video && !dockedTop ? 252 : 0) : 0
+  const capsuleHeight = capsuleVisible ? 60 : 0
 
   useEffect(() => { setMounted(true) }, [])
   useEffect(() => {
@@ -160,15 +159,13 @@ export function WorkoutMusic({ open, editing, sheetOpen, restVisible, onOpen, on
   return <>
     {!item && <button className="mx-auto flex min-h-11 items-center gap-2 px-4 text-[13px] text-muted" onClick={onOpen} aria-label="Open workout music"><Music2 aria-hidden className="size-4" />Music</button>}
     {mounted && createPortal(<>
-      {youtubeConnected && <aside className="music-ui music-pip" data-youtube-pip={video ? '' : undefined} style={{ display: video ? undefined : 'none', top: dockedTop ? `calc(var(--safe-top) + ${modal ? 12 : 76}px)` : undefined, bottom: dockedTop ? undefined : `calc(var(--safe-bottom) + ${bottom + 56}px)` }} aria-label="YouTube video">
+      {/* The video takes the cover-art slot in the capsule; while the capsule is hidden it waits, still playing, in the top corner. */}
+      {youtubeConnected && <aside className="music-ui music-pip" data-youtube-pip={video ? '' : undefined} data-docked={capsuleVisible ? undefined : ''} style={{ display: video ? undefined : 'none', ...(capsuleVisible ? { bottom: `calc(var(--safe-bottom) + ${bottom + 8}px)` } : { top: `calc(var(--safe-top) + ${modal ? 12 : 76}px)` }) }} aria-label="YouTube video">
         <YouTubePlayer ref={youtube} item={queue[index]} playing={ytPlaying} onPlaying={setYtPlaying} onEnded={() => youtubeSkip(1, false)} onError={setError} />
-        <button className="flex h-11 w-full items-center justify-center gap-2 text-[12px] text-muted" onClick={() => setTopDock(!dockedTop)} aria-label={dockedTop ? 'Dock video above player' : 'Dock video to top corner'} disabled={editing || modal}>
-          {dockedTop ? <MoveDownRight aria-hidden className="size-4" /> : <MoveUpRight aria-hidden className="size-4" />}Move video
-        </button>
       </aside>}
       {capsuleVisible && <aside className="music-ui music-capsule" data-music-capsule style={{ bottom: `calc(var(--safe-bottom) + ${bottom}px)` }} aria-label="Workout music">
         <button className="flex h-12 min-w-0 flex-1 items-center gap-2 pl-2 text-left" aria-label={`Now playing: ${item!.title}, open music controls`} onClick={onOpen}>
-          {item!.image ? <img src={item!.image} alt="" className="size-8 shrink-0 rounded-lg object-cover" /> : <Music2 aria-hidden className="size-5 shrink-0 text-muted" />}
+          {video ? <span aria-hidden className="h-8 w-14 shrink-0" /> : item!.image ? <img src={item!.image} alt="" className="size-8 shrink-0 rounded-lg object-cover" /> : <Music2 aria-hidden className="size-5 shrink-0 text-muted" />}
           <span className="min-w-0"><span className="block truncate text-[13px] font-[550]">{item!.title}</span><span className={`block truncate text-[11px] ${error ? 'text-warning' : 'text-muted'}`}>{error ? source === 'spotify' && spotify.noDevice ? 'No Spotify device available' : error : item!.subtitle}</span></span>
         </button>
         {source === 'spotify' && spotify.noDevice ? <button className="h-11 shrink-0 px-3 text-[12px] text-accent" disabled={busy || !online} onClick={() => void spotify.retry()}>Retry</button> : <>

@@ -34,17 +34,17 @@
 }
 .music-pip {
   position: fixed;
-  right: max(12px, calc((100vw - 360px) / 2));
-  z-index: 45;
-  width: 202px;
-  border: 1px solid var(--color-line-strong);
-  border-radius: 14px;
+  /* Over the capsule's cover-art slot: capsule left edge + 1px border + 8px padding. */
+  left: calc(max(12px, (100vw - 360px) / 2) + 9px);
+  z-index: 46;
+  width: 56px;
+  height: 32px;
+  border-radius: 8px;
   overflow: hidden;
-  background: var(--color-raised);
-  color: var(--color-ink);
-  box-shadow: 0 5px 24px #0005;
+  background: #000;
 }
-.music-pip iframe { display: block; width: 200px; height: 200px; border: 0; }
+.music-pip[data-docked] { left: auto; right: max(12px, calc((100vw - 360px) / 2)); width: 96px; height: 54px; box-shadow: 0 5px 24px #0005; }
+.music-pip > div, .music-pip iframe { display: block; width: 100%; height: 100%; border: 0; }
 [data-theme='light'] .music-ui { --color-line-strong: #c8c8c8; --color-warning: #805300; }
 @keyframes music-appear { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .music-capsule { animation: none; } }

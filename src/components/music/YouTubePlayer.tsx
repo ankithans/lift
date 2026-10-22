@@ -3,7 +3,7 @@ import { loadYouTube, type Item, type YTPlayer } from './providers'
 
 export interface YouTubeHandle { play: () => void; pause: () => void; load: (item: Item) => void }
 
-/** Kept in a body portal. A 200×200 viewport is YouTube's absolute minimum. */
+/** Kept in a body portal so closing sheets never unmounts it. Sized by its container. */
 export function YouTubePlayer({ item, playing, onPlaying, onEnded, onError, ref }: {
   item?: Item; playing: boolean; onPlaying: (p: boolean) => void; onEnded: () => void
   onError: (message: string) => void; ref: Ref<YouTubeHandle>
@@ -31,8 +31,8 @@ export function YouTubePlayer({ item, playing, onPlaying, onEnded, onError, ref 
     host.current?.appendChild(node)
     void loadYouTube().then(() => {
       if (disposed || !window.YT) return
-      player.current = new window.YT.Player(node, { width: '200', height: '200', videoId: initialId,
-        playerVars: { playsinline: 1, origin: location.origin, autoplay: 0, controls: 1 },
+      player.current = new window.YT.Player(node, { width: '100%', height: '100%', videoId: initialId,
+        playerVars: { playsinline: 1, origin: location.origin, autoplay: 0, controls: 0, disablekb: 1, iv_load_policy: 3, rel: 0 },
         events: {
           onReady: () => {
             if (disposed) return
@@ -63,5 +63,5 @@ export function YouTubePlayer({ item, playing, onPlaying, onEnded, onError, ref 
     if (loaded.current !== item.id) { switching.current = true; loaded.current = item.id; player.current.loadVideoById(item.id) }
     if (playing && document.visibilityState === 'visible') player.current.playVideo(); else player.current.pauseVideo()
   }, [item?.id, playing])
-  return <div ref={host} className="h-[200px] w-[200px] bg-black" aria-label="YouTube video player" />
+  return <div ref={host} className="h-full w-full bg-black" aria-label="YouTube video player" />
 }
