@@ -1,0 +1,258 @@
+[
+  {
+    "file": "whoop--summary.png",
+    "source": "https://mobbin.com/apps/whoop-ios-f2d3db04-8fb3-4e1d-ada4-f5dc133be818/ff42691a-a36c-4a33-80c5-a349c719dfcb/screens",
+    "original": "WHOOP iOS Screens 0.png",
+    "acquisition": "existing Mobbin UI download, newly inspected for WHOOP feature",
+    "width": 1180,
+    "height": 2676,
+    "sha256": "c53efa348c63d4ef63d717d608f89bef939f63af898a587a84eb4d6431222129"
+  },
+  {
+    "file": "whoop--sleep-breakdown.png",
+    "source": "https://mobbin.com/apps/whoop-ios-f2d3db04-8fb3-4e1d-ada4-f5dc133be818/ff42691a-a36c-4a33-80c5-a349c719dfcb/screens",
+    "original": "WHOOP iOS Screens 1.png",
+    "acquisition": "existing Mobbin UI download, newly inspected for WHOOP feature",
+    "width": 1179,
+    "height": 2676,
+    "sha256": "b7f0b303983e1b27a9f206f0dd7feb5891f7783a1c7338449e80f4cc59213ff3"
+  },
+  {
+    "file": "oura--sync-explanation.png",
+    "source": "https://mobbin.com/search/apps/android?query=Oura",
+    "original": "Oura android Dec 2023 9.png",
+    "acquisition": "existing Mobbin UI download, newly inspected for WHOOP feature",
+    "width": 1080,
+    "height": 2460,
+    "sha256": "9e67515d77b51dac909f5329c3e0bede40ec6e46a716104b4d00d53840e9aa16"
+  },
+  {
+    "file": "oura--readiness-and-dated-bars.png",
+    "source": "https://mobbin.com/search/apps/android?query=Oura",
+    "original": "Oura android Dec 2023 48.png",
+    "acquisition": "existing Mobbin UI download, newly inspected for WHOOP feature",
+    "width": 1080,
+    "height": 2460,
+    "sha256": "d8c9fbd88d589c30a6f870eab313ec465c5bdf3aad4573e748a31cb0320d6fc3"
+  },
+  {
+    "file": "oura--resting-hr-detail.png",
+    "source": "https://mobbin.com/search/apps/android?query=Oura",
+    "original": "Oura android Dec 2023 64.png",
+    "acquisition": "existing Mobbin UI download, newly inspected for WHOOP feature",
+    "width": 1080,
+    "height": 2460,
+    "sha256": "2b68bb77c8cf4e9a9ce7ec8a524770758bc90dba60f33b9f568825a6fe6e7bc4"
+  },
+  {
+    "file": "oura--sleep-timing-bars.png",
+    "source": "https://mobbin.com/search/apps/android?query=Oura",
+    "original": "Oura android Dec 2023 72.png",
+    "acquisition": "existing Mobbin UI download, newly inspected for WHOOP feature",
+    "width": 1080,
+    "height": 2460,
+    "sha256": "6eb7a9cf6c7c791d5ab77e045487114df1d3ed22ff7698d82ddccdd621a4cd98"
+  },
+  {
+    "file": "oura--trend-list.png",
+    "source": "https://mobbin.com/search/apps/android?query=Oura",
+    "original": "Oura android Dec 2023 144.png",
+    "acquisition": "existing Mobbin UI download, newly inspected for WHOOP feature",
+    "width": 1080,
+    "height": 2460,
+    "sha256": "24f74c9ddbcfe6e6794d35fcd9be95350f4f14836e7c0a79249dfe31ef018bb9"
+  },
+  {
+    "file": "oura--rest-mode.png",
+    "source": "https://mobbin.com/search/apps/android?query=Oura",
+    "original": "Oura android Dec 2023 168.png",
+    "acquisition": "existing Mobbin UI download, newly inspected for WHOOP feature",
+    "width": 1080,
+    "height": 2460,
+    "sha256": "0733b8e0392b6ae0f4a8c8c7d9d90c69a629c859b3ffec7acdc772b11ec96bea"
+  },
+  {
+    "file": "oura--connect-hr-provider.png",
+    "source": "https://mobbin.com/apps/oura-ios-a3164d3a-474c-4ecb-8180-67acda881aa6/601b4b29-6c80-4544-8c4f-28e8c9a8f0bc/screens",
+    "original": "Oura iOS Screens 0.png",
+    "acquisition": "existing Mobbin UI download, newly inspected for WHOOP feature",
+    "width": 1179,
+    "height": 2676,
+    "sha256": "16f9fff4ac3ea69fc6450a5d982d09615e8bc76da27cca8b25f1e4f6a7a4d226"
+  },
+  {
+    "file": "oura--activity-summary.png",
+    "source": "https://mobbin.com/apps/oura-ios-a3164d3a-474c-4ecb-8180-67acda881aa6/601b4b29-6c80-4544-8c4f-28e8c9a8f0bc/screens",
+    "original": "Oura iOS Screens 2.png",
+    "acquisition": "existing Mobbin UI download, newly inspected for WHOOP feature",
+    "width": 1179,
+    "height": 2676,
+    "sha256": "a959a5eb29ff8d6e6ebafd43ac432a2531e21122ab1b77e1ec41512376866d1b"
+  },
+  {
+    "file": "bevel--dashboard.png",
+    "source": "https://mobbin.com/apps/bevel-ios-4e7bb614-26f2-4464-a26b-9314adeef824/07003fc7-0512-4a41-b38d-e54efc4d5ec3/screens",
+    "original": "Bevel ios Oct 2026 13.png",
+    "acquisition": "existing Mobbin UI download, newly inspected for WHOOP feature",
+    "width": 1179,
+    "height": 2676,
+    "sha256": "1a0866aa8e095fd42824e6b346467e1201eaa480e6ed6f763ce89f199256cde3"
+  },
+  {
+    "file": "bevel--recovery-detail.png",
+    "source": "https://mobbin.com/apps/bevel-ios-4e7bb614-26f2-4464-a26b-9314adeef824/07003fc7-0512-4a41-b38d-e54efc4d5ec3/screens",
+    "original": "Bevel ios Oct 2026 320.png",
+    "acquisition": "existing Mobbin UI download, newly inspected for WHOOP feature",
+    "width": 1179,
+    "height": 2676,
+    "sha256": "125a823249dec4e4eedf24fa3255d2e6f910ab14510a222d4f07ef427d67781b"
+  },
+  {
+    "file": "bevel--sleep-detail.png",
+    "source": "https://mobbin.com/apps/bevel-ios-4e7bb614-26f2-4464-a26b-9314adeef824/07003fc7-0512-4a41-b38d-e54efc4d5ec3/screens",
+    "original": "Bevel ios Oct 2026 330.png",
+    "acquisition": "existing Mobbin UI download, newly inspected for WHOOP feature",
+    "width": 1179,
+    "height": 2676,
+    "sha256": "9fb0139700ba456cf82c2e35563c33cc090305f27283361a6b39fb384101aa4f"
+  },
+  {
+    "file": "bevel--strain-detail.png",
+    "source": "https://mobbin.com/apps/bevel-ios-4e7bb614-26f2-4464-a26b-9314adeef824/07003fc7-0512-4a41-b38d-e54efc4d5ec3/screens",
+    "original": "Bevel ios Oct 2026 340.png",
+    "acquisition": "existing Mobbin UI download, newly inspected for WHOOP feature",
+    "width": 1179,
+    "height": 2676,
+    "sha256": "2d0836df2d4e2083664543fe7c18ad1838ac8aef48eda7d79ba54f123e517f43"
+  },
+  {
+    "file": "bevel--sleep-history.png",
+    "source": "https://mobbin.com/apps/bevel-ios-4e7bb614-26f2-4464-a26b-9314adeef824/07003fc7-0512-4a41-b38d-e54efc4d5ec3/screens",
+    "original": "Bevel ios Oct 2026 350.png",
+    "acquisition": "existing Mobbin UI download, newly inspected for WHOOP feature",
+    "width": 1179,
+    "height": 2676,
+    "sha256": "af55d2428103664b60bdff39100467631b5437431259945bfc6a6adc278e84c5"
+  },
+  {
+    "file": "bevel--mood-calendar.png",
+    "source": "https://mobbin.com/apps/bevel-ios-4e7bb614-26f2-4464-a26b-9314adeef824/07003fc7-0512-4a41-b38d-e54efc4d5ec3/screens",
+    "original": "Bevel ios Oct 2026 490.png",
+    "acquisition": "existing Mobbin UI download, newly inspected for WHOOP feature",
+    "width": 1179,
+    "height": 2676,
+    "sha256": "7ff5832b8d7fab1311f4053efbb3e4c8ffa1939b313895a66a2f6105e7fb216e"
+  },
+  {
+    "file": "gentler--rest-day.png",
+    "source": "https://mobbin.com/apps/gentler-streak-ios-ccc0bb26-39b3-48fa-862d-2df69182840e/91403472-6e15-413b-ae56-0ad41f2ca6d2/screens",
+    "original": "Gentler Streak iOS Screens 0.png",
+    "acquisition": "existing Mobbin UI download, newly inspected for WHOOP feature",
+    "width": 1179,
+    "height": 2676,
+    "sha256": "c899f22da929ed4145834994b71b3c473d4423248927d5df1080eae32b42cc1b"
+  },
+  {
+    "file": "gentler--history.png",
+    "source": "https://mobbin.com/apps/gentler-streak-ios-ccc0bb26-39b3-48fa-862d-2df69182840e/91403472-6e15-413b-ae56-0ad41f2ca6d2/screens",
+    "original": "Gentler Streak iOS Screens 1.png",
+    "acquisition": "existing Mobbin UI download, newly inspected for WHOOP feature",
+    "width": 1179,
+    "height": 2676,
+    "sha256": "e5037ea696d6932d424db40e97f90b415508b8bd839e1348546a371260bb16e9"
+  },
+  {
+    "file": "hevy--connect-health.png",
+    "source": "https://mobbin.com/apps/hevy-ios-cf2a2ec4-b4c9-4a33-96b3-c316e7165a3b/2e8aa5bb-1d4e-46e1-a60c-43919883fbb7/screens",
+    "original": "Hevy ios Oct 2025 6.png",
+    "acquisition": "existing Mobbin UI download, newly inspected for WHOOP feature",
+    "width": 1179,
+    "height": 2676,
+    "sha256": "1c3501cbb41037b15b30686adc009891f3a1efc5d0696e97bd279503b7580980"
+  },
+  {
+    "file": "hevy--settings-connection-row.png",
+    "source": "https://mobbin.com/apps/hevy-ios-cf2a2ec4-b4c9-4a33-96b3-c316e7165a3b/2e8aa5bb-1d4e-46e1-a60c-43919883fbb7/screens",
+    "original": "Hevy ios Oct 2025 260.png",
+    "acquisition": "existing Mobbin UI download, newly inspected for WHOOP feature",
+    "width": 1179,
+    "height": 2676,
+    "sha256": "76b4f2b9dfcabc1ee316f512abcc2a7cdc8e71fa82188a769f52d44aaefb4e60"
+  },
+  {
+    "file": "ladder--week-calendar.png",
+    "source": "https://mobbin.com/apps/ladder-ios-74898326-8455-4641-a83d-03851ba164dc/b2fd8ade-0fd6-4e24-9cee-20941ca4b603/screens",
+    "original": "Ladder ios Jul 2024 160.png",
+    "acquisition": "existing Mobbin UI download, newly inspected for WHOOP feature",
+    "width": 1179,
+    "height": 2676,
+    "sha256": "ace3b43e24d548bed8832265e4551f9fc7be82d3ca8b88a794160a753834a636"
+  },
+  {
+    "file": "ladder--connection-settings.png",
+    "source": "https://mobbin.com/apps/ladder-ios-74898326-8455-4641-a83d-03851ba164dc/b2fd8ade-0fd6-4e24-9cee-20941ca4b603/screens",
+    "original": "Ladder ios Jul 2024 170.png",
+    "acquisition": "existing Mobbin UI download, newly inspected for WHOOP feature",
+    "width": 1179,
+    "height": 2676,
+    "sha256": "bb66948bd2b95cc43d98a61ad0171d1b0bac2eb8132e967c9f21e3602b8b897f"
+  },
+  {
+    "file": "fitbod--upcoming-workout.png",
+    "source": "https://mobbin.com/apps/fitbod-ios-3bdabe9b-9287-43ff-9758-82b6558538a9/78b57dd0-e0fb-446f-b5ed-b90dc28cd58c/screens",
+    "original": "Fitbod ios Jun 2022 160.png",
+    "acquisition": "existing Mobbin UI download, newly inspected for WHOOP feature",
+    "width": 1125,
+    "height": 2556,
+    "sha256": "5476bb6c366ff909d8ecd532c35d9633ffbd7432db9c69593ff85445ae65e214"
+  },
+  {
+    "file": "fitbod--connected-export-choices.png",
+    "source": "https://mobbin.com/apps/fitbod-ios-3bdabe9b-9287-43ff-9758-82b6558538a9/78b57dd0-e0fb-446f-b5ed-b90dc28cd58c/screens",
+    "original": "Fitbod ios Jun 2022 110.png",
+    "acquisition": "existing Mobbin UI download, newly inspected for WHOOP feature",
+    "width": 1125,
+    "height": 2556,
+    "sha256": "da8a216cf555e0cd4f1b2c923a3f5b949fa907d27984860bcee91e130ead0e0b"
+  },
+  {
+    "file": "whoop--activity-list.png",
+    "source": "https://mobbin.com/apps/whoop-ios-f2d3db04-8fb3-4e1d-ada4-f5dc133be818/ff42691a-a36c-4a33-80c5-a349c719dfcb/screens",
+    "acquisition": "live WHOOP Mobbin collection pageAssets export; browser asset inventory also included previously observed images",
+    "originalAssetId": "b6e51c21b6159005",
+    "width": 720,
+    "height": 1681
+  },
+  {
+    "file": "whoop--metrics-grid.png",
+    "source": "https://mobbin.com/apps/whoop-ios-f2d3db04-8fb3-4e1d-ada4-f5dc133be818/ff42691a-a36c-4a33-80c5-a349c719dfcb/screens",
+    "acquisition": "live WHOOP Mobbin collection pageAssets export; browser asset inventory also included previously observed images",
+    "originalAssetId": "c32d65456df9e74b",
+    "width": 720,
+    "height": 1680
+  },
+  {
+    "file": "whoop--activity-preferences.png",
+    "source": "https://mobbin.com/apps/whoop-ios-f2d3db04-8fb3-4e1d-ada4-f5dc133be818/ff42691a-a36c-4a33-80c5-a349c719dfcb/screens",
+    "acquisition": "live WHOOP Mobbin collection pageAssets export; browser asset inventory also included previously observed images",
+    "originalAssetId": "1cbe0df0705c7a96",
+    "width": 720,
+    "height": 1681
+  },
+  {
+    "file": "whoop--on-track.png",
+    "source": "https://mobbin.com/apps/whoop-ios-f2d3db04-8fb3-4e1d-ada4-f5dc133be818/ff42691a-a36c-4a33-80c5-a349c719dfcb/screens",
+    "acquisition": "live WHOOP Mobbin collection pageAssets export; browser asset inventory also included previously observed images",
+    "originalAssetId": "2785b9270cbe1bd1",
+    "width": 720,
+    "height": 1681
+  },
+  {
+    "file": "whoop--email-onboarding.png",
+    "source": "https://mobbin.com/apps/whoop-ios-f2d3db04-8fb3-4e1d-ada4-f5dc133be818/ff42691a-a36c-4a33-80c5-a349c719dfcb/screens",
+    "acquisition": "live WHOOP Mobbin collection pageAssets export; browser asset inventory also included previously observed images",
+    "originalAssetId": "a5b9261235e106fa",
+    "width": 720,
+    "height": 1681
+  }
+]
