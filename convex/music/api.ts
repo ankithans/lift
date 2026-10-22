@@ -32,7 +32,11 @@ export async function request(url: string, init: RequestInit = {}) {
     const retry = r.headers.get('retry-after');
     throw new ProviderError(r.status, Math.min(24 * 3600_000, Math.max(1000, retry ? Number(retry) * 1000 || Date.parse(retry) - Date.now() : 60_000)), reason);
   }
-  return r.status === 204 ? null : await r.json() as unknown;
+  // Player commands have no response model. Spotify can acknowledge a command
+  // with 200 + plain text as well as 204; parsing that success as JSON made
+  // working remote controls report NETWORK and left the UI out of sync.
+  const playerCommand = url.startsWith('https://api.spotify.com/v1/me/player') && (init.method === 'PUT' || init.method === 'POST');
+  return r.status === 204 || playerCommand ? null : await r.json() as unknown;
 }
 export function parseTokens(raw: unknown, requireRefresh: boolean) {
   const r = obj(raw);
@@ -100,6 +104,11 @@ export async function providerRequest(ctx: ActionCtx, c: Doc<'musicConnections'>
 }
 export function safeError(e: unknown): never {
   if (e instanceof ConvexError) throw e;
-  if (e instanceof ProviderError) return problem(e.status === 404 ? 'NO_DEVICE' : e.status === 403 ? 'UNAVAILABLE' : 'NETWORK');
+  // Preserve Spotify's machine-readable reason, never its raw response/body.
+  if (e instanceof ProviderError) {
+    const code = e.status === 404 ? 'NO_DEVICE' : e.status === 403 ? 'UNAVAILABLE' : 'NETWORK';
+    const reason = /^[a-zA-Z0-9_ -]{1,80}$/.test(e.reason) ? e.reason : '';
+    throw new ConvexError({ code, status: e.status, ...(reason ? { reason } : {}) });
+  }
   return problem('NETWORK');
 }

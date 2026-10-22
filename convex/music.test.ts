@@ -112,6 +112,23 @@ describe('music refresh and cache fencing', () => {
       if (status === 401) expect(c!.status).toBe('reconnect');
     }
   });
+  test('player errors retain the provider reason without exposing the raw response', async () => {
+    const { owner } = await fixture();
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ error: {
+      status: 404, reason: 'NO_ACTIVE_DEVICE', message: 'private provider body',
+    } }), { status: 404 })));
+    try { await owner.action(api.spotify.control, { command: 'play' }); expect.fail('Expected missing device'); }
+    catch (error) {
+      expect(String(error)).toContain('NO_ACTIVE_DEVICE');
+      expect(String(error)).toContain('NO_DEVICE');
+      expect(String(error)).not.toContain('private provider body');
+    }
+  });
+  test('a successful player command accepts Spotify 200 non-JSON acknowledgements', async () => {
+    const { owner } = await fixture();
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('Playback acknowledged', { status: 200 })));
+    await expect(owner.action(api.spotify.control, { command: 'pause' })).resolves.toBeNull();
+  });
   test('YouTube LM falls back to LL with explicit provenance and removes unavailable videos', async () => {
     const { t, userId } = await fixture();
     await t.run(ctx => ctx.db.insert('musicConnections', { userId, provider: 'youtube', accessToken: 'youtube-server', refreshToken: 'refresh', expiresAt: 9e15, scope: '', status: 'connected', connectedAt: 1 }));

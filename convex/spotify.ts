@@ -41,12 +41,12 @@ export const devices = action({
   },
 });
 export const playback = action({
-  args: {}, returns: v.object({ playing: v.boolean(), item: v.optional(musicItem), device: v.optional(v.string()), progressMs: v.number(), durationMs: v.number(), restricted: v.boolean() }),
+  args: {}, returns: v.object({ playing: v.boolean(), item: v.optional(musicItem), device: v.optional(v.string()), deviceId: v.optional(v.string()), progressMs: v.number(), durationMs: v.number(), restricted: v.boolean() }),
   handler: async ctx => {
     const c = await owner(ctx, 'spotify');
     try {
       const r = obj(await providerRequest(ctx, c, '/me/player'));
-      return { playing: r.is_playing === true, item: spotifyItem(r.item) ?? undefined, device: str(obj(r.device).name) || undefined, progressMs: num(r.progress_ms), durationMs: num(obj(r.item).duration_ms), restricted: obj(r.device).is_restricted === true };
+      return { playing: r.is_playing === true, item: spotifyItem(r.item) ?? undefined, device: str(obj(r.device).name) || undefined, deviceId: str(obj(r.device).id) || undefined, progressMs: num(r.progress_ms), durationMs: num(obj(r.item).duration_ms), restricted: obj(r.device).is_restricted === true };
     } catch (e) { return safeError(e); }
   },
 });
