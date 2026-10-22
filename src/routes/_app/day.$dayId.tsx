@@ -104,7 +104,9 @@ function DayPreview() {
         </ol>
       </section>
 
-      <div className="fixed inset-x-0 bottom-[calc(var(--tabbar-h)+var(--safe-bottom))] z-30 px-4 pb-3 lg:static lg:mt-8 lg:p-0">
+      {/* Room for the fixed start bar so it never covers the last exercise. */}
+      <div aria-hidden className="h-24 lg:hidden" />
+      <div className="fixed inset-x-0 bottom-[calc(var(--tabbar-h)+var(--safe-bottom)+var(--dock,0px))] z-30 bg-gradient-to-t from-black via-black/90 to-transparent px-4 pb-3 pt-8 lg:static lg:mt-8 lg:bg-none lg:p-0">
         <div className="mx-auto max-w-[600px]">
           {active ? (
             <Link to="/workout" className="btn btn-primary w-full shadow-[0_10px_40px_-6px_#000]">

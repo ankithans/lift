@@ -24,6 +24,7 @@ export const TOOLS: AnyCommand[] = [
   programs.startProgram,
   programs.createEmptyProgram,
   programs.updateDay,
+  programs.arrangeWeek,
   programs.addSlot,
   programs.updateSlot,
   programs.removeSlot,

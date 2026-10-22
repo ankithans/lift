@@ -8,6 +8,7 @@ export const templates = userQuery(c.listTemplates);
 export const startFromTemplate = userMutation(c.startProgram);
 export const createEmpty = userMutation(c.createEmptyProgram);
 export const updateDay = userMutation(c.updateDay);
+export const arrangeWeek = userMutation(c.arrangeWeek);
 export const addExercise = userMutation(c.addSlot);
 export const updateExercise = userMutation(c.updateSlot);
 export const removeExercise = userMutation(c.removeSlot);

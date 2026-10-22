@@ -274,6 +274,42 @@ export const updateDay = defineMutation({
   summarize: (a) => `Updated day ${a.title ?? ""}`.trim(),
 });
 
+export const arrangeWeek = defineMutation({
+  name: "arrange_week",
+  description:
+    "Rearrange the weekly schedule in one go. `slots` maps each weekday (0=Sun..6=Sat) to a program day id, or null to leave that weekday free (rest). Every day of the active program listed here moves to its new weekday; days not listed keep theirs unless their weekday is taken.",
+  args: { slots: v.array(v.object({ weekday: v.number(), dayId: v.union(v.id("programDays"), v.null()) })) },
+  audit: true,
+  run: async (ctx, { userId }, { slots }) => {
+    if (slots.length === 0 || slots.length > 7) fail("slots must cover 1–7 weekdays");
+    const weekdays = new Set<number>();
+    const moved = new Map<string, number>();
+    let programId: Id<"programs"> | null = null;
+    for (const { weekday, dayId } of slots) {
+      if (!Number.isInteger(weekday) || weekday < 0 || weekday > 6 || weekdays.has(weekday)) fail("invalid weekday");
+      weekdays.add(weekday);
+      if (!dayId) continue;
+      const day = await own(ctx, userId, "programDays", dayId);
+      if (programId && day.programId !== programId) fail("days must belong to one program");
+      programId = day.programId;
+      if (moved.has(day._id)) fail("a day can only appear once");
+      moved.set(day._id, weekday);
+    }
+    if (!programId) return null;
+    for (const d of await programDays(ctx, programId)) {
+      const target = moved.get(d._id);
+      if (target !== undefined) {
+        if (d.weekday !== target) await ctx.db.patch(d._id, { weekday: target });
+      } else if (d.weekday !== undefined && weekdays.has(d.weekday)) {
+        // Displaced from a weekday the caller reassigned: becomes unscheduled.
+        await ctx.db.patch(d._id, { weekday: undefined });
+      }
+    }
+    return null;
+  },
+  summarize: () => "Rearranged the week",
+});
+
 export const addSlot = defineMutation({
   name: "add_program_exercise",
   description: "Add an exercise to a program day. Defaults come from the exercise when sets/reps/rest are omitted.",
