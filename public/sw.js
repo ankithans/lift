@@ -2,7 +2,7 @@
 // - App shell: hashed assets cache-first; pages network-first with the last copy as offline fallback.
 // - Notification clicks bring the app back.
 // Live data stays in Convex; this only keeps the app openable without signal.
-const SHELL = 'lift-shell-v2'
+const SHELL = 'lift-shell-v3'
 const OFFLINE_HTML = `<!doctype html><meta name=viewport content="width=device-width,initial-scale=1"><meta name=theme-color content="#000"><title>Lift · Offline</title><body style="margin:0;min-height:100dvh;display:grid;place-items:center;background:#000;color:#f5f5f5;font:16px/1.5 -apple-system,system-ui,sans-serif;text-align:center;padding:24px"><div><div style="width:44px;height:44px;border-radius:12px;background:#b8f4d0;margin:0 auto 20px"></div><h1 style="font-size:22px;margin:0 0 8px">You're offline</h1><p style="color:#a3a3a3;margin:0 0 20px">Lift will reconnect as soon as you have signal.<br>Sets you already logged are kept.</p><button onclick="location.reload()" style="font:inherit;font-weight:600;background:#b8f4d0;color:#07110b;border:0;border-radius:999px;padding:12px 22px">Try again</button></div>`
 
 self.addEventListener('install', (event) => {
@@ -27,7 +27,11 @@ self.addEventListener('fetch', (event) => {
         (hit) =>
           hit ||
           fetch(req).then((res) => {
-            if (res.ok) caches.open(SHELL).then((c) => c.put(req, res.clone()))
+            // Clone synchronously: the browser consumes the original body right away.
+            if (res.ok) {
+              const copy = res.clone()
+              caches.open(SHELL).then((c) => c.put(req, copy))
+            }
             return res
           }),
       ),
@@ -39,7 +43,10 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(req)
         .then((res) => {
-          if (res.ok) caches.open(SHELL).then((c) => c.put(req, res.clone()))
+          if (res.ok) {
+            const copy = res.clone()
+            caches.open(SHELL).then((c) => c.put(req, copy))
+          }
           return res
         })
         .catch(async () => {
