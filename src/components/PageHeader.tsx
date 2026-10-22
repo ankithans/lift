@@ -40,7 +40,8 @@ export function PageHeader({
   const compact = compactTitle ?? (typeof title === 'string' ? title : '')
 
   return (
-    <header className="mb-7">
+    // `contents` lets the bar stick to the page instead of scrolling away with the header box.
+    <header className="contents">
       <div
         className={`sticky top-0 z-30 -mx-5 flex h-14 items-center gap-1 px-3 pt-[var(--safe-top)] transition-colors duration-150 lg:-mx-8 lg:px-6 ${
           collapsed ? 'border-b border-line bg-black' : 'border-b border-transparent bg-black'
@@ -73,7 +74,7 @@ export function PageHeader({
           )}
         </div>
       </div>
-      <div className="mt-1">
+      <div className="mb-7 mt-2">
         {eyebrow && <div className="text-[13px] leading-[18px] text-muted">{eyebrow}</div>}
         <h1 className={`${size === 'large' ? 'text-[32px] leading-[36px]' : 'text-[28px] leading-[34px]'} font-[650] tracking-[-0.03em] ${eyebrow ? 'mt-1' : ''}`}>
           {title}

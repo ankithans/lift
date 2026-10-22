@@ -7,7 +7,7 @@
  * Changes are reconciled on a timeout so "close one, open another" in the same
  * tick (menu → picker) doesn't bounce the history.
  */
-type Overlay = { id: number; close: () => void }
+type Overlay = { id: number; close: () => void; kind: 'sheet' | 'keypad' }
 
 const stack: Overlay[] = []
 const countListeners = new Set<() => void>()
@@ -20,7 +20,8 @@ export function subscribeOverlays(l: () => void) {
     countListeners.delete(l)
   }
 }
-export const overlayCount = () => stack.length
+/** Open sheets only: the keypad manages toast placement itself. */
+export const overlayCount = () => stack.filter((o) => o.kind === 'sheet').length
 let pushed = false
 let ignoreNextPop = false
 let scheduled = false
@@ -63,12 +64,12 @@ function onPop() {
 }
 
 /** Register an open overlay. Returns a function to call when it closes. */
-export function openOverlay(close: () => void) {
+export function openOverlay(close: () => void, kind: 'sheet' | 'keypad' = 'sheet') {
   if (!listening && typeof window !== 'undefined') {
     window.addEventListener('popstate', onPop)
     listening = true
   }
-  const entry = { id: nextId++, close }
+  const entry = { id: nextId++, close, kind }
   stack.push(entry)
   // Push synchronously so a Back pressed immediately can never leave the page.
   if (!pushed && typeof window !== 'undefined') {

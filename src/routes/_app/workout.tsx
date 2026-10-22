@@ -15,11 +15,14 @@ import {
   NotebookPen,
   Plus,
   Repeat,
+  Dumbbell,
+  Flame,
   Medal,
   Timer,
   Trash2,
-  Trophy,
+  TrendingDown,
   X,
+  Zap,
 } from 'lucide-react'
 import { memo, useEffect, useMemo, useRef, useState } from 'react'
 import { api } from '../../../convex/_generated/api'
@@ -81,6 +84,7 @@ type Menu =
   | { type: 'info'; we: WorkoutExercise }
   | { type: 'swap'; we: WorkoutExercise }
   | { type: 'add' }
+  | { type: 'rir' }
   | { type: 'finish' }
   | { type: 'discard' }
   | null
@@ -631,9 +635,9 @@ function LiveWorkout() {
               style={{ animationDelay: `${Math.min(bi, 6) * 30}ms` }}
             >
               {block.group && (
-                <div className="flex items-center gap-2 px-1 pb-1 pt-3 text-accent">
+                <div className="flex items-center gap-2 px-1 pb-1 pt-3 text-muted">
                   <Link2 aria-hidden className="size-3.5" />
-                  <span className="t-eyebrow">Superset · {Math.max(...block.items.map((i) => i.we.sets.length))} rounds</span>
+                  <span className="text-[13px] font-[500] text-muted">Superset · {Math.max(...block.items.map((i) => i.we.sets.length))} rounds</span>
                 </div>
               )}
               <div className={block.group ? 'border-l-2 border-accent/25' : ''}>
@@ -665,6 +669,7 @@ function LiveWorkout() {
                       onMenu={() => openMenu({ type: 'exercise', we, index: workout.exercises.indexOf(we) })}
                       onInfo={() => openMenu({ type: 'info', we })}
                       onRest={() => openMenu({ type: 'rest', we })}
+                      onRirHelp={() => openMenu({ type: 'rir' })}
                       onCollapse={
                         allDone
                           ? () => {
@@ -758,32 +763,44 @@ function LiveWorkout() {
           <div className="pb-2">
             {menu.set.isPr && (
               <div className="mb-3 rounded-[16px] bg-pr/[0.06] px-4 py-3 shadow-[inset_2px_0_0_var(--color-pr)]">
-                <div className="flex items-center gap-1.5 text-[13px] font-[550] text-pr">
-                  <Medal aria-hidden className="size-3.5" /> Personal record
-                </div>
-                <div className="num mt-1 text-[20px] font-[550]">{fmtSet(menu.set, menu.we.exercise.tracking, unit)}</div>
-                {menu.we.best && (
-                  <div className="num mt-0.5 text-[13px] text-muted">
-                    Previous best: {fmtSet({ weightKg: menu.we.best.weightKg, reps: menu.we.best.reps }, menu.we.exercise.tracking, unit)}
-                  </div>
-                )}
+                {(() => {
+                  // PRs rank by estimated 1RM for loaded sets, reps otherwise — name it, and compare like with like.
+                  const loaded = Boolean(menu.set.weightKg && menu.set.reps)
+                  const est = (w?: number | null, r?: number | null) => (w && r ? (r === 1 ? w : w * (1 + Math.min(r, 30) / 30)) : 0)
+                  const best = menu.we.best
+                  return (
+                    <>
+                      <div className="flex items-center gap-1.5 text-[13px] font-[550] text-pr">
+                        <Medal aria-hidden className="size-3.5" /> {loaded ? 'Best estimated 1RM' : 'Most reps'}
+                      </div>
+                      <div className="num mt-1 text-[20px] font-[550]">
+                        {fmtSet(menu.set, menu.we.exercise.tracking, unit)}
+                        {loaded && <span className="ml-2 text-[14px] font-[450] text-muted">≈ {fmtWeight(est(menu.set.weightKg, menu.set.reps), unit)} {unit}</span>}
+                      </div>
+                      {best && (
+                        <div className="num mt-0.5 text-[13px] text-muted">
+                          Previous best {fmtSet({ weightKg: best.weightKg, reps: best.reps }, menu.we.exercise.tracking, unit)}
+                          {loaded && best.e1rmKg ? ` ≈ ${fmtWeight(best.e1rmKg, unit)} ${unit}` : ''}
+                        </div>
+                      )}
+                    </>
+                  )
+                })()}
               </div>
             )}
             {(
               [
-                ['working', 'Working set', 'Counts toward volume and PRs'],
-                ['warmup', 'Warm-up', 'Excluded from stats'],
-                ['drop', 'Drop set', 'Reduced weight, straight after'],
-                ['failure', 'To failure', 'Taken to 0 reps in reserve'],
+                ['working', 'Working set', Dumbbell],
+                ['warmup', 'Warm-up', Flame],
+                ['drop', 'Drop set', TrendingDown],
+                ['failure', 'To failure', Zap],
               ] as const
-            ).map(([kind, label, hint]) => (
+            ).map(([kind, label, Icon]) => (
               <SheetAction
                 key={kind}
-                icon={
-                  menu.set.kind === kind ? <Check className="size-4 text-accent" strokeWidth={2.6} /> : <span className="text-[13px] font-[700]">{kind[0].toUpperCase()}</span>
-                }
-                label={`${label}${menu.set.kind === kind ? ' (current)' : ''}`}
-                hint={hint}
+                icon={<Icon className="size-5" />}
+                label={label}
+                value={menu.set.kind === kind ? <Check aria-label="current" className="size-5 text-accent" strokeWidth={2.4} /> : undefined}
                 onClick={() => {
                   void updateSet({ setId: menu.set._id, kind })
                   setMenu(null)
@@ -835,6 +852,13 @@ function LiveWorkout() {
             </div>
           </div>
         )}
+      </Sheet>
+
+      <Sheet open={menu?.type === 'rir'} onClose={() => setMenu(null)} title="Reps in reserve">
+        <div className="space-y-3 pb-2 text-[15px] leading-6 text-ink/90">
+          <p>How many more good reps you could have done. 0 means you couldn’t do another.</p>
+          <p className="text-muted">It’s optional. Logging it helps you see when you’re ready to add weight.</p>
+        </div>
       </Sheet>
 
       <Sheet open={menu?.type === 'notes'} onClose={() => setMenu(null)} title="Note">
@@ -977,7 +1001,7 @@ function Header({
             )}
           </div>
         </div>
-        <button onClick={onFinish} className="btn btn-sm btn-primary mr-1 h-11">
+        <button onClick={onFinish} className="mr-1 h-11 rounded-full px-4 text-[15px] font-[600] text-accent hover:bg-accent-dim">
           Finish
         </button>
       </div>
@@ -1021,7 +1045,7 @@ function FoldedCard({ we, letter, inSuperset, onExpand }: { we: WorkoutExercise;
         <span className="flex items-center gap-2">
           {letter && <span className="num grid size-5 shrink-0 place-items-center rounded-md bg-accent/15 text-[11px] font-[750] text-accent">{letter}</span>}
           <span className="truncate text-[15px] font-[600] text-ink/90">{we.exercise.name}</span>
-          {prs > 0 && <Trophy aria-hidden className="size-3.5 shrink-0 text-pr" />}
+          {prs > 0 && <Medal aria-hidden className="size-3.5 shrink-0 text-pr" />}
         </span>
         <span className="num block truncate text-[13px] text-muted">{summary}</span>
       </span>
@@ -1044,6 +1068,7 @@ const ExerciseCard = memo(function ExerciseCard({
   onRest,
   onAddSet,
   onCollapse,
+  onRirHelp,
 }: {
   we: WorkoutExercise
   letter: string | null
@@ -1058,6 +1083,7 @@ const ExerciseCard = memo(function ExerciseCard({
   onRest: () => void
   onAddSet: () => void
   onCollapse?: () => void
+  onRirHelp: () => void
 }) {
   const unit = useUnit()
   const t = we.exercise.tracking
@@ -1065,19 +1091,13 @@ const ExerciseCard = memo(function ExerciseCard({
   const allDone = we.sets.length > 0 && we.sets.every((s) => s.done)
   // On narrow screens the "Previous" column moves under each row so inputs keep their size.
   // Superset blocks lose ~14px to their rail, so they switch a little earlier (430px).
-  const grid = inSuperset
-    ? cols.length === 3
-      ? 'grid-cols-[40px_minmax(0,1fr)_minmax(0,1fr)_40px_44px] min-[430px]:grid-cols-[44px_minmax(0,1fr)_62px_62px_42px_46px]'
+  // Prefilled values are last session's, so no separate Previous column: inputs get the width.
+  const grid =
+    cols.length === 3
+      ? 'grid-cols-[40px_minmax(0,1fr)_minmax(0,1fr)_48px_48px]'
       : cols.length === 2
-        ? 'grid-cols-[40px_minmax(0,1fr)_52px_44px] min-[430px]:grid-cols-[44px_minmax(0,1fr)_72px_52px_46px]'
-        : 'grid-cols-[40px_minmax(0,1fr)_44px] min-[430px]:grid-cols-[44px_minmax(0,1fr)_88px_46px]'
-    : cols.length === 3
-      ? 'grid-cols-[40px_minmax(0,1fr)_minmax(0,1fr)_40px_44px] min-[390px]:grid-cols-[44px_minmax(0,1fr)_62px_62px_42px_46px]'
-      : cols.length === 2
-        ? 'grid-cols-[40px_minmax(0,1fr)_52px_44px] min-[390px]:grid-cols-[44px_minmax(0,1fr)_72px_52px_46px]'
-        : 'grid-cols-[40px_minmax(0,1fr)_44px] min-[390px]:grid-cols-[44px_minmax(0,1fr)_88px_46px]'
-  const narrowHide = inSuperset ? 'max-[429px]:hidden' : 'max-[389px]:hidden'
-  const narrowShow = inSuperset ? 'max-[429px]:block' : 'max-[389px]:block'
+        ? 'grid-cols-[40px_minmax(0,1fr)_48px_48px]'
+        : 'grid-cols-[40px_minmax(0,1fr)_48px]'
   return (
     <article className={`${inSuperset ? 'pl-2.5 pr-1' : 'card'} pb-2 pt-4`}>
       <div className={`flex items-start gap-3 ${inSuperset ? '' : 'px-3 min-[390px]:px-4'}`}>
@@ -1111,24 +1131,35 @@ const ExerciseCard = memo(function ExerciseCard({
       {we.notes && <p className={`mt-2 text-[14px] italic leading-5 text-muted ${inSuperset ? '' : 'px-4'}`}>“{we.notes}”</p>}
 
       <div className={`mt-3 ${inSuperset ? '' : 'px-1 min-[390px]:px-2'}`}>
-        <div aria-hidden className={`grid ${grid} items-center gap-1 px-1 pb-1 text-[11px] font-[650] uppercase tracking-[0.08em] text-subtle min-[390px]:px-2`}>
-          <span className="text-center">Set</span>
-          <span className={`pl-1 ${narrowHide}`}>Previous</span>
-          {cols.map((c) => (
-            <span key={c} className="text-center">
-              {c === 'weight' ? (t === 'weighted_bodyweight' ? `+${unit}` : unit) : c === 'reps' ? 'Reps' : c === 'rir' ? 'RIR' : 'Sec'}
-            </span>
-          ))}
+        <div className={`mx-auto grid max-w-[520px] ${grid} items-center gap-1.5 px-1 pb-1 text-[12px] font-[500] text-muted min-[390px]:px-2`}>
+          <span aria-hidden className="text-center">Set</span>
+          {cols.map((c) =>
+            c === 'rir' ? (
+              <button key={c} onClick={onRirHelp} className="mx-auto h-8 rounded-full px-2 hover:text-ink" aria-label="What is RIR?">
+                RIR
+              </button>
+            ) : (
+              <span key={c} aria-hidden className="text-center">
+                {c === 'weight' ? (t === 'weighted_bodyweight' ? `+${unit}` : unit) : c === 'reps' ? 'Reps' : 'Sec'}
+              </span>
+            ),
+          )}
           <span />
         </div>
         {we.sets.map((set, i) => {
           const label = setLabel(set, workingIndex(we, i), letter)
           const prevText = prevLabel(we, i, unit)
+          const prev = previousFor(we, i)
+          const differs = Boolean(
+            prev &&
+              (set.done || set.weightKg !== undefined || set.reps !== undefined) &&
+              ((set.weightKg ?? null) !== (prev.weightKg ?? null) || (set.reps ?? null) !== (prev.reps ?? null) || (set.durationSec ?? null) !== (prev.durationSec ?? null)),
+          )
           return (
             <div
               key={set._id}
               id={`set-${set._id}`}
-              className={`grid ${grid} relative min-h-[56px] items-center gap-1 rounded-[14px] px-1 transition-colors duration-200 min-[390px]:px-2 ${
+              className={`relative mx-auto grid max-w-[520px] ${grid} min-h-[56px] items-center gap-1.5 rounded-[14px] px-1 transition-colors duration-200 min-[390px]:px-2 ${
                 set.isPr
                   ? 'animate-[pr-fill_500ms_ease-out_both] bg-pr/[0.05]'
                   : set.done
@@ -1156,10 +1187,6 @@ const ExerciseCard = memo(function ExerciseCard({
               </button>
               {/* A record keeps a fine gold rule at its left edge — durable, not decorative. */}
               {set.isPr && <span aria-hidden className="pointer-events-none absolute left-0 top-1/2 h-10 w-[2px] -translate-y-1/2 rounded-full bg-pr animate-fade" />}
-              <span className={`num truncate pl-1 text-[13px] text-muted ${narrowHide}`}>
-                <span className="sr-only">Previous </span>
-                {prevText}
-              </span>
               {cols.map((c) => {
                 const v = displayValue(we, set, i, c)
                 const active = editing?.setId === set._id && editing.field === c
@@ -1189,18 +1216,19 @@ const ExerciseCard = memo(function ExerciseCard({
                 aria-label={`Set ${label} done`}
                 aria-pressed={set.done}
                 className={`press mx-auto grid size-11 place-items-center rounded-full transition-all duration-200 ${
-                  set.isPr
-                    ? 'bg-pr text-black'
-                    : set.done
+                  set.done
                       ? 'bg-accent text-accent-ink'
                       : 'border-[1.5px] border-edge text-subtle hover:border-muted hover:text-muted'
                 }`}
               >
                 <Check aria-hidden className={`size-5 ${set.done ? 'animate-pop' : ''}`} strokeWidth={2.8} />
               </button>
-              <span className={`num col-span-full -mt-1 hidden pb-1.5 pl-[44px] text-[12px] text-muted ${narrowShow}`}>
-                Last: {prevText}
-              </span>
+              {/* Last time, only once today's numbers differ from it. */}
+              {differs && (
+                <span className="num col-span-full -mt-1 pb-1.5 pl-[46px] text-[12px] text-muted">
+                  <span className="sr-only">Previous </span>Last time {prevText}
+                </span>
+              )}
             </div>
           )
         })}
@@ -1363,7 +1391,7 @@ function RestStrip({
   return (
     <aside aria-label="Rest timer" className="fixed inset-x-0 bottom-0 z-40 px-3 pb-[calc(var(--safe-bottom)+12px)]">
       <div className="mx-auto max-w-[560px] overflow-hidden rounded-[22px] border border-line-strong bg-raised/95 shadow-[0_16px_50px_-10px_#000] backdrop-blur-xl animate-[rise_240ms_cubic-bezier(0.22,1,0.36,1)_both]">
-        <div className="flex h-[68px] items-center gap-3 pl-3 pr-2">
+        <div className="flex h-16 items-center gap-3 pl-3 pr-2">
           {!(remaining > 0) ? (
             <>
               <span className="grid size-11 shrink-0 place-items-center rounded-full bg-accent text-accent-ink animate-pop">
@@ -1379,7 +1407,7 @@ function RestStrip({
             </>
           ) : (
             <>
-              <svg aria-hidden width="46" height="46" viewBox="0 0 46 46" className="shrink-0 -rotate-90">
+              <svg aria-hidden width="40" height="40" viewBox="0 0 46 46" className="shrink-0 -rotate-90">
                 <circle cx="23" cy="23" r={R} fill="none" stroke="#2a2a2d" strokeWidth="3.5" />
                 <circle
                   cx="23"
@@ -1443,21 +1471,21 @@ function FinishPanel({
   const skipped = total - done
   return (
     <div className="pb-2">
-      <dl className="grid grid-cols-3 gap-2">
+      <dl className="flex gap-8">
         {[
           ['Duration', fmtDuration((Date.now() - workout.startedAt) / 1000)],
           ['Sets', `${done}`],
-          [`Volume ${unit}`, volume > 0 ? fmtVolume(volume, unit) : '—'],
+          ...(volume > 0 ? [[`Volume, ${unit}`, fmtVolume(volume, unit)]] : []),
         ].map(([k, v]) => (
-          <div key={k} className="rounded-[16px] bg-raised px-3 py-3">
-            <dt className="text-[12px] font-[550] text-muted">{k}</dt>
-            <dd className="num mt-0.5 text-[20px] font-[680] tracking-[-0.02em]">{v}</dd>
+          <div key={k}>
+            <dd className="num text-[20px] font-[550] leading-6">{v}</dd>
+            <dt className="mt-0.5 text-[12px] text-muted">{k}</dt>
           </div>
         ))}
       </dl>
       {prs > 0 && (
-        <p className="mt-3 flex items-center gap-2 text-[14px] font-[600] text-pr">
-          <Trophy aria-hidden className="size-4" /> {prs} new personal record{prs > 1 ? 's' : ''}
+        <p className="mt-4 flex items-center gap-2 text-[14px] font-[550] text-pr">
+          <Medal aria-hidden className="size-4" /> {prs} new personal record{prs > 1 ? 's' : ''}
         </p>
       )}
       {skipped > 0 && (

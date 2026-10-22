@@ -172,7 +172,7 @@ function DayPreview() {
         {info && (
           <>
             <p className="num -mt-1 mb-4 text-[14px] text-muted">{info.plan}</p>
-            <ExerciseInfo id={info.id} />
+            <ExerciseInfo id={info.id} defaultTab="form" />
           </>
         )}
       </Sheet>

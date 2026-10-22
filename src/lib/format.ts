@@ -98,6 +98,7 @@ export function fmtSet(
 
 /** The implement that defines an exercise (dumbbell over the bench it's done on). */
 export function mainEquipment(list: string[]) {
-  const main = list.find((e) => /dumbbell|barbell|cable|machine|band|kettlebell|smith|ez|trap bar|plate/i.test(e))
-  return main ?? list[0] ?? ''
+  const main = list.find((e) => /dumbbell|barbell|cable|machine|band|kettlebell|smith|ez|trap bar|plate/i.test(e)) ?? list[0] ?? ''
+  // Library data is inconsistently cased ("dumbbells"); show it as a tidy noun.
+  return main.charAt(0).toUpperCase() + main.slice(1)
 }

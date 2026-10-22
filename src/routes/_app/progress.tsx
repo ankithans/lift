@@ -284,11 +284,13 @@ function BodyWeight() {
   const del = useMutation(api.progress.deleteBodyMetric)
   const [open, setOpen] = useState(false)
   const [text, setText] = useState('')
+  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
   const points = (rows ?? []).slice().reverse().map((r) => ({ x: r.measuredAt, y: toDisplayWeight(r.value, unit) ?? 0 }))
   const latest = rows?.[0]
 
   const openLog = () => {
     setText(latest ? fmtNum(toDisplayWeight(latest.value, unit)) : '')
+    setDate(new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10))
     setOpen(true)
   }
 
@@ -346,7 +348,10 @@ function BodyWeight() {
             e.preventDefault()
             const n = Number.parseFloat(text.replace(',', '.'))
             if (!Number.isFinite(n) || n <= 0) return
-            await log({ kind: 'weight', value: fromDisplayWeight(n, unit) })
+            // Midday local time on the chosen date keeps it on that calendar day everywhere.
+            const [y, m, d] = date.split('-').map(Number)
+            const measuredAt = new Date(y, m - 1, d, 12).getTime()
+            await log({ kind: 'weight', value: fromDisplayWeight(n, unit), measuredAt: Math.min(measuredAt, Date.now()) })
             setOpen(false)
           }}
         >
@@ -361,6 +366,16 @@ function BodyWeight() {
               className="num w-full bg-transparent text-[40px] font-[550] tracking-[-0.03em] outline-none placeholder:text-muted/50"
             />
             <span className="text-[18px] font-[500] text-muted">{unit}</span>
+          </label>
+          <label className="mt-3 flex min-h-14 items-center justify-between border-b border-line text-[16px]">
+            Date
+            <input
+              type="date"
+              value={date}
+              max={new Date().toISOString().slice(0, 10)}
+              onChange={(e) => setDate(e.target.value)}
+              className="num bg-transparent text-right text-[16px] text-muted outline-none [color-scheme:dark]"
+            />
           </label>
           <button type="submit" className="btn btn-primary mt-4 w-full">
             Save

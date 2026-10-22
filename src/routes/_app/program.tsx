@@ -1,7 +1,7 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useMutation, useQuery } from 'convex/react'
 import type { FunctionReturnType } from 'convex/server'
-import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, Link2, Link2Off, Minus, MoreHorizontal, Plus, Repeat, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, Link2, Link2Off, Minus, MoreHorizontal, Pencil, Plus, Repeat, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { api } from '../../../convex/_generated/api'
 import type { Id } from '../../../convex/_generated/dataModel'
@@ -32,6 +32,8 @@ function ProgramEditor() {
   const [adding, setAdding] = useState<Day | null>(null)
   const [swapping, setSwapping] = useState<Slot | null>(null)
   const [renaming, setRenaming] = useState(false)
+  const [programMenu, setProgramMenu] = useState(false)
+  const navigate = useNavigate()
   const addExercise = useMutation(api.programs.addExercise)
   const swap = useMutation(api.programs.swapExercise)
 
@@ -54,7 +56,7 @@ function ProgramEditor() {
         title={program.name}
         subtitle="Changes apply to future workouts."
         action={
-          <button className="icon-btn size-12" aria-label="Program options" onClick={() => setRenaming(true)}>
+          <button className="icon-btn size-12" aria-label="Program options" onClick={() => setProgramMenu(true)}>
             <MoreHorizontal className="size-5" />
           </button>
         }
@@ -115,6 +117,21 @@ function ProgramEditor() {
 
       <Sheet open={slotMenu !== null} onClose={() => setSlotMenu(null)} title={slotMenu?.slot.exercise.name}>
         {slotMenu && <SlotEditor key={slotMenu.slot._id} {...slotMenu} close={() => setSlotMenu(null)} onSwap={() => { setSwapping(slotMenu.slot); setSlotMenu(null) }} />}
+      </Sheet>
+
+      <Sheet open={programMenu} onClose={() => setProgramMenu(false)} title={program.name}>
+        <div className="pb-2">
+          <SheetAction icon={<Pencil className="size-5" />} label="Rename" onClick={() => { setProgramMenu(false); setRenaming(true) }} />
+          <SheetAction
+            icon={<Repeat className="size-5" />}
+            label="Switch program"
+            hint="Your history and records stay"
+            onClick={() => {
+              setProgramMenu(false)
+              navigate({ to: '/welcome' })
+            }}
+          />
+        </div>
       </Sheet>
 
       <Sheet open={renaming} onClose={() => setRenaming(false)} title="Rename program">

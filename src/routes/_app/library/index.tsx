@@ -141,6 +141,20 @@ function Library() {
 
       <Sheet open={filtering} onClose={() => setFiltering(false)} title="Filter">
         <div role="radiogroup" aria-label="Muscle" className="pb-2">
+          {group && (
+            <div className="mb-2 flex min-h-12 items-center justify-between border-b border-line text-[14px] text-muted">
+              Showing {group}
+              <button
+                className="h-11 px-2 text-[14px] font-[600] text-accent"
+                onClick={() => {
+                  set({ group: undefined })
+                  setFiltering(false)
+                }}
+              >
+                Clear
+              </button>
+            </div>
+          )}
           {[null, ...GROUPS].map((g) => {
             const on = (group ?? null) === g
             return (

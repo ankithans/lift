@@ -90,9 +90,11 @@ export function LineChart({
         <text x={pad.l} y={h - 4} fill="#8a8a90" fontSize="17">
           {fmtDate(geo.minX, { month: 'short', day: 'numeric' })}
         </text>
-        <text x={w - pad.r} y={h - 4} fill="#8a8a90" fontSize="17" textAnchor="end">
-          {fmtDate(geo.maxX, { month: 'short', day: 'numeric' })}
-        </text>
+        {fmtDate(geo.maxX, { month: 'short', day: 'numeric' }) !== fmtDate(geo.minX, { month: 'short', day: 'numeric' }) && (
+          <text x={w - pad.r} y={h - 4} fill="#8a8a90" fontSize="17" textAnchor="end">
+            {fmtDate(geo.maxX, { month: 'short', day: 'numeric' })}
+          </text>
+        )}
       </svg>
     </div>
   )

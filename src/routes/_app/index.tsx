@@ -22,7 +22,9 @@ export const Route = createFileRoute('/_app/')({
 })
 
 type Week = NonNullable<FunctionReturnType<typeof api.programs.week>>
-type Day = Week['days'][number]
+type ServerDay = Week['days'][number]
+/** 'before': a day that predates the account (shown plainly, never "missed"). */
+type Day = Omit<ServerDay, 'status'> & { status: ServerDay['status'] | 'before' }
 
 const ROW_H = 60
 // The click that ends a drag must not also open the day.
@@ -51,12 +53,14 @@ function Train() {
 
   // Days before the account existed aren't "missed".
   const joined = startOfDay(me.profile?._creationTime ?? 0)
-  const fix = (w: Week | undefined) => w?.days.map((d) => (d.status === 'missed' && d.start < joined ? { ...d, status: 'upcoming' as const } : d))
+  // Days before the account existed are plain, neither "missed" nor "upcoming".
+  const fix = (w: Week | undefined): Day[] | undefined =>
+    w?.days.map((d): Day => (d.start + 86400000 <= joined && d.status !== 'done' ? { ...d, status: 'before' } : d))
   const days = useMemo(() => fix(week), [week, joined])
   const currentDays = useMemo(() => (offset === 0 ? days : fix(thisWeek)), [offset, days, thisWeek, joined])
   const todayDay = currentDays?.find((d) => d.isToday)
 
-  const planned = days?.filter((d) => d.planned?.kind === 'workout').length ?? 0
+  const planned = days?.filter((d) => d.planned?.kind === 'workout' && d.status !== 'before').length ?? 0
   const doneCount = days?.filter((d) => d.status === 'done').length ?? 0
 
   return (
@@ -411,6 +415,7 @@ function WeekSection({
                   dragging={isSource}
                   target={isTarget ? dayName(order[i]) : null}
                   floating={isSource && target !== null ? `${dayName(item)} → ${WEEKDAYS[days[target].weekday]} ${new Date(days[target].start).getDate()}` : null}
+                  floatingSub={isSource && target !== null ? (dayName(order[target]) === 'Rest' ? 'Move here (rest day)' : `Swap with ${dayName(order[target])}`) : null}
                   changed={Boolean(changed?.rows.includes(i))}
                   changedKey={changed?.key ?? 0}
                   onHandleDown={(e) => begin(i, e.pointerId, e.clientY)}
@@ -470,7 +475,7 @@ function WeekSection({
                   >
                     <span className="w-24 shrink-0 text-[16px] font-[500]">{WEEKDAYS_LONG[d.weekday]}</span>
                     <span className="min-w-0 flex-1 truncate text-[14px] text-muted">
-                      {current ? 'Current day' : !movable(j) ? 'Already happened' : there === 'Rest' ? 'Rest' : `Swap with ${there}`}
+                      {current ? 'Current day' : !movable(j) ? 'Already happened' : there === 'Rest' ? 'Move here (rest day)' : `Swap with ${there}`}
                     </span>
                   </button>
                 </li>
@@ -492,6 +497,7 @@ function DayRow({
   dragging,
   target,
   floating,
+  floatingSub,
   changed,
   changedKey,
   onHandleDown,
@@ -507,6 +513,7 @@ function DayRow({
   dragging: boolean
   target: string | null
   floating: string | null
+  floatingSub: string | null
   changed: boolean
   changedKey: number
   onHandleDown: (e: React.PointerEvent) => void
@@ -558,12 +565,14 @@ function DayRow({
           </span>
           <span
             className={`block truncate text-[16px] leading-[22px] ${isRest && !workout ? 'font-[450] text-muted' : 'font-[550]'} ${
-              status === 'missed' ? 'text-muted' : ''
+              status === 'missed' || status === 'before' ? 'text-muted' : ''
             }`}
           >
             {floating ?? title}
           </span>
-          {target !== null && <span className="block text-[13px] text-accent">Swap with {target}</span>}
+          {(floatingSub ?? (target !== null ? (target === 'Rest' ? 'Move here (rest day)' : `Swap with ${target}`) : null)) && (
+            <span className="block text-[13px] text-accent">{floatingSub ?? (target === 'Rest' ? 'Move here (rest day)' : `Swap with ${target}`)}</span>
+          )}
         </span>
         {!editing && (
           <span className="shrink-0 pr-2 text-[13px]">
@@ -577,6 +586,7 @@ function DayRow({
             {status === 'active' && <span className="font-[500] text-accent">Now</span>}
             {status === 'missed' && <span className="text-muted">Missed</span>}
             {status === 'upcoming' && !isRest && <ChevronRight aria-hidden className="size-4 text-muted" />}
+            {/* 'before': day predates the account, nothing to show */}
           </span>
         )}
       </button>

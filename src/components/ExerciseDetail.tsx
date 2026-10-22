@@ -52,10 +52,10 @@ export function VideoPlayer({ url, poster, name }: { url: string | null; poster?
   )
 }
 
-export function ExerciseBody({ data, compact = false }: { data: ExerciseData; compact?: boolean }) {
+export function ExerciseBody({ data, compact = false, defaultTab }: { data: ExerciseData; compact?: boolean; defaultTab?: 'form' | 'history' }) {
   const unit = useUnit()
   // Sheets opened mid-workout default to History (what you need between sets); the page defaults to Form.
-  const [tab, setTab] = useState<'form' | 'history'>(compact && data.sessions.length > 0 ? 'history' : 'form')
+  const [tab, setTab] = useState<'form' | 'history'>(defaultTab ?? (compact && data.sessions.length > 0 ? 'history' : 'form'))
   const [allSteps, setAllSteps] = useState(false)
   const [musclesOpen, setMusclesOpen] = useState(false)
   // "All Glutes" next to "Glutes" is noise; keep the specific labels.
@@ -66,7 +66,9 @@ export function ExerciseBody({ data, compact = false }: { data: ExerciseData; co
   const shownSteps = allSteps ? steps : steps.slice(0, 3)
 
   // One metric, clearly named: heaviest working set per session (reps for bodyweight, time for holds).
-  const loaded = data.tracking === 'weight_reps' || data.tracking === 'weighted_bodyweight'
+  // Bodyweight-plus-load only ranks by load once any load has actually been logged.
+  const anyLoad = data.sessions.some((s) => s.sets.some((x) => (x.weightKg ?? 0) > 0))
+  const loaded = data.tracking === 'weight_reps' || (data.tracking === 'weighted_bodyweight' && anyLoad)
   const metricName = data.tracking === 'duration' ? 'Longest hold' : loaded ? 'Heaviest set' : 'Most reps'
   const perSession = [...data.sessions].reverse().map((s) => {
     const top = s.sets.reduce<(typeof s.sets)[number] | null>((best, x) => {
@@ -118,7 +120,7 @@ export function ExerciseBody({ data, compact = false }: { data: ExerciseData; co
                   {allSteps ? 'Show less' : 'Full instructions'}
                 </button>
               )}
-              {data.cues[0] && allSteps && <p className="mt-2 text-[15px] leading-6 text-muted">{data.cues[0]}</p>}
+              {data.cues[0] && <p className="mt-3 text-[15px] leading-6 text-muted">{data.cues[0]}</p>}
             </section>
           )}
           {muscles.length > 0 && (
@@ -126,10 +128,12 @@ export function ExerciseBody({ data, compact = false }: { data: ExerciseData; co
               <button onClick={() => setMusclesOpen(!musclesOpen)} aria-expanded={musclesOpen} className="flex min-h-16 w-full items-center gap-3 text-left">
                 <span className="min-w-0 flex-1">
                   <span className="block text-[16px] font-[550]">Muscles</span>
-                  <span className="block truncate text-[13px] text-muted">
-                    {primary.map((m) => m.name).join(', ')}
-                    {secondary.length ? ` · also ${secondary.map((m) => m.name).join(', ')}` : ''}
-                  </span>
+                  {!musclesOpen && (
+                    <span className="block truncate text-[13px] text-muted">
+                      {primary.map((m) => m.name).join(', ')}
+                      {secondary.length ? ` · also ${secondary.map((m) => m.name).join(', ')}` : ''}
+                    </span>
+                  )}
                 </span>
                 <ChevronDown aria-hidden className={`size-4 text-muted transition-transform ${musclesOpen ? 'rotate-180' : ''}`} />
               </button>
@@ -200,9 +204,9 @@ export function ExerciseBody({ data, compact = false }: { data: ExerciseData; co
 }
 
 /** Self-loading exercise view used inside sheets. */
-export function ExerciseInfo({ id }: { id: string }) {
+export function ExerciseInfo({ id, defaultTab }: { id: string; defaultTab?: 'form' | 'history' }) {
   const data = useQuery(api.library.get, { id })
   if (data === undefined) return <BlockSkeleton h={220} />
   if (data === null) return null
-  return <ExerciseBody data={data} compact />
+  return <ExerciseBody data={data} compact defaultTab={defaultTab} />
 }

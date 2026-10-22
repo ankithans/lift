@@ -105,7 +105,7 @@ export function Keypad({
   // Back button closes the keypad (saving the draft) instead of leaving the workout.
   const closeRef = useRef(onClose)
   closeRef.current = onClose
-  useEffect(() => openOverlay(() => closeRef.current()), [])
+  useEffect(() => openOverlay(() => closeRef.current(), 'keypad'), [])
 
   // Keys are handled only while focus is inside the keypad (focus moves there on open).
   const onKeyDown = (e: ReactKeyboardEvent) => {
@@ -134,7 +134,10 @@ export function Keypad({
     <section role="region" aria-label={`Keypad, ${context}`} onKeyDown={onKeyDown} className="fixed inset-x-0 bottom-0 z-50 animate-[rise_220ms_cubic-bezier(0.22,1,0.36,1)_both]">
       <div className="mx-auto max-w-[640px] rounded-t-[26px] border border-b-0 border-line bg-[#0b0b0c]/95 px-3 pb-[calc(var(--safe-bottom)+10px)] pt-3 shadow-[0_-24px_60px_-12px_#000] backdrop-blur-xl lg:mb-4 lg:rounded-[26px] lg:border-b">
         <div className="flex items-center gap-2 px-1">
-          <div className="min-w-0 flex-1 truncate text-[13px] font-[550] text-muted">{context}</div>
+          <div className="flex min-w-0 flex-1 items-baseline gap-1.5 text-[13px] font-[550] text-muted">
+            <span className="truncate">{context.split(' · ')[0]}</span>
+            {context.includes(' · ') && <span className="num shrink-0 text-ink/80">{context.split(' · ').slice(1).join(' · ')}</span>}
+          </div>
           {target && (target.low || target.high) ? (
             <span
               className={`num flex h-8 shrink-0 items-center rounded-full px-2.5 text-[12px] font-[650] transition-colors ${
@@ -206,7 +209,7 @@ export function Keypad({
                     key={o.v}
                     role="radio"
                     aria-checked={on}
-                    aria-label={o.v === 0 ? 'Zero reps left, failure' : `${o.label} reps left`}
+                    aria-label={o.v === 0 ? 'Zero reps left' : `${o.label} reps left`}
                     onClick={() => {
                       tap()
                       onInput(String(o.v), true)

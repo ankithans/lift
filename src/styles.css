@@ -178,7 +178,7 @@ button {
   transition: transform 90ms ease-out, background-color 140ms ease-out, opacity 140ms;
 }
 .btn:active { transform: scale(0.975); }
-.btn:disabled { opacity: 0.6; pointer-events: none; }
+.btn:disabled { opacity: 1; background: var(--color-raised); color: var(--color-muted); pointer-events: none; }
 .btn-primary { background: var(--color-accent); color: var(--color-accent-ink); }
 .btn-primary:hover { background: #c9f8dc; }
 .btn-secondary { background: var(--color-raised); color: var(--color-ink); }
@@ -216,6 +216,9 @@ button {
   transition: background-color 140ms, color 140ms, border-color 140ms, transform 90ms;
 }
 .chip:active { transform: scale(0.96); }
+/* 40px visual, 48px touch target. */
+.chip { position: relative; }
+.chip::before { content: ""; position: absolute; inset: -4px 0; }
 .chip[data-on="true"] {
   background: var(--color-ink);
   border-color: var(--color-ink);

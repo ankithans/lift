@@ -42,7 +42,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       {/* Desktop sidebar */}
       {!fullscreen && (
         <aside className="sticky top-0 hidden h-dvh w-[232px] shrink-0 flex-col border-r border-line px-4 py-6 lg:flex">
-          <Link to="/" className="flex items-center gap-3 px-2">
+          <Link to="/" className="flex min-h-11 items-center gap-3 px-2">
             <Logo size={30} />
             <span className="text-[19px] font-[680] tracking-[-0.03em]">Lift</span>
           </Link>

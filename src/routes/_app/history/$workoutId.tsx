@@ -141,7 +141,7 @@ function WorkoutDetail() {
                     return (
                       <li
                         key={set._id}
-                        className={`relative flex items-center gap-3 ${editing ? 'min-h-14 flex-wrap py-1.5' : 'min-h-12'} ${set.isPr ? '-mx-2 rounded-[12px] bg-pr/[0.05] px-2' : ''}`}
+                        className={`relative ${editing ? 'grid min-h-14 grid-cols-[40px_minmax(0,1fr)_minmax(0,1fr)_76px_44px] items-center gap-2 py-1' : 'flex min-h-12 items-center gap-3'} ${set.isPr ? '-mx-2 rounded-[12px] bg-pr/[0.05] px-2' : ''}`}
                       >
                         {set.isPr && <span aria-hidden className="absolute left-0 top-1/2 h-8 w-[2px] -translate-y-1/2 rounded-full bg-pr" />}
                         <span className={`num w-10 shrink-0 text-[13px] ${set.kind === 'warmup' ? 'text-warning' : 'text-muted'}`}>
@@ -156,7 +156,7 @@ function WorkoutDetail() {
                           )}
                         </span>
                         {editing ? (
-                          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+                          <>
                             {we.exercise.tracking !== 'reps' && we.exercise.tracking !== 'duration' && (
                               <NumField
                                 key={`w-${unit}-${set.weightKg}`}
@@ -167,16 +167,17 @@ function WorkoutDetail() {
                                 onCommit={(v) => updateSet({ setId: set._id, weightKg: v === null ? null : fromDisplayWeight(v, unit) })}
                               />
                             )}
+                            {(we.exercise.tracking === 'reps' || we.exercise.tracking === 'duration') && <span aria-hidden />}
                             {we.exercise.tracking === 'duration' ? (
                               <NumField key={`d-${set.durationSec}`} label={`Set ${i + 1} seconds`} value={set.durationSec ?? null} suffix="s" onCommit={(v) => updateSet({ setId: set._id, durationSec: v })} />
                             ) : (
                               <NumField key={`r-${set.reps}`} label={`Set ${i + 1} reps`} value={set.reps ?? null} suffix="reps" onCommit={(v) => updateSet({ setId: set._id, reps: v })} />
                             )}
                             <NumField key={`rir-${set.rir}`} label={`Set ${i + 1} reps in reserve`} value={set.rir ?? null} suffix="RIR" narrow onCommit={(v) => updateSet({ setId: set._id, rir: v })} />
-                            <button className="icon-btn -mr-2 shrink-0 text-muted hover:text-danger" aria-label={`Delete set ${i + 1}`} onClick={() => void removeSet({ setId: set._id })}>
+                            <button className="icon-btn shrink-0 text-muted hover:text-danger" aria-label={`Delete set ${i + 1}`} onClick={() => void removeSet({ setId: set._id })}>
                               <Trash2 className="size-4" />
                             </button>
-                          </div>
+                          </>
                         ) : (
                           <>
                             <span className="num flex-1 text-[16px]">
@@ -275,7 +276,7 @@ function NumField({
   const saved = value === null ? '' : fmtNum(value)
   const [text, setText] = useState(saved)
   return (
-    <label className={`flex h-11 items-center ${narrow ? 'w-[84px] shrink-0' : 'min-w-[96px] flex-1'} gap-1 rounded-[10px] bg-raised px-3 focus-within:ring-1 focus-within:ring-line-strong`}>
+    <label className={`flex h-11 min-w-0 items-center gap-1 rounded-[10px] bg-raised ${narrow ? 'px-2' : 'px-3'} focus-within:ring-1 focus-within:ring-line-strong`}>
       <input
         value={text}
         inputMode={decimal ? 'decimal' : 'numeric'}
