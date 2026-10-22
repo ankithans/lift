@@ -1,0 +1,2068 @@
+[
+  {
+    "file": "train--future--today-focus.png",
+    "app": "future",
+    "original": "Future Pro iOS Screens 0.png",
+    "source": "https://mobbin.com/apps/future-pro-ios-e5c0e84e-d7e7-46cd-9662-23bffc92ca32/f4ddb8cd-b304-5687-8b52-ea09c577dfae/screens",
+    "screenUrl": "https://mobbin.com/screens/55f80729-19a2-4731-a824-96e5ab605ff8",
+    "width": 1180,
+    "height": 2556,
+    "originalDimensions": [
+      1180,
+      2676
+    ],
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "5f99913675b9265e416c9715a54331cb6d5a4b8917e79ee8ba8ad5b495ee7e2d",
+    "round": "R1 carried forward, reselected for R2",
+    "previousFile": "future--today-focus.png",
+    "usecase": "train"
+  },
+  {
+    "file": "train--ladder--week-today-strip.png",
+    "app": "ladder",
+    "original": "Ladder ios Jul 2024 28.png",
+    "source": "https://mobbin.com/apps/ladder-ios-74898326-8455-4641-a83d-03851ba164dc/b2fd8ade-0fd6-4e24-9cee-20941ca4b603/screens",
+    "width": 1180,
+    "height": 2556,
+    "originalDimensions": [
+      1180,
+      2676
+    ],
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "d4732d921718499196fe2bcb8fe59e1d4d03da8747a6349a98312944d6ee87b6",
+    "round": "R1 carried forward, reselected for R2",
+    "previousFile": "ladder--week-today-strip.png",
+    "usecase": "train"
+  },
+  {
+    "file": "train--gentler-streak--rest-day-tone.png",
+    "app": "gentler-streak",
+    "original": "Gentler Streak iOS Screens 0.png",
+    "source": "https://mobbin.com/apps/gentler-streak-ios-ccc0bb26-39b3-48fa-862d-2df69182840e/91403472-6e15-413b-ae56-0ad41f2ca6d2/screens",
+    "screenUrl": "https://mobbin.com/screens/89addee0-a199-4220-bf7c-5fc6b916e1da",
+    "width": 1179,
+    "height": 2556,
+    "originalDimensions": [
+      1179,
+      2676
+    ],
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "f7ced8be8f348330df862ba2543f9b587db394c60b308e3a1213b56a9b12596b",
+    "round": "R1 carried forward, reselected for R2",
+    "previousFile": "gentler-streak--rest-day-tone.png",
+    "usecase": "train"
+  },
+  {
+    "file": "train--things--dark-today-list.png",
+    "app": "things",
+    "original": "Things 3 ios Mar 2023 152.png",
+    "source": "https://mobbin.com/apps/things-3-ios-14d4b9f3-ea09-4247-9091-19c5209dedff/a840cade-6433-4ae5-8199-03bb9772621d/screens",
+    "width": 1125,
+    "height": 2436,
+    "originalDimensions": [
+      1125,
+      2556
+    ],
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "902a311d5a3b2b4f614db90c9da2e164cc42896491c09b3e0291990247b22602",
+    "round": "R1 carried forward, reselected for R2",
+    "previousFile": "things--dark-today-list.png",
+    "usecase": "train"
+  },
+  {
+    "file": "train--whoop--today-dashboard.png",
+    "app": "whoop",
+    "original": "WHOOP iOS Screens 0.png",
+    "source": "https://mobbin.com/apps/whoop-ios-f2d3db04-8fb3-4e1d-ada4-f5dc133be818/ff42691a-a36c-4a33-80c5-a349c719dfcb/screens",
+    "width": 1180,
+    "height": 2556,
+    "screenUrl": "https://mobbin.com/screens/c5067dc0-aae8-4bb3-a55b-5f26b78a7374",
+    "originalDimensions": [
+      1180,
+      2676
+    ],
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "653ba5be1927ce74ca4ac54a79751292f234ac98cc6f3e5558696637097cb66c",
+    "round": "R1 carried forward, reselected for R2",
+    "previousFile": "whoop--today-dashboard.png",
+    "usecase": "train"
+  },
+  {
+    "file": "train--macrofactor--dark-dashboard.png",
+    "app": "macrofactor",
+    "original": "MacroFactor ios Aug 2026 310.png",
+    "source": "https://mobbin.com/apps/macro-factor-ios-be8ea834-9f58-4bec-8d11-30c2ace4b523/5e2b0161-a47c-40a5-8665-95e601889178/screens",
+    "width": 1179,
+    "height": 2556,
+    "originalDimensions": [
+      1179,
+      2676
+    ],
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "0863ff4ea90954f6984de054ee422a620e3cafe84a5101b4d57edb433d6ca9df",
+    "round": "R1 carried forward, reselected for R2",
+    "previousFile": "macrofactor--dark-dashboard.png",
+    "usecase": "train"
+  },
+  {
+    "file": "preview--ladder--workout-overview.png",
+    "app": "ladder",
+    "original": "Ladder ios Jul 2024 37.png",
+    "source": "https://mobbin.com/apps/ladder-ios-74898326-8455-4641-a83d-03851ba164dc/b2fd8ade-0fd6-4e24-9cee-20941ca4b603/screens",
+    "width": 1180,
+    "height": 2556,
+    "originalDimensions": [
+      1180,
+      2676
+    ],
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "c11c237597bbb30bde09efd174c8a2224654bbb50342e1c2aa0cd05da1baf9cd",
+    "round": "R1 carried forward, reselected for R2",
+    "previousFile": "ladder--workout-overview.png",
+    "usecase": "preview"
+  },
+  {
+    "file": "preview--nike-training-club--workout-preview.png",
+    "app": "nike-training-club",
+    "original": "Nike Training Club iOS Screens 0.png",
+    "source": "https://mobbin.com/apps/nike-training-club-ios-07d6cbf7-4378-4a21-986a-e2aa83a6733a/34985bcb-464d-49f2-8cf3-fd2a5a1a996b/screens",
+    "width": 1179,
+    "height": 2556,
+    "screenUrl": "https://mobbin.com/screens/23ba2d82-53f4-4888-b658-8a2e4a6981e3",
+    "originalDimensions": [
+      1179,
+      2676
+    ],
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "9e2db4c402a9a1b95a8f4596080fb30a1d9fbd355e59661251980307d50a5af0",
+    "round": "R1 carried forward, reselected for R2",
+    "previousFile": "nike-training-club--workout-preview.png",
+    "usecase": "preview"
+  },
+  {
+    "file": "preview--fitbod--superset-preview.png",
+    "app": "fitbod",
+    "original": "Fitbod ios Jun 2022 81.png",
+    "source": "https://mobbin.com/apps/fitbod-ios-3bdabe9b-9287-43ff-9758-82b6558538a9/78b57dd0-e0fb-446f-b5ed-b90dc28cd58c/screens",
+    "width": 1125,
+    "height": 2436,
+    "originalDimensions": [
+      1125,
+      2556
+    ],
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "70375f0f85e3337e6a75793a170e33d81cf11049fa788e001116dcc3adc817aa",
+    "round": "R1 carried forward, reselected for R2",
+    "previousFile": "fitbod--superset-preview.png",
+    "usecase": "preview"
+  },
+  {
+    "file": "logging--hevy--active-workout-sets.png",
+    "app": "hevy",
+    "original": "Hevy ios Oct 2025 30.png",
+    "source": "https://mobbin.com/apps/hevy-ios-cf2a2ec4-b4c9-4a33-96b3-c316e7165a3b/2e8aa5bb-1d4e-46e1-a60c-43919883fbb7/screens",
+    "width": 1179,
+    "height": 2556,
+    "originalDimensions": [
+      1179,
+      2676
+    ],
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "cc13645175582f84e074597cf40ace2f9605c975c1417563150617e3b549e1d2",
+    "round": "R1 carried forward, reselected for R2",
+    "previousFile": "hevy--active-workout-sets.png",
+    "usecase": "logging"
+  },
+  {
+    "file": "logging--bevel--completed-set-state.png",
+    "app": "bevel",
+    "original": "Bevel ios Oct 2026 292.png",
+    "source": "https://mobbin.com/apps/bevel-ios-4e7bb614-26f2-4464-a26b-9314adeef824/07003fc7-0512-4a41-b38d-e54efc4d5ec3/screens",
+    "width": 1179,
+    "height": 2556,
+    "originalDimensions": [
+      1179,
+      2676
+    ],
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "d6336eddbcb421bcb394cee245b442fe380668b4c30bb4c746eef86d75524d05",
+    "round": "R1 carried forward, reselected for R2",
+    "previousFile": "bevel--completed-set-state.png",
+    "usecase": "logging"
+  },
+  {
+    "file": "logging--fitbod--active-set-keypad.png",
+    "app": "fitbod",
+    "original": "Fitbod ios Jun 2022 93.png",
+    "source": "https://mobbin.com/apps/fitbod-ios-3bdabe9b-9287-43ff-9758-82b6558538a9/78b57dd0-e0fb-446f-b5ed-b90dc28cd58c/screens",
+    "width": 1125,
+    "height": 2436,
+    "originalDimensions": [
+      1125,
+      2556
+    ],
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "8080dd940c90773be8a9b1037a08e9229f16c8b1dccfecbe4cb1058df7aae352",
+    "round": "R1 carried forward, reselected for R2",
+    "previousFile": "fitbod--active-set-keypad.png",
+    "usecase": "logging"
+  },
+  {
+    "file": "logging--ladder--set-logging-keypad.png",
+    "app": "ladder",
+    "original": "Ladder ios Jul 2024 77.png",
+    "source": "https://mobbin.com/apps/ladder-ios-74898326-8455-4641-a83d-03851ba164dc/b2fd8ade-0fd6-4e24-9cee-20941ca4b603/screens",
+    "width": 1180,
+    "height": 2556,
+    "originalDimensions": [
+      1180,
+      2676
+    ],
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "614b2eb6029dd89e735c61dcc11bad7c2329b63a53028c2bd24a82bd0cff7dd4",
+    "round": "R1 carried forward, reselected for R2",
+    "previousFile": "ladder--set-logging-keypad.png",
+    "usecase": "logging"
+  },
+  {
+    "file": "pr--fitbod--finish-record-summary.png",
+    "app": "fitbod",
+    "original": "Fitbod ios Jun 2022 117.png",
+    "source": "https://mobbin.com/apps/fitbod-ios-3bdabe9b-9287-43ff-9758-82b6558538a9/78b57dd0-e0fb-446f-b5ed-b90dc28cd58c/screens",
+    "width": 1125,
+    "height": 2436,
+    "originalDimensions": [
+      1125,
+      2556
+    ],
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "7e040dead7c566bbd63fbad8c81f474eb6a59036e569dc8785b6a2d48d0a804d",
+    "round": "R1 carried forward, reselected for R2",
+    "previousFile": "fitbod--finish-record-summary.png",
+    "usecase": "pr"
+  },
+  {
+    "file": "pr--hevy--personal-records.png",
+    "app": "hevy",
+    "original": "Hevy ios Oct 2025 77.png",
+    "source": "https://mobbin.com/apps/hevy-ios-cf2a2ec4-b4c9-4a33-96b3-c316e7165a3b/2e8aa5bb-1d4e-46e1-a60c-43919883fbb7/screens",
+    "width": 1179,
+    "height": 2556,
+    "originalDimensions": [
+      1179,
+      2676
+    ],
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "06787a19a6f5fa43443492612530546f4ee453e22134c88f0e59026b16be781d",
+    "round": "R1 carried forward, reselected for R2",
+    "previousFile": "hevy--personal-records.png",
+    "usecase": "pr"
+  },
+  {
+    "file": "pr--fitbod--exercise-record-chart.png",
+    "app": "fitbod",
+    "original": "Fitbod ios Jun 2022 106.png",
+    "source": "https://mobbin.com/apps/fitbod-ios-3bdabe9b-9287-43ff-9758-82b6558538a9/78b57dd0-e0fb-446f-b5ed-b90dc28cd58c/screens",
+    "width": 1125,
+    "height": 2436,
+    "originalDimensions": [
+      1125,
+      2556
+    ],
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "177ad625320395ce57ecb3d077ddf0c33d20de702a8039f485417d80b3cb4145",
+    "round": "R1 carried forward, reselected for R2",
+    "previousFile": "fitbod--exercise-record-chart.png",
+    "usecase": "pr"
+  },
+  {
+    "file": "sheet--linear-mobile--filter-sheet.png",
+    "app": "linear-mobile",
+    "original": "Linear Mobile iOS Screens 1.png",
+    "source": "https://mobbin.com/apps/linear-mobile-ios-a9c8e2d8-2d18-4d27-88be-a89ea6f82028/c0c28468-0381-466b-9d3f-133f1227e303/screens",
+    "width": 1179,
+    "height": 2556,
+    "screenUrl": "https://mobbin.com/screens/2f215b52-9a22-4ee9-b192-88e2de993521",
+    "originalDimensions": [
+      1179,
+      2676
+    ],
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "743e8afabafcf760a231f2177164d88cee9193cdeffd99e9862c700c05a22c61",
+    "round": "R1 carried forward, reselected for R2",
+    "previousFile": "linear-mobile--filter-sheet.png",
+    "usecase": "sheet"
+  },
+  {
+    "file": "sheet--hevy--set-type-sheet.png",
+    "app": "hevy",
+    "original": "Hevy ios Oct 2025 71.png",
+    "source": "https://mobbin.com/apps/hevy-ios-cf2a2ec4-b4c9-4a33-96b3-c316e7165a3b/2e8aa5bb-1d4e-46e1-a60c-43919883fbb7/screens",
+    "width": 1179,
+    "height": 2556,
+    "originalDimensions": [
+      1179,
+      2676
+    ],
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "0c22c91a40813fc962af0fec66b89dc3b650ee558d09391ce1f004c5ee2a39c7",
+    "round": "R1 carried forward, reselected for R2",
+    "previousFile": "hevy--set-type-sheet.png",
+    "usecase": "sheet"
+  },
+  {
+    "file": "sheet--fitbod--rest-sheet.png",
+    "app": "fitbod",
+    "original": "Fitbod ios Jun 2022 95.png",
+    "source": "https://mobbin.com/apps/fitbod-ios-3bdabe9b-9287-43ff-9758-82b6558538a9/78b57dd0-e0fb-446f-b5ed-b90dc28cd58c/screens",
+    "width": 1125,
+    "height": 2436,
+    "originalDimensions": [
+      1125,
+      2556
+    ],
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "14fb62b53282e6935917d4865564780678bb8356e9be316bd9bda97cdc5aab08",
+    "round": "R1 carried forward, reselected for R2",
+    "previousFile": "fitbod--rest-sheet.png",
+    "usecase": "sheet"
+  },
+  {
+    "file": "sheet--future--active-context-sheet.png",
+    "app": "future",
+    "original": "Future Pro iOS Screens 1.png",
+    "source": "https://mobbin.com/apps/future-pro-ios-e5c0e84e-d7e7-46cd-9662-23bffc92ca32/f4ddb8cd-b304-5687-8b52-ea09c577dfae/screens",
+    "screenUrl": "https://mobbin.com/screens/726b0126-ef7b-417d-9e31-451344db66a1",
+    "width": 1180,
+    "height": 2556,
+    "originalDimensions": [
+      1180,
+      2676
+    ],
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "2501bd9585f15d8c04dda3aa30a7a5d0516b86e572e61e04174471082e15846f",
+    "round": "R1 carried forward, reselected for R2",
+    "previousFile": "future--active-context-sheet.png",
+    "usecase": "sheet"
+  },
+  {
+    "file": "sheet--opal--contextual-sheet.png",
+    "app": "opal",
+    "original": "Opal iOS Screens 0.png",
+    "source": "https://mobbin.com/apps/opal-ios-3cd5ac67-b82e-481c-b1fb-6c817ac87321/5e028b5d-803b-4bdc-a0dd-568f9e3e5b55/screens",
+    "width": 1180,
+    "height": 2556,
+    "screenUrl": "https://mobbin.com/screens/9a9094c8-e1ef-4d85-95e3-af37fde9bec0",
+    "originalDimensions": [
+      1180,
+      2676
+    ],
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "932848f6412cfefc2ccf0e120739e72817ba8414ad8156104e94ed2776acbf13",
+    "round": "R1 carried forward, reselected for R2",
+    "previousFile": "opal--contextual-sheet.png",
+    "usecase": "sheet"
+  },
+  {
+    "file": "history--hevy--dark-workout-summary.png",
+    "app": "hevy",
+    "original": "Hevy ios Oct 2025 269.png",
+    "source": "https://mobbin.com/apps/hevy-ios-cf2a2ec4-b4c9-4a33-96b3-c316e7165a3b/2e8aa5bb-1d4e-46e1-a60c-43919883fbb7/screens",
+    "width": 1179,
+    "height": 2556,
+    "originalDimensions": [
+      1179,
+      2676
+    ],
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "27784078a76652b713b025a2ad44e40c0df7eff18f4bd7b0fd886cced7f398c4",
+    "round": "R1 carried forward, reselected for R2",
+    "previousFile": "hevy--dark-workout-summary.png",
+    "usecase": "history"
+  },
+  {
+    "file": "history--bevel--finish-summary.png",
+    "app": "bevel",
+    "original": "Bevel ios Oct 2026 302.png",
+    "source": "https://mobbin.com/apps/bevel-ios-4e7bb614-26f2-4464-a26b-9314adeef824/07003fc7-0512-4a41-b38d-e54efc4d5ec3/screens",
+    "width": 1179,
+    "height": 2556,
+    "originalDimensions": [
+      1179,
+      2676
+    ],
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "6151a35afc95cc202330f1de51d56e95dd1f36a2d416fffadaab5a5fc3ffaf84",
+    "round": "R1 carried forward, reselected for R2",
+    "previousFile": "bevel--finish-summary.png",
+    "usecase": "history"
+  },
+  {
+    "file": "history--gentler-streak--activity-history-chart.png",
+    "app": "gentler-streak",
+    "original": "Gentler Streak iOS Screens 1.png",
+    "source": "https://mobbin.com/apps/gentler-streak-ios-ccc0bb26-39b3-48fa-862d-2df69182840e/91403472-6e15-413b-ae56-0ad41f2ca6d2/screens",
+    "screenUrl": "https://mobbin.com/screens/0770467c-efce-4c31-8522-c651e6037af6",
+    "width": 1179,
+    "height": 2556,
+    "originalDimensions": [
+      1179,
+      2676
+    ],
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "f2251ef1d851259a5e40cffa4216e7ed0d00b3cea7afd013dfc2a428453f4d82",
+    "round": "R1 carried forward, reselected for R2",
+    "previousFile": "gentler-streak--activity-history-chart.png",
+    "usecase": "history"
+  },
+  {
+    "file": "history--future--consistency-calendar.png",
+    "app": "future",
+    "original": "Future Pro iOS Screens 2.png",
+    "source": "https://mobbin.com/apps/future-pro-ios-e5c0e84e-d7e7-46cd-9662-23bffc92ca32/f4ddb8cd-b304-5687-8b52-ea09c577dfae/screens",
+    "screenUrl": "https://mobbin.com/screens/d8f2e00a-c4e6-4d2d-8af4-edcff4f5e25d",
+    "width": 1179,
+    "height": 2556,
+    "originalDimensions": [
+      1179,
+      2676
+    ],
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "ea1f4962a44f36ef1bc79d7b61f37eeb53328b5f229d50c61c8953132fc2fd15",
+    "round": "R1 carried forward, reselected for R2",
+    "previousFile": "future--consistency-calendar.png",
+    "usecase": "history"
+  },
+  {
+    "file": "library--hevy--library-search.png",
+    "app": "hevy",
+    "original": "Hevy ios Oct 2025 23.png",
+    "source": "https://mobbin.com/apps/hevy-ios-cf2a2ec4-b4c9-4a33-96b3-c316e7165a3b/2e8aa5bb-1d4e-46e1-a60c-43919883fbb7/screens",
+    "width": 1179,
+    "height": 2556,
+    "originalDimensions": [
+      1179,
+      2676
+    ],
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "0e2e50629a5d355617b4c7ac349909ad62860f4fdf055410486a9f1642cf7302",
+    "round": "R1 carried forward, reselected for R2",
+    "previousFile": "hevy--library-search.png",
+    "usecase": "library"
+  },
+  {
+    "file": "library--hevy--muscle-filter-sheet.png",
+    "app": "hevy",
+    "original": "Hevy ios Oct 2025 49.png",
+    "source": "https://mobbin.com/apps/hevy-ios-cf2a2ec4-b4c9-4a33-96b3-c316e7165a3b/2e8aa5bb-1d4e-46e1-a60c-43919883fbb7/screens",
+    "width": 1179,
+    "height": 2556,
+    "originalDimensions": [
+      1179,
+      2676
+    ],
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "71d598ad79515c026add6e2f4260f7d29631c655195ef3f15a5c123517acff92",
+    "round": "R1 carried forward, reselected for R2",
+    "previousFile": "hevy--muscle-filter-sheet.png",
+    "usecase": "library"
+  },
+  {
+    "file": "library--oura-android--library-filter-chips.png",
+    "app": "oura-android",
+    "original": "Oura android Dec 2023 78.png",
+    "source": "https://mobbin.com/apps/oura-android-de2301f2-7120-4098-96d7-b074a8a9a5e7/6b895996-d7e9-487c-937b-eae4f8eeb4e9/screens",
+    "width": 1080,
+    "height": 2340,
+    "originalDimensions": [
+      1080,
+      2460
+    ],
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "747a1e91b90d8fc020ef46f20cd26d6e8634817e97f3f8cc54d1b35cfdfd41e6",
+    "round": "R1 carried forward, reselected for R2",
+    "previousFile": "oura-android--library-filter-chips.png",
+    "usecase": "library"
+  },
+  {
+    "file": "exercise--fitbod--exercise-muscle-anatomy.png",
+    "app": "fitbod",
+    "original": "Fitbod ios Jun 2022 64.png",
+    "source": "https://mobbin.com/apps/fitbod-ios-3bdabe9b-9287-43ff-9758-82b6558538a9/78b57dd0-e0fb-446f-b5ed-b90dc28cd58c/screens",
+    "width": 1125,
+    "height": 2436,
+    "originalDimensions": [
+      1125,
+      2556
+    ],
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "7cf151ee545f4d8e611cb7b5c1af657c928591279189efb0cc7d7b25ab5773dc",
+    "round": "R1 carried forward, reselected for R2",
+    "previousFile": "fitbod--exercise-muscle-anatomy.png",
+    "usecase": "exercise"
+  },
+  {
+    "file": "exercise--nike-training-club--active-form-guidance.png",
+    "app": "nike-training-club",
+    "original": "Nike Training Club iOS Screens 1.png",
+    "source": "https://mobbin.com/apps/nike-training-club-ios-07d6cbf7-4378-4a21-986a-e2aa83a6733a/34985bcb-464d-49f2-8cf3-fd2a5a1a996b/screens",
+    "width": 1179,
+    "height": 2556,
+    "screenUrl": "https://mobbin.com/screens/9ae702a8-751a-44ec-9956-425e841d025e",
+    "originalDimensions": [
+      1179,
+      2676
+    ],
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "7cd5ace344742a8db10f1a4be90eeb74c728811504748486abc682210a72d40f",
+    "round": "R1 carried forward, reselected for R2",
+    "previousFile": "nike-training-club--active-form-guidance.png",
+    "usecase": "exercise"
+  },
+  {
+    "file": "exercise--hevy--exercise-detail-chart.png",
+    "app": "hevy",
+    "original": "Hevy ios Oct 2025 75.png",
+    "source": "https://mobbin.com/apps/hevy-ios-cf2a2ec4-b4c9-4a33-96b3-c316e7165a3b/2e8aa5bb-1d4e-46e1-a60c-43919883fbb7/screens",
+    "width": 1179,
+    "height": 2556,
+    "originalDimensions": [
+      1179,
+      2676
+    ],
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "bd9d79f8438f7e5901d01582909d945c87c94b320d263fd1e9804117b92ef496",
+    "round": "R1 carried forward, reselected for R2",
+    "previousFile": "hevy--exercise-detail-chart.png",
+    "usecase": "exercise"
+  },
+  {
+    "file": "exercise-history--hevy--exercise-history-sets.png",
+    "app": "hevy",
+    "original": "Hevy ios Oct 2025 84.png",
+    "source": "https://mobbin.com/apps/hevy-ios-cf2a2ec4-b4c9-4a33-96b3-c316e7165a3b/2e8aa5bb-1d4e-46e1-a60c-43919883fbb7/screens",
+    "width": 1179,
+    "height": 2556,
+    "originalDimensions": [
+      1179,
+      2676
+    ],
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "a09b878d248e27ec8a0eb011da03c32a7c502846d8d0f78c80c001645b28ba56",
+    "round": "R1 carried forward, reselected for R2",
+    "previousFile": "hevy--exercise-history-sets.png",
+    "usecase": "exercise-history"
+  },
+  {
+    "file": "exercise-history--ladder--exercise-journal.png",
+    "app": "ladder",
+    "original": "Ladder ios Jul 2024 167.png",
+    "source": "https://mobbin.com/apps/ladder-ios-74898326-8455-4641-a83d-03851ba164dc/b2fd8ade-0fd6-4e24-9cee-20941ca4b603/screens",
+    "width": 1179,
+    "height": 2556,
+    "originalDimensions": [
+      1179,
+      2676
+    ],
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "510d75532abbea01ccf30166d98b922ee883b7b32013c897524f149a46769a12",
+    "round": "R1 carried forward, reselected for R2",
+    "previousFile": "ladder--exercise-journal.png",
+    "usecase": "exercise-history"
+  },
+  {
+    "file": "exercise-history--hevy--empty-exercise-history.png",
+    "app": "hevy",
+    "original": "Hevy ios Oct 2025 83.png",
+    "source": "https://mobbin.com/apps/hevy-ios-cf2a2ec4-b4c9-4a33-96b3-c316e7165a3b/2e8aa5bb-1d4e-46e1-a60c-43919883fbb7/screens",
+    "width": 1179,
+    "height": 2556,
+    "originalDimensions": [
+      1179,
+      2676
+    ],
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "1cc79ae695cb6423af01f9ee86d9fc42eb321ff40f52f30530ae7b9e0a182b24",
+    "round": "R1 carried forward, reselected for R2",
+    "previousFile": "hevy--empty-exercise-history.png",
+    "usecase": "exercise-history"
+  },
+  {
+    "file": "progress--hevy--weekly-muscle-anatomy.png",
+    "app": "hevy",
+    "original": "Hevy ios Oct 2025 213.png",
+    "source": "https://mobbin.com/apps/hevy-ios-cf2a2ec4-b4c9-4a33-96b3-c316e7165a3b/2e8aa5bb-1d4e-46e1-a60c-43919883fbb7/screens",
+    "width": 1179,
+    "height": 2556,
+    "originalDimensions": [
+      1179,
+      2676
+    ],
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "7b88944dd30141b7ff3a3f78fb4a53804c62e61808d1f979bd61d8cb4ad2a198",
+    "round": "R1 carried forward, reselected for R2",
+    "previousFile": "hevy--weekly-muscle-anatomy.png",
+    "usecase": "progress"
+  },
+  {
+    "file": "progress--hevy--muscle-distribution.png",
+    "app": "hevy",
+    "original": "Hevy ios Oct 2025 218.png",
+    "source": "https://mobbin.com/apps/hevy-ios-cf2a2ec4-b4c9-4a33-96b3-c316e7165a3b/2e8aa5bb-1d4e-46e1-a60c-43919883fbb7/screens",
+    "width": 1179,
+    "height": 2556,
+    "originalDimensions": [
+      1179,
+      2676
+    ],
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "2e7e775ecb0c44155bf482f02309d96e64d5c92a3e99c907371f784c9758cfd9",
+    "round": "R1 carried forward, reselected for R2",
+    "previousFile": "hevy--muscle-distribution.png",
+    "usecase": "progress"
+  },
+  {
+    "file": "progress--macrofactor--scale-weight-chart.png",
+    "app": "macrofactor",
+    "original": "MacroFactor ios Aug 2026 201.png",
+    "source": "https://mobbin.com/apps/macro-factor-ios-be8ea834-9f58-4bec-8d11-30c2ace4b523/5e2b0161-a47c-40a5-8665-95e601889178/screens",
+    "width": 1179,
+    "height": 2556,
+    "originalDimensions": [
+      1179,
+      2676
+    ],
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "fb3eafb13998380936c339964623c9f965faac1af2b33f1ec00213f25b7bfa5b",
+    "round": "R1 carried forward, reselected for R2",
+    "previousFile": "macrofactor--scale-weight-chart.png",
+    "usecase": "progress"
+  },
+  {
+    "file": "progress--macrofactor--weight-entry-sheet.png",
+    "app": "macrofactor",
+    "original": "MacroFactor ios Aug 2026 202.png",
+    "source": "https://mobbin.com/apps/macro-factor-ios-be8ea834-9f58-4bec-8d11-30c2ace4b523/5e2b0161-a47c-40a5-8665-95e601889178/screens",
+    "width": 1179,
+    "height": 2556,
+    "originalDimensions": [
+      1179,
+      2676
+    ],
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "32772d3745b38343dda626215c476dfeadb3480ee78362c8e303155abfd7241a",
+    "round": "R1 carried forward, reselected for R2",
+    "previousFile": "macrofactor--weight-entry-sheet.png",
+    "usecase": "progress"
+  },
+  {
+    "file": "progress--whoop--metric-breakdown.png",
+    "app": "whoop",
+    "original": "WHOOP iOS Screens 1.png",
+    "source": "https://mobbin.com/apps/whoop-ios-f2d3db04-8fb3-4e1d-ada4-f5dc133be818/ff42691a-a36c-4a33-80c5-a349c719dfcb/screens",
+    "width": 1179,
+    "height": 2556,
+    "screenUrl": "https://mobbin.com/screens/7734a2ec-4e6f-4923-9d3c-a3d9d84dd619",
+    "originalDimensions": [
+      1179,
+      2676
+    ],
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "38feb507473d5d85c7c90c296dfb3067fc95fb2f8666cd1d7322a20a66cbbafe",
+    "round": "R1 carried forward, reselected for R2",
+    "previousFile": "whoop--metric-breakdown.png",
+    "usecase": "progress"
+  },
+  {
+    "file": "settings--raycast--dark-settings-sheet.png",
+    "app": "raycast",
+    "original": "Raycast ios Nov 2025 129.png",
+    "source": "https://mobbin.com/apps/raycast-ios-12dd61e1-ee57-4aca-bc8b-8f0afe77d8c7/dcec212b-2143-4565-a9f4-8609f23b4806/screens",
+    "width": 1179,
+    "height": 2556,
+    "originalDimensions": [
+      1179,
+      2676
+    ],
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "47f9a4e05711cd5e2b7ca30f1b9c8dc3257a6e09bc7bd437dcf6af830e039072",
+    "round": "R1 carried forward, reselected for R2",
+    "previousFile": "raycast--dark-settings-sheet.png",
+    "usecase": "settings"
+  },
+  {
+    "file": "settings--bevel--rest-and-autofill-settings.png",
+    "app": "bevel",
+    "original": "Bevel ios Oct 2026 334.png",
+    "source": "https://mobbin.com/apps/bevel-ios-4e7bb614-26f2-4464-a26b-9314adeef824/07003fc7-0512-4a41-b38d-e54efc4d5ec3/screens",
+    "width": 1179,
+    "height": 2556,
+    "originalDimensions": [
+      1179,
+      2676
+    ],
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "0238a62ac3445dfc360a695f9f0cd533599e618ba9e48eb441c6dfb8a8011201",
+    "round": "R1 carried forward, reselected for R2",
+    "previousFile": "bevel--rest-and-autofill-settings.png",
+    "usecase": "settings"
+  },
+  {
+    "file": "settings--hevy--program-filter-sheet.png",
+    "app": "hevy",
+    "original": "Hevy ios Oct 2025 132.png",
+    "source": "https://mobbin.com/apps/hevy-ios-cf2a2ec4-b4c9-4a33-96b3-c316e7165a3b/2e8aa5bb-1d4e-46e1-a60c-43919883fbb7/screens",
+    "width": 1179,
+    "height": 2556,
+    "originalDimensions": [
+      1179,
+      2676
+    ],
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "a870e350373c42f3e39ec6f4b77282eb337c5301c59f5dcf8fe4b7fe98cbef18",
+    "round": "R1 carried forward, reselected for R2",
+    "previousFile": "hevy--program-filter-sheet.png",
+    "usecase": "settings"
+  },
+  {
+    "file": "signin--raycast--black-sign-in.png",
+    "app": "raycast",
+    "original": "Raycast ios Nov 2025 149.png",
+    "source": "https://mobbin.com/apps/raycast-ios-12dd61e1-ee57-4aca-bc8b-8f0afe77d8c7/dcec212b-2143-4565-a9f4-8609f23b4806/screens",
+    "width": 1180,
+    "height": 2556,
+    "originalDimensions": [
+      1180,
+      2676
+    ],
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "2a3e8a948b3989fe93ac7c556a53b1513dc6f6aa514d1a4ea63201a98a1412bc",
+    "round": "R1 carried forward, reselected for R2",
+    "previousFile": "raycast--black-sign-in.png",
+    "usecase": "signin"
+  },
+  {
+    "file": "signin--oura-android--sign-in.png",
+    "app": "oura-android",
+    "original": "Oura android Dec 2023 5.png",
+    "source": "https://mobbin.com/apps/oura-android-de2301f2-7120-4098-96d7-b074a8a9a5e7/6b895996-d7e9-487c-937b-eae4f8eeb4e9/screens",
+    "width": 1080,
+    "height": 2340,
+    "originalDimensions": [
+      1080,
+      2460
+    ],
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "7e57c3a3b8a5310b08a58d0d00b1a765f2dbbfc283daad0132b85e055d160ba9",
+    "round": "R1 carried forward, reselected for R2",
+    "previousFile": "oura-android--sign-in.png",
+    "usecase": "signin"
+  },
+  {
+    "file": "components--linear-mobile--borderless-inbox.png",
+    "app": "linear-mobile",
+    "original": "Linear Mobile iOS Screens 0.png",
+    "source": "https://mobbin.com/apps/linear-mobile-ios-a9c8e2d8-2d18-4d27-88be-a89ea6f82028/c0c28468-0381-466b-9d3f-133f1227e303/screens",
+    "width": 1179,
+    "height": 2556,
+    "screenUrl": "https://mobbin.com/screens/58a6ef8a-408a-4ce7-90d5-08033f7c5a47",
+    "originalDimensions": [
+      1179,
+      2676
+    ],
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "c09f7a776bb89a1a1d618198b99c0c4d4763199505ae7d61d0e7eab7e3af8e30",
+    "round": "R1 carried forward, reselected for R2",
+    "previousFile": "linear-mobile--borderless-inbox.png",
+    "usecase": "components"
+  },
+  {
+    "file": "components--linear-mobile--grouped-list.png",
+    "app": "linear-mobile",
+    "original": "Linear Mobile iOS Screens 2.png",
+    "source": "https://mobbin.com/apps/linear-mobile-ios-a9c8e2d8-2d18-4d27-88be-a89ea6f82028/c0c28468-0381-466b-9d3f-133f1227e303/screens",
+    "width": 1179,
+    "height": 2556,
+    "screenUrl": "https://mobbin.com/screens/50ce5570-0d23-48b2-84c3-7b28a0e4414b",
+    "originalDimensions": [
+      1179,
+      2676
+    ],
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "8ef9532bdcdb61fc05787bea79fc62677249b9d893aaa8952ecfa7170776dd58",
+    "round": "R1 carried forward, reselected for R2",
+    "previousFile": "linear-mobile--grouped-list.png",
+    "usecase": "components"
+  },
+  {
+    "file": "components--cash-app--quiet-success.png",
+    "app": "cash-app",
+    "original": "Cash App iOS Screens 1.png",
+    "source": "https://mobbin.com/apps/cash-app-ios-6fc9a5b8-91ee-47dd-976d-9784a1975e1a/cf7e02fa-2217-50ef-a724-4162e37e153d/screens",
+    "width": 1179,
+    "height": 2556,
+    "screenUrl": "https://mobbin.com/screens/e2f3dd05-7f46-45fc-801c-8492a1314a79",
+    "originalDimensions": [
+      1179,
+      2676
+    ],
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "d9aeebe0ec5e2aeddbbd32bf6c33424a6d8cf25902a16da908739c63c4bca234",
+    "round": "R1 carried forward, reselected for R2",
+    "previousFile": "cash-app--quiet-success.png",
+    "usecase": "components"
+  },
+  {
+    "file": "components--raycast--dark-keyboard-context.png",
+    "app": "raycast",
+    "original": "Raycast ios Nov 2025 132.png",
+    "source": "https://mobbin.com/apps/raycast-ios-12dd61e1-ee57-4aca-bc8b-8f0afe77d8c7/dcec212b-2143-4565-a9f4-8609f23b4806/screens",
+    "width": 1179,
+    "height": 2556,
+    "originalDimensions": [
+      1179,
+      2676
+    ],
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "cddc0cbde84997f6edc385e6894bcea70f30a62c61311830de331e13cdf08e4e",
+    "round": "R1 carried forward, reselected for R2",
+    "previousFile": "raycast--dark-keyboard-context.png",
+    "usecase": "components"
+  },
+  {
+    "file": "components--ladder--resume-workout-dock.png",
+    "app": "ladder",
+    "original": "Ladder ios Jul 2024 92.png",
+    "source": "https://mobbin.com/apps/ladder-ios-74898326-8455-4641-a83d-03851ba164dc/b2fd8ade-0fd6-4e24-9cee-20941ca4b603/screens",
+    "width": 1179,
+    "height": 2556,
+    "originalDimensions": [
+      1179,
+      2676
+    ],
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "08f966012eb768ea32689840b67b1aff58d6a7156b61bbc1ac9ea839d2f933f4",
+    "round": "R1 carried forward, reselected for R2",
+    "previousFile": "ladder--resume-workout-dock.png",
+    "usecase": "components"
+  },
+  {
+    "file": "components--things--dark-upcoming-sections.png",
+    "app": "things",
+    "original": "Things 3 ios Mar 2023 154.png",
+    "source": "https://mobbin.com/apps/things-3-ios-14d4b9f3-ea09-4247-9091-19c5209dedff/a840cade-6433-4ae5-8199-03bb9772621d/screens",
+    "width": 1125,
+    "height": 2436,
+    "originalDimensions": [
+      1125,
+      2556
+    ],
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "ebb3990e215ffe7c6eaced3eae29efc5416c1add000f92e2ab31cbee60f08402",
+    "round": "R1 carried forward, reselected for R2",
+    "previousFile": "things--dark-upcoming-sections.png",
+    "usecase": "components"
+  },
+  {
+    "file": "train--structured--dark-today.png",
+    "app": "structured",
+    "original": "Structured ios Sep 2026 120.png",
+    "source": "https://mobbin.com/apps/structured-ios-09540dbb-d1cc-45ab-b87b-e2df38ebe178/cca72712-7ffa-5fed-a090-11a8a28740ee/screens",
+    "round": "R2 new selection",
+    "usecase": "train",
+    "originalDimensions": [
+      1180,
+      2676
+    ],
+    "width": 1180,
+    "height": 2556,
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "45569702d83403896d1ea52c13c7d80f769a885f22d70d7ceaeb37035a325078"
+  },
+  {
+    "file": "reorder--structured--week-with-detail-detent.png",
+    "app": "structured",
+    "original": "Structured ios Sep 2026 66.png",
+    "source": "https://mobbin.com/apps/structured-ios-09540dbb-d1cc-45ab-b87b-e2df38ebe178/cca72712-7ffa-5fed-a090-11a8a28740ee/screens",
+    "round": "R2 new selection",
+    "usecase": "reorder",
+    "originalDimensions": [
+      1179,
+      2676
+    ],
+    "width": 1179,
+    "height": 2556,
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "5944e7eaddd816a1b9761077d617893374ae8e336477cd5a22304905911c59cd"
+  },
+  {
+    "file": "program--structured--day-detail-editor.png",
+    "app": "structured",
+    "original": "Structured ios Sep 2026 70.png",
+    "source": "https://mobbin.com/apps/structured-ios-09540dbb-d1cc-45ab-b87b-e2df38ebe178/cca72712-7ffa-5fed-a090-11a8a28740ee/screens",
+    "round": "R2 new selection",
+    "usecase": "program",
+    "originalDimensions": [
+      1180,
+      2676
+    ],
+    "width": 1180,
+    "height": 2556,
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "f741c159cf41a5ac28d5572f2ad5b8b7039a793a91b3a2e1821791e4c440556a"
+  },
+  {
+    "file": "empty--structured--inbox.png",
+    "app": "structured",
+    "original": "Structured ios Sep 2026 79.png",
+    "source": "https://mobbin.com/apps/structured-ios-09540dbb-d1cc-45ab-b87b-e2df38ebe178/cca72712-7ffa-5fed-a090-11a8a28740ee/screens",
+    "round": "R2 new selection",
+    "usecase": "empty",
+    "originalDimensions": [
+      1180,
+      2676
+    ],
+    "width": 1180,
+    "height": 2556,
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "f701818180dfb0fb3716843716a01d7a0a87d79b533fb099692e52fd5f147a8a"
+  },
+  {
+    "file": "settings--structured--grouped-settings.png",
+    "app": "structured",
+    "original": "Structured ios Sep 2026 104.png",
+    "source": "https://mobbin.com/apps/structured-ios-09540dbb-d1cc-45ab-b87b-e2df38ebe178/cca72712-7ffa-5fed-a090-11a8a28740ee/screens",
+    "round": "R2 new selection",
+    "usecase": "settings",
+    "originalDimensions": [
+      1180,
+      2676
+    ],
+    "width": 1180,
+    "height": 2556,
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "a1cbb2d182c618e8d66f35c0f8ab27e57e4b23215f38ec77a7a949979eb3d419"
+  },
+  {
+    "file": "sheet--structured--alert-list.png",
+    "app": "structured",
+    "original": "Structured ios Sep 2026 41.png",
+    "source": "https://mobbin.com/apps/structured-ios-09540dbb-d1cc-45ab-b87b-e2df38ebe178/cca72712-7ffa-5fed-a090-11a8a28740ee/screens",
+    "round": "R2 new selection",
+    "usecase": "sheet",
+    "originalDimensions": [
+      1179,
+      2676
+    ],
+    "width": 1179,
+    "height": 2556,
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "8f724edbc8864ac5eac63176a9959eafc5283925c42251f8cbdeae04c95058be"
+  },
+  {
+    "file": "welcome--structured--single-decision.png",
+    "app": "structured",
+    "original": "Structured ios Sep 2026 3.png",
+    "source": "https://mobbin.com/apps/structured-ios-09540dbb-d1cc-45ab-b87b-e2df38ebe178/cca72712-7ffa-5fed-a090-11a8a28740ee/screens",
+    "round": "R2 new selection",
+    "usecase": "welcome",
+    "originalDimensions": [
+      1180,
+      2676
+    ],
+    "width": 1180,
+    "height": 2556,
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "79cfc06631e38d6a4d679a22446b0ff7246b336145680b39b6a8d50a416cf439"
+  },
+  {
+    "file": "library--structured--dark-choice-list.png",
+    "app": "structured",
+    "original": "Structured ios Sep 2026 122.png",
+    "source": "https://mobbin.com/apps/structured-ios-09540dbb-d1cc-45ab-b87b-e2df38ebe178/cca72712-7ffa-5fed-a090-11a8a28740ee/screens",
+    "round": "R2 new selection",
+    "usecase": "library",
+    "originalDimensions": [
+      1180,
+      2676
+    ],
+    "width": 1180,
+    "height": 2556,
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "442d90847ecea7d645959fd14c4011361e3e25fee85c838a6619950646c5244e"
+  },
+  {
+    "file": "signin--todoist--provider-hierarchy.png",
+    "app": "todoist",
+    "original": "Todoist ios Mar 2026 0.png",
+    "source": "https://mobbin.com/apps/todoist-ios-eef2af1b-27db-42b9-a83e-ab4e645a4fdb/c8ffef88-5e15-4e50-bdaf-89447837fa24/screens",
+    "round": "R2 new selection",
+    "usecase": "signin",
+    "originalDimensions": [
+      1180,
+      2676
+    ],
+    "width": 1180,
+    "height": 2556,
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "05c55e78f3ae2186d612e18a997a75eefbebf00179dbb5d2023d42abd423d533"
+  },
+  {
+    "file": "welcome--todoist--single-selection.png",
+    "app": "todoist",
+    "original": "Todoist ios Mar 2026 10.png",
+    "source": "https://mobbin.com/apps/todoist-ios-eef2af1b-27db-42b9-a83e-ab4e645a4fdb/c8ffef88-5e15-4e50-bdaf-89447837fa24/screens",
+    "round": "R2 new selection",
+    "usecase": "welcome",
+    "originalDimensions": [
+      1180,
+      2676
+    ],
+    "width": 1180,
+    "height": 2556,
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "2ac7e070d40509158cc88b2693b5b388668684204297f574507a1d611dbdbc97"
+  },
+  {
+    "file": "sheet--todoist--task-detail.png",
+    "app": "todoist",
+    "original": "Todoist ios Mar 2026 27.png",
+    "source": "https://mobbin.com/apps/todoist-ios-eef2af1b-27db-42b9-a83e-ab4e645a4fdb/c8ffef88-5e15-4e50-bdaf-89447837fa24/screens",
+    "round": "R2 new selection",
+    "usecase": "sheet",
+    "originalDimensions": [
+      1180,
+      2676
+    ],
+    "width": 1180,
+    "height": 2556,
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "fef7e234818c7b27c64a7b73b771624dd46fcae74604bd6b3a180afa2cdf8bfd"
+  },
+  {
+    "file": "toast--todoist--completion-and-undo.png",
+    "app": "todoist",
+    "original": "Todoist ios Mar 2026 100.png",
+    "source": "https://mobbin.com/apps/todoist-ios-eef2af1b-27db-42b9-a83e-ab4e645a4fdb/c8ffef88-5e15-4e50-bdaf-89447837fa24/screens",
+    "round": "R2 new selection",
+    "usecase": "toast",
+    "originalDimensions": [
+      1180,
+      2676
+    ],
+    "width": 1180,
+    "height": 2556,
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "585e362ec71bdceaef8d9971799e51d6b92e25e21e33569f86e4e3c8b2cd56d2"
+  },
+  {
+    "file": "menu--todoist--task-actions.png",
+    "app": "todoist",
+    "original": "Todoist ios Mar 2026 102.png",
+    "source": "https://mobbin.com/apps/todoist-ios-eef2af1b-27db-42b9-a83e-ab4e645a4fdb/c8ffef88-5e15-4e50-bdaf-89447837fa24/screens",
+    "round": "R2 new selection",
+    "usecase": "menu",
+    "originalDimensions": [
+      1179,
+      2676
+    ],
+    "width": 1179,
+    "height": 2556,
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "14c31d32d9c82ae3b6cc097ed947d01cba77e61cd655ddb31703c341da8873c0"
+  },
+  {
+    "file": "reorder--todoist--move-destination.png",
+    "app": "todoist",
+    "original": "Todoist ios Mar 2026 103.png",
+    "source": "https://mobbin.com/apps/todoist-ios-eef2af1b-27db-42b9-a83e-ab4e645a4fdb/c8ffef88-5e15-4e50-bdaf-89447837fa24/screens",
+    "round": "R2 new selection",
+    "usecase": "reorder",
+    "originalDimensions": [
+      1179,
+      2676
+    ],
+    "width": 1179,
+    "height": 2556,
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "2d0984e6d18c355d6dd5adf6592469407963343452adf142ab3e32c6ce1fb542"
+  },
+  {
+    "file": "history--todoist--dated-agenda.png",
+    "app": "todoist",
+    "original": "Todoist ios Mar 2026 113.png",
+    "source": "https://mobbin.com/apps/todoist-ios-eef2af1b-27db-42b9-a83e-ab4e645a4fdb/c8ffef88-5e15-4e50-bdaf-89447837fa24/screens",
+    "round": "R2 new selection",
+    "usecase": "history",
+    "originalDimensions": [
+      1179,
+      2676
+    ],
+    "width": 1179,
+    "height": 2556,
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "0f83f95d6355090bf371c253e634414513686010249078960fbaa2b2853289ec"
+  },
+  {
+    "file": "sheet--todoist--display-controls.png",
+    "app": "todoist",
+    "original": "Todoist ios Mar 2026 108.png",
+    "source": "https://mobbin.com/apps/todoist-ios-eef2af1b-27db-42b9-a83e-ab4e645a4fdb/c8ffef88-5e15-4e50-bdaf-89447837fa24/screens",
+    "round": "R2 new selection",
+    "usecase": "sheet",
+    "originalDimensions": [
+      1179,
+      2676
+    ],
+    "width": 1179,
+    "height": 2556,
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "9faa5985fb357a80b61a37c761197a1c1b30106b282ee512ea60e717d72e8628"
+  },
+  {
+    "file": "feedback--streaks--completed-habit.png",
+    "app": "streaks",
+    "original": "Streaks ios Oct 2021 36.png",
+    "source": "https://mobbin.com/apps/streaks-ios-ec5eee00-e0a8-4060-a969-379d4eae7c63/6b18a4df-08da-42c6-8494-468a9b6c7643/screens",
+    "round": "R2 new selection",
+    "usecase": "feedback",
+    "originalDimensions": [
+      1125,
+      2556
+    ],
+    "width": 1125,
+    "height": 2441,
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 115
+    },
+    "cropped": true,
+    "sha256": "dee963f081a81fa5ef94c51741af510c2f53b19754864eccd2bd4e1de5eb2f9a"
+  },
+  {
+    "file": "train--streaks--habit-home.png",
+    "app": "streaks",
+    "original": "Streaks ios Oct 2021 58.png",
+    "source": "https://mobbin.com/apps/streaks-ios-ec5eee00-e0a8-4060-a969-379d4eae7c63/6b18a4df-08da-42c6-8494-468a9b6c7643/screens",
+    "round": "R2 new selection",
+    "usecase": "train",
+    "originalDimensions": [
+      1125,
+      2556
+    ],
+    "width": 1125,
+    "height": 2441,
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 115
+    },
+    "cropped": true,
+    "sha256": "967782c810c61cc87ec9afeec913b3f28c7a52823dbdcc3b34e80acbcea5be4d"
+  },
+  {
+    "file": "reorder--streaks--arrange-before.png",
+    "app": "streaks",
+    "original": "Streaks ios Oct 2021 70.png",
+    "source": "https://mobbin.com/apps/streaks-ios-ec5eee00-e0a8-4060-a969-379d4eae7c63/6b18a4df-08da-42c6-8494-468a9b6c7643/screens",
+    "round": "R2 new selection",
+    "usecase": "reorder",
+    "originalDimensions": [
+      1125,
+      2556
+    ],
+    "width": 1125,
+    "height": 2441,
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 115
+    },
+    "cropped": true,
+    "sha256": "6bba8b83f431e7fc790d9efc0e4631abf351d9387ef716572f78241c3047b917"
+  },
+  {
+    "file": "reorder--streaks--arrange-after.png",
+    "app": "streaks",
+    "original": "Streaks ios Oct 2021 71.png",
+    "source": "https://mobbin.com/apps/streaks-ios-ec5eee00-e0a8-4060-a969-379d4eae7c63/6b18a4df-08da-42c6-8494-468a9b6c7643/screens",
+    "round": "R2 new selection",
+    "usecase": "reorder",
+    "originalDimensions": [
+      1125,
+      2556
+    ],
+    "width": 1125,
+    "height": 2441,
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 115
+    },
+    "cropped": true,
+    "sha256": "bc63b09e1091dc7c625dd11b472f1b2c358466bc6ee591f838484dde222f6791"
+  },
+  {
+    "file": "welcome--hevy--units.png",
+    "app": "hevy",
+    "original": "Hevy ios Oct 2025 4.png",
+    "source": "https://mobbin.com/apps/hevy-ios-cf2a2ec4-b4c9-4a33-96b3-c316e7165a3b/2e8aa5bb-1d4e-46e1-a60c-43919883fbb7/screens",
+    "round": "R2 new selection",
+    "usecase": "welcome",
+    "originalDimensions": [
+      1179,
+      2676
+    ],
+    "width": 1179,
+    "height": 2556,
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "7fc180d2cfba2883b7726f9c8ad98162847b1b320af20ff8c2b53d28f7e50107"
+  },
+  {
+    "file": "menu--hevy--exercise-actions.png",
+    "app": "hevy",
+    "original": "Hevy ios Oct 2025 99.png",
+    "source": "https://mobbin.com/apps/hevy-ios-cf2a2ec4-b4c9-4a33-96b3-c316e7165a3b/2e8aa5bb-1d4e-46e1-a60c-43919883fbb7/screens",
+    "round": "R2 new selection",
+    "usecase": "menu",
+    "originalDimensions": [
+      1179,
+      2676
+    ],
+    "width": 1179,
+    "height": 2556,
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "02dff48ecc7f0dbd2fedf099cbfbc45333f7334763a57268701fb36d0c3e5ff3"
+  },
+  {
+    "file": "reorder--hevy--routine-before.png",
+    "app": "hevy",
+    "original": "Hevy ios Oct 2025 100.png",
+    "source": "https://mobbin.com/apps/hevy-ios-cf2a2ec4-b4c9-4a33-96b3-c316e7165a3b/2e8aa5bb-1d4e-46e1-a60c-43919883fbb7/screens",
+    "round": "R2 new selection",
+    "usecase": "reorder",
+    "originalDimensions": [
+      1179,
+      2676
+    ],
+    "width": 1179,
+    "height": 2556,
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "487bccf683b83ea645c426811e0522cd224ad75a37ce9bb4c3cd4a8ad5886bad"
+  },
+  {
+    "file": "reorder--hevy--routine-after.png",
+    "app": "hevy",
+    "original": "Hevy ios Oct 2025 102.png",
+    "source": "https://mobbin.com/apps/hevy-ios-cf2a2ec4-b4c9-4a33-96b3-c316e7165a3b/2e8aa5bb-1d4e-46e1-a60c-43919883fbb7/screens",
+    "round": "R2 new selection",
+    "usecase": "reorder",
+    "originalDimensions": [
+      1179,
+      2676
+    ],
+    "width": 1179,
+    "height": 2556,
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "0c24c8e3e80a1e6452eee9c2e0be9776d6fbb2b8462e56ddf1383bd5605efe2a"
+  },
+  {
+    "file": "program--hevy--routine-editor.png",
+    "app": "hevy",
+    "original": "Hevy ios Oct 2025 126.png",
+    "source": "https://mobbin.com/apps/hevy-ios-cf2a2ec4-b4c9-4a33-96b3-c316e7165a3b/2e8aa5bb-1d4e-46e1-a60c-43919883fbb7/screens",
+    "round": "R2 new selection",
+    "usecase": "program",
+    "originalDimensions": [
+      1179,
+      2676
+    ],
+    "width": 1179,
+    "height": 2556,
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "99953be8ab725ce78abbe4119ee664d230ca0f65fea565de0bc07c4fb51bc779"
+  },
+  {
+    "file": "welcome--hevy--program-overview.png",
+    "app": "hevy",
+    "original": "Hevy ios Oct 2025 135.png",
+    "source": "https://mobbin.com/apps/hevy-ios-cf2a2ec4-b4c9-4a33-96b3-c316e7165a3b/2e8aa5bb-1d4e-46e1-a60c-43919883fbb7/screens",
+    "round": "R2 new selection",
+    "usecase": "welcome",
+    "originalDimensions": [
+      1179,
+      2676
+    ],
+    "width": 1179,
+    "height": 2556,
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "ef1f7cf2364853edea362b423be79fcad57c4a38e0686f924c9025c6b36a88b9"
+  },
+  {
+    "file": "exercise--hevy--info-sheet.png",
+    "app": "hevy",
+    "original": "Hevy ios Oct 2025 183.png",
+    "source": "https://mobbin.com/apps/hevy-ios-cf2a2ec4-b4c9-4a33-96b3-c316e7165a3b/2e8aa5bb-1d4e-46e1-a60c-43919883fbb7/screens",
+    "round": "R2 new selection",
+    "usecase": "exercise",
+    "originalDimensions": [
+      1179,
+      2676
+    ],
+    "width": 1179,
+    "height": 2556,
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "ec20da86fc11464b83d21f383bdd7d88c1b5b02563990ba39936e0321f7a88b3"
+  },
+  {
+    "file": "history--hevy--chronological-workouts.png",
+    "app": "hevy",
+    "original": "Hevy ios Oct 2025 210.png",
+    "source": "https://mobbin.com/apps/hevy-ios-cf2a2ec4-b4c9-4a33-96b3-c316e7165a3b/2e8aa5bb-1d4e-46e1-a60c-43919883fbb7/screens",
+    "round": "R2 new selection",
+    "usecase": "history",
+    "originalDimensions": [
+      1179,
+      2676
+    ],
+    "width": 1179,
+    "height": 2556,
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "22c52128cb747bf8f912f39065819f6a344e69afc465cfab80ada8a797c29e02"
+  },
+  {
+    "file": "settings--hevy--grouped-preferences.png",
+    "app": "hevy",
+    "original": "Hevy ios Oct 2025 242.png",
+    "source": "https://mobbin.com/apps/hevy-ios-cf2a2ec4-b4c9-4a33-96b3-c316e7165a3b/2e8aa5bb-1d4e-46e1-a60c-43919883fbb7/screens",
+    "round": "R2 new selection",
+    "usecase": "settings",
+    "originalDimensions": [
+      1179,
+      2676
+    ],
+    "width": 1179,
+    "height": 2556,
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "e5166e27b3e72bb0ea234401d31ac217f117a0abda13a40d01699978aa3fa9b9"
+  },
+  {
+    "file": "signin--hevy--email-and-providers.png",
+    "app": "hevy",
+    "original": "Hevy ios Oct 2025 281.png",
+    "source": "https://mobbin.com/apps/hevy-ios-cf2a2ec4-b4c9-4a33-96b3-c316e7165a3b/2e8aa5bb-1d4e-46e1-a60c-43919883fbb7/screens",
+    "round": "R2 new selection",
+    "usecase": "signin",
+    "originalDimensions": [
+      1179,
+      2676
+    ],
+    "width": 1179,
+    "height": 2556,
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 120
+    },
+    "cropped": true,
+    "sha256": "612d1c978cdc9449ff214bc64e4f4acf8e19f09ddb9be408b012c434d297790b"
+  },
+  {
+    "file": "sheet--things-3--date-selection.png",
+    "app": "things-3",
+    "original": "Things 3 ios Mar 2023 23.png",
+    "source": "https://mobbin.com/apps/things-3-ios-14d4b9f3-ea09-4247-9091-19c5209dedff/a840cade-6433-4ae5-8199-03bb9772621d/screens",
+    "round": "R2 new selection",
+    "usecase": "sheet",
+    "originalDimensions": [
+      1125,
+      2556
+    ],
+    "width": 1125,
+    "height": 2441,
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 115
+    },
+    "cropped": true,
+    "sha256": "967a7c027bc2bd518dede5dccd27092695d08e6a83fa74253445399786607322"
+  },
+  {
+    "file": "reorder--things-3--move-destination.png",
+    "app": "things-3",
+    "original": "Things 3 ios Mar 2023 105.png",
+    "source": "https://mobbin.com/apps/things-3-ios-14d4b9f3-ea09-4247-9091-19c5209dedff/a840cade-6433-4ae5-8199-03bb9772621d/screens",
+    "round": "R2 new selection",
+    "usecase": "reorder",
+    "originalDimensions": [
+      1125,
+      2556
+    ],
+    "width": 1125,
+    "height": 2441,
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 115
+    },
+    "cropped": true,
+    "sha256": "405a6c783b9a6c05e08539634d7e93defbe7a7adf888b74e3b968e9ad86adf1f"
+  },
+  {
+    "file": "history--things-3--logbook.png",
+    "app": "things-3",
+    "original": "Things 3 ios Mar 2023 117.png",
+    "source": "https://mobbin.com/apps/things-3-ios-14d4b9f3-ea09-4247-9091-19c5209dedff/a840cade-6433-4ae5-8199-03bb9772621d/screens",
+    "round": "R2 new selection",
+    "usecase": "history",
+    "originalDimensions": [
+      1125,
+      2556
+    ],
+    "width": 1125,
+    "height": 2441,
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 115
+    },
+    "cropped": true,
+    "sha256": "be8ac313480e975683e84abbbd31cb7e31f9484cda0fe83be1572f791ee06910"
+  },
+  {
+    "file": "settings--things-3--compact-groups.png",
+    "app": "things-3",
+    "original": "Things 3 ios Mar 2023 122.png",
+    "source": "https://mobbin.com/apps/things-3-ios-14d4b9f3-ea09-4247-9091-19c5209dedff/a840cade-6433-4ae5-8199-03bb9772621d/screens",
+    "round": "R2 new selection",
+    "usecase": "settings",
+    "originalDimensions": [
+      1125,
+      2556
+    ],
+    "width": 1125,
+    "height": 2441,
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 115
+    },
+    "cropped": true,
+    "sha256": "4cfc7703354a07fcc0350e72d3d77c07bb20ed39c226f07ebc82c0eb228d1c2a"
+  },
+  {
+    "file": "welcome--fitbod--experience-choice.png",
+    "app": "fitbod",
+    "original": "Fitbod ios Jun 2022 4.png",
+    "source": "https://mobbin.com/apps/fitbod-ios-3bdabe9b-9287-43ff-9758-82b6558538a9/78b57dd0-e0fb-446f-b5ed-b90dc28cd58c/screens",
+    "round": "R2 new selection",
+    "usecase": "welcome",
+    "originalDimensions": [
+      1125,
+      2556
+    ],
+    "width": 1125,
+    "height": 2441,
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 115
+    },
+    "cropped": true,
+    "sha256": "569ee0fdad29945278aed68e54938fdddf56915796639492e2f057e01451eb85"
+  },
+  {
+    "file": "program--fitbod--weekly-frequency.png",
+    "app": "fitbod",
+    "original": "Fitbod ios Jun 2022 15.png",
+    "source": "https://mobbin.com/apps/fitbod-ios-3bdabe9b-9287-43ff-9758-82b6558538a9/78b57dd0-e0fb-446f-b5ed-b90dc28cd58c/screens",
+    "round": "R2 new selection",
+    "usecase": "program",
+    "originalDimensions": [
+      1125,
+      2556
+    ],
+    "width": 1125,
+    "height": 2441,
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 115
+    },
+    "cropped": true,
+    "sha256": "58c83e62cab37640446be7930d0cc86265e9545f0c4ab7029cbefdca9a03142c"
+  },
+  {
+    "file": "exercise--fitbod--instructions.png",
+    "app": "fitbod",
+    "original": "Fitbod ios Jun 2022 63.png",
+    "source": "https://mobbin.com/apps/fitbod-ios-3bdabe9b-9287-43ff-9758-82b6558538a9/78b57dd0-e0fb-446f-b5ed-b90dc28cd58c/screens",
+    "round": "R2 new selection",
+    "usecase": "exercise",
+    "originalDimensions": [
+      1125,
+      2556
+    ],
+    "width": 1125,
+    "height": 2441,
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 115
+    },
+    "cropped": true,
+    "sha256": "6ab8c79210d72de4db1da6366637c13b15b8e79ac526937bceb8f27c50d470ab"
+  },
+  {
+    "file": "menu--fitbod--exercise-actions.png",
+    "app": "fitbod",
+    "original": "Fitbod ios Jun 2022 100.png",
+    "source": "https://mobbin.com/apps/fitbod-ios-3bdabe9b-9287-43ff-9758-82b6558538a9/78b57dd0-e0fb-446f-b5ed-b90dc28cd58c/screens",
+    "round": "R2 new selection",
+    "usecase": "menu",
+    "originalDimensions": [
+      1125,
+      2556
+    ],
+    "width": 1125,
+    "height": 2441,
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 115
+    },
+    "cropped": true,
+    "sha256": "fd6c2bee823cebc88a05f32aceedbeae66b34de2b2709841b9f5093138a62be6"
+  },
+  {
+    "file": "train--not-boring-habits--single-action.png",
+    "app": "not-boring-habits",
+    "original": "(Not Boring) Habits ios Apr 2023 30.png",
+    "source": "https://mobbin.com/apps/not-boring-habits-ios-a3150be9-98de-472c-abe7-754c423b6fb7/6d1f7d7e-8b5c-4fa2-9434-7a75aa78432f/screens",
+    "round": "R2 new selection",
+    "usecase": "train",
+    "originalDimensions": [
+      1125,
+      2556
+    ],
+    "width": 1125,
+    "height": 2441,
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 115
+    },
+    "cropped": true,
+    "sha256": "f08a3db78f9dc20bf6a6016d4c1f0ff50f808616dedb2e331dc9eb14b025544a"
+  },
+  {
+    "file": "feedback--not-boring-habits--completed-check.png",
+    "app": "not-boring-habits",
+    "original": "(Not Boring) Habits ios Apr 2023 60.png",
+    "source": "https://mobbin.com/apps/not-boring-habits-ios-a3150be9-98de-472c-abe7-754c423b6fb7/6d1f7d7e-8b5c-4fa2-9434-7a75aa78432f/screens",
+    "round": "R2 new selection",
+    "usecase": "feedback",
+    "originalDimensions": [
+      1125,
+      2556
+    ],
+    "width": 1125,
+    "height": 2441,
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 115
+    },
+    "cropped": true,
+    "sha256": "57ba9445644ded736c35cd60f026c8b9326328e7646326de151162dbca3a8c46"
+  },
+  {
+    "file": "history--not-boring-habits--dated-log.png",
+    "app": "not-boring-habits",
+    "original": "(Not Boring) Habits ios Apr 2023 107.png",
+    "source": "https://mobbin.com/apps/not-boring-habits-ios-a3150be9-98de-472c-abe7-754c423b6fb7/6d1f7d7e-8b5c-4fa2-9434-7a75aa78432f/screens",
+    "round": "R2 new selection",
+    "usecase": "history",
+    "originalDimensions": [
+      1125,
+      2556
+    ],
+    "width": 1125,
+    "height": 2441,
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 115
+    },
+    "cropped": true,
+    "sha256": "c19531d436bdc783632ee928e3c0d8279b0f7a05862d2d9d3ddc0024e35a1f32"
+  }
+]

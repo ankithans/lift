@@ -1,19 +1,16 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { usePaginatedQuery } from 'convex/react'
-import { History as HistoryIcon, Trophy } from 'lucide-react'
+import { ChevronRight, History as HistoryIcon, Medal } from 'lucide-react'
 import { api } from '../../../../convex/_generated/api'
 import { Empty } from '#/components/Empty'
-import { ExerciseThumb } from '#/components/ExerciseThumb'
 import { PageHeader } from '#/components/PageHeader'
 import { ListSkeleton } from '#/components/Skeletons'
-import { fmtDate, fmtDuration, fmtVolume } from '#/lib/format'
-import { useUnit } from '#/lib/me'
+import { fmtDate, fmtDuration } from '#/lib/format'
 
 export const Route = createFileRoute('/_app/history/')({
   head: () => ({ meta: [{ title: 'History · Lift' }] }), component: HistoryList })
 
 function HistoryList() {
-  const unit = useUnit()
   const { results, status, loadMore } = usePaginatedQuery(api.workouts.list, {}, { initialNumItems: 20 })
 
   const groups: { label: string; items: typeof results }[] = []
@@ -30,45 +27,34 @@ function HistoryList() {
       {status === 'LoadingFirstPage' ? (
         <ListSkeleton rows={6} />
       ) : results.length === 0 ? (
-        <Empty icon={HistoryIcon} title="No workouts yet" body="Finished workouts land here, with every set." action={<Link to="/" className="btn btn-primary">Start training</Link>} />
+        <Empty icon={HistoryIcon} title="No workouts yet" body="Completed sessions appear here." action={<Link to="/" className="btn btn-primary">Start training</Link>} />
       ) : (
-        <div className="space-y-8">
+        <div className="space-y-7">
           {groups.map((g) => (
-            <section key={g.label} className="animate-fade">
-              <h2 className="t-eyebrow sticky top-0 z-10 -mx-1 bg-black/85 px-1 py-2 text-subtle backdrop-blur">
-                {g.label} <span className="num ml-1 text-subtle">{g.items.length}</span>
-              </h2>
-              <ul className="divide-hair">
+            <section key={g.label} aria-label={`${g.label}, ${g.items.length} workouts`} className="animate-fade">
+              <h2 className="sticky top-[calc(var(--safe-top)+56px)] z-10 -mx-5 bg-black px-5 py-2 text-[18px] font-[600] leading-6">{g.label}</h2>
+              <ul>
                 {g.items.map((w) => (
                   <li key={w._id}>
-                    <Link to="/history/$workoutId" params={{ workoutId: w._id }} className="press flex gap-4 py-4">
-                      <div className="w-11 shrink-0 text-center">
-                        <div className="text-[11px] font-[650] uppercase tracking-[0.06em] text-subtle">{fmtDate(w.startedAt, { weekday: 'short' })}</div>
-                        <div className="num text-[22px] font-[680] leading-7 tracking-[-0.02em]">{new Date(w.startedAt).getDate()}</div>
+                    <Link to="/history/$workoutId" params={{ workoutId: w._id }} className="press -mx-2 flex min-h-20 items-center gap-3 rounded-2xl px-2 hover:bg-surface">
+                      <div className="w-14 shrink-0 text-[13px] leading-[18px] text-muted">
+                        <div className="font-[600]">{fmtDate(w.startedAt, { weekday: 'short' })}</div>
+                        <div className="num">{new Date(w.startedAt).getDate()}</div>
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="truncate text-[16px] font-[600]">{w.title}</span>
-                          {(w.stats?.prs ?? 0) > 0 && (
-                            <span className="num inline-flex shrink-0 items-center gap-1 rounded-full bg-pr-dim px-2 py-0.5 text-[12px] font-[650] text-pr">
-                              <Trophy className="size-3" /> {w.stats?.prs}
-                            </span>
-                          )}
-                        </div>
+                        <div className="text-[16px] font-[550] leading-[22px]">{w.title}</div>
                         {w.stats && (
-                          <div className="num mt-0.5 text-[13px] text-subtle">
-                            {fmtDuration(w.stats.durationSec)} · {w.stats.sets} sets · {fmtVolume(w.stats.volumeKg, unit)} {unit}
+                          <div className="num text-[13px] text-muted">
+                            {fmtDuration(w.stats.durationSec)} · {w.stats.sets} sets
                           </div>
                         )}
-                        <div className="mt-2.5 flex -space-x-1.5">
-                          {w.exercises.slice(0, 7).map((e, i) => (
-                            <ExerciseThumb key={i} src={e.thumbnailUrl} size={28} className="rounded-[8px] ring-2 ring-black" />
-                          ))}
-                          {w.exerciseCount > 7 && (
-                            <span className="num grid size-7 place-items-center rounded-[8px] bg-raised text-[11px] font-[650] text-muted ring-2 ring-black">+{w.exerciseCount - 7}</span>
-                          )}
-                        </div>
                       </div>
+                      {(w.stats?.prs ?? 0) > 0 && (
+                        <span className="num inline-flex shrink-0 items-center gap-1 text-[13px] font-[550] text-pr" aria-label={`${w.stats?.prs} personal records`}>
+                          <Medal aria-hidden className="size-3.5" /> {w.stats?.prs}
+                        </span>
+                      )}
+                      <ChevronRight aria-hidden className="size-4 shrink-0 text-muted" />
                     </Link>
                   </li>
                 ))}

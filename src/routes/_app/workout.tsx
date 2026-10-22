@@ -5,6 +5,7 @@ import {
   ArrowUp,
   Check,
   ChevronDown,
+  ChevronRight,
   CloudOff,
   Info,
   Link2,
@@ -14,6 +15,7 @@ import {
   NotebookPen,
   Plus,
   Repeat,
+  Medal,
   Timer,
   Trash2,
   Trophy,
@@ -26,7 +28,7 @@ import { ExerciseInfo } from '#/components/ExerciseDetail'
 import { ExercisePicker } from '#/components/ExercisePicker'
 import { ExerciseThumb } from '#/components/ExerciseThumb'
 import { Keypad, type KeypadField, type KeypadTab } from '#/components/Keypad'
-import { Sheet, SheetAction } from '#/components/Sheet'
+import { Sheet, SheetAction, SheetDivider } from '#/components/Sheet'
 import { BlockSkeleton } from '#/components/Skeletons'
 import { announce } from '#/lib/announce'
 import { useOnline } from '#/lib/convex'
@@ -243,6 +245,15 @@ function LiveWorkout() {
   useWakeLock(Boolean(workout))
   const rest = useRest(workout, quietUntil)
 
+  // Toasts sit just above whatever occupies the bottom: keypad, rest strip, or nothing.
+  const bottomLayer = editing ? 430 : rest.endsAt || rest.endedAt ? 96 : 16
+  useEffect(() => {
+    document.documentElement.style.setProperty('--toast-bottom', `${bottomLayer}px`)
+    return () => {
+      document.documentElement.style.removeProperty('--toast-bottom')
+    }
+  }, [bottomLayer])
+
   // Put keyboard/screen-reader focus somewhere sensible after the keypad closes or cards fold.
   useEffect(() => {
     if (!focusAfter.current) return
@@ -260,12 +271,7 @@ function LiveWorkout() {
   }, [online])
 
   // PR/info toasts sit below the workout header instead of covering Finish.
-  useEffect(() => {
-    document.documentElement.style.setProperty('--toast-top', '72px')
-    return () => {
-      document.documentElement.style.removeProperty('--toast-top')
-    }
-  }, [])
+
 
   // Mutations with optimistic updates for instant feel.
   const updateSetMut = useMutation(api.workouts.updateSet).withOptimisticUpdate((store, args) => {
@@ -749,7 +755,20 @@ function LiveWorkout() {
 
       <Sheet open={menu?.type === 'set'} onClose={() => setMenu(null)} title={menu?.type === 'set' ? `Set ${menu.label}` : ''}>
         {menu?.type === 'set' && (
-          <div className="space-y-1 pb-2">
+          <div className="pb-2">
+            {menu.set.isPr && (
+              <div className="mb-3 rounded-[16px] bg-pr/[0.06] px-4 py-3 shadow-[inset_2px_0_0_var(--color-pr)]">
+                <div className="flex items-center gap-1.5 text-[13px] font-[550] text-pr">
+                  <Medal aria-hidden className="size-3.5" /> Personal record
+                </div>
+                <div className="num mt-1 text-[20px] font-[550]">{fmtSet(menu.set, menu.we.exercise.tracking, unit)}</div>
+                {menu.we.best && (
+                  <div className="num mt-0.5 text-[13px] text-muted">
+                    Previous best: {fmtSet({ weightKg: menu.we.best.weightKg, reps: menu.we.best.reps }, menu.we.exercise.tracking, unit)}
+                  </div>
+                )}
+              </div>
+            )}
             {(
               [
                 ['working', 'Working set', 'Counts toward volume and PRs'],
@@ -781,8 +800,9 @@ function LiveWorkout() {
                 }}
               />
             )}
+            <SheetDivider />
             <SheetAction
-              icon={<Trash2 className="size-4" />}
+              icon={<Trash2 className="size-5" />}
               label="Delete set"
               tone="danger"
               onClick={() => {
@@ -1058,14 +1078,6 @@ const ExerciseCard = memo(function ExerciseCard({
         : 'grid-cols-[40px_minmax(0,1fr)_44px] min-[390px]:grid-cols-[44px_minmax(0,1fr)_88px_46px]'
   const narrowHide = inSuperset ? 'max-[429px]:hidden' : 'max-[389px]:hidden'
   const narrowShow = inSuperset ? 'max-[429px]:block' : 'max-[389px]:block'
-  const best = we.best
-    ? we.best.weightKg
-      ? `${fmtWeight(we.best.weightKg, unit)}×${we.best.reps}`
-      : we.best.reps
-        ? `${we.best.reps} reps`
-        : null
-    : null
-
   return (
     <article className={`${inSuperset ? 'pl-2.5 pr-1' : 'card'} pb-2 pt-4`}>
       <div className={`flex items-start gap-3 ${inSuperset ? '' : 'px-3 min-[390px]:px-4'}`}>
@@ -1075,16 +1087,10 @@ const ExerciseCard = memo(function ExerciseCard({
         <button onClick={onInfo} className="min-w-0 flex-1 pt-0.5 text-left">
           <div className="flex items-start gap-2">
             {letter && <span className="num mt-0.5 grid size-5 shrink-0 place-items-center rounded-md bg-accent/15 text-[11px] font-[750] text-accent">{letter}</span>}
-            <h2 id={`ex-${we._id}`} tabIndex={-1} className={`line-clamp-2 text-[17px] outline-none font-[620] leading-[22px] tracking-[-0.015em] ${allDone ? 'text-muted' : ''}`}>{we.exercise.name}</h2>
+            <h2 id={`ex-${we._id}`} tabIndex={-1} className={`line-clamp-2 text-[18px] font-[600] leading-6 tracking-[-0.015em] outline-none ${allDone ? 'text-muted' : ''}`}>{we.exercise.name}</h2>
           </div>
           <div className="num mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[13px] text-muted">
             {we.repLow ? <span>{fmtReps(we.repLow, we.repHigh)} reps</span> : null}
-            {best && t !== 'duration' ? (
-              <span className="inline-flex items-center gap-1">
-                · <Trophy aria-hidden className="size-3" />
-                <span className="sr-only">best</span> {best}
-              </span>
-            ) : null}
             {allDone && (
               <span className="inline-flex items-center gap-1 text-accent">
                 · <Check aria-hidden className="size-3.5" strokeWidth={2.6} /> Done
@@ -1122,9 +1128,9 @@ const ExerciseCard = memo(function ExerciseCard({
             <div
               key={set._id}
               id={`set-${set._id}`}
-              className={`grid ${grid} relative min-h-[56px] items-center gap-1 overflow-hidden rounded-[14px] px-1 transition-colors duration-200 min-[390px]:px-2 ${
+              className={`grid ${grid} relative min-h-[56px] items-center gap-1 rounded-[14px] px-1 transition-colors duration-200 min-[390px]:px-2 ${
                 set.isPr
-                  ? 'bg-pr/[0.08] shadow-[inset_0_0_0_1px_rgba(233,199,120,0.35)]'
+                  ? 'animate-[pr-fill_500ms_ease-out_both] bg-pr/[0.05]'
                   : set.done
                     ? 'bg-accent/[0.07]'
                     : editing?.setId === set._id
@@ -1139,15 +1145,17 @@ const ExerciseCard = memo(function ExerciseCard({
                 }`}
                 aria-label={`Set ${label}${set.kind !== 'working' ? `, ${set.kind === 'warmup' ? 'warm-up' : set.kind === 'drop' ? 'drop set' : 'to failure'}` : ''}${set.isPr ? ', personal record' : ''}, options`}
               >
-                {set.isPr ? <Trophy aria-hidden className="size-[18px] text-pr animate-pop" strokeWidth={2} /> : label}
+                {set.isPr ? (
+                  <span className="flex items-center gap-0.5 text-pr">
+                    <Medal aria-hidden className="size-3" strokeWidth={2.2} />
+                    <span className="text-[10px] font-[600] leading-[14px] tracking-[0.02em]">PR</span>
+                  </span>
+                ) : (
+                  label
+                )}
               </button>
-              {/* One soft sheen across a new record — the only flourish in the app. */}
-              {set.isPr && (
-                <span
-                  aria-hidden
-                  className="pointer-events-none absolute inset-0 animate-[pr-sheen_1400ms_ease-out_1_both] bg-[linear-gradient(105deg,transparent_35%,rgba(233,199,120,0.22)_50%,transparent_65%)] bg-[length:250%_100%]"
-                />
-              )}
+              {/* A record keeps a fine gold rule at its left edge — durable, not decorative. */}
+              {set.isPr && <span aria-hidden className="pointer-events-none absolute left-0 top-1/2 h-10 w-[2px] -translate-y-1/2 rounded-full bg-pr animate-fade" />}
               <span className={`num truncate pl-1 text-[13px] text-muted ${narrowHide}`}>
                 <span className="sr-only">Previous </span>
                 {prevText}
@@ -1163,9 +1171,9 @@ const ExerciseCard = memo(function ExerciseCard({
                     aria-label={`${
                       c === 'weight' ? (t === 'weighted_bodyweight' ? `Added ${unit}` : unit === 'kg' ? 'Kilograms' : 'Pounds') : c === 'reps' ? 'Reps' : c === 'rir' ? 'Reps in reserve' : 'Seconds'
                     } ${(active ? editing.draft : v.text) || 'empty'}${v.suggested && v.text && !active ? ', suggested from last time' : ''}, set ${label}`}
-                    className={`press num h-11 min-w-0 rounded-[12px] text-center text-[19px] font-[620] tracking-[-0.01em] transition-colors ${
-                      active ? 'bg-ink text-black' : set.done ? 'text-ink' : 'bg-raised hover:bg-pressed'
-                    } ${v.suggested && !active ? 'font-[500] italic text-subtle' : ''}`}
+                    className={`press num h-11 min-w-0 rounded-[12px] text-center text-[20px] tracking-[-0.01em] transition-colors ${
+                      active ? 'bg-ink font-[500] text-black' : set.done ? 'font-[500] text-ink' : 'bg-raised font-[500] hover:bg-pressed'
+                    } ${v.suggested && !active ? '!font-[400] text-muted' : ''}`}
                   >
                     {active
                       ? editing.draft || (c === 'rir' ? '–' : '0')
@@ -1239,14 +1247,31 @@ function ExerciseMenu({
   const next = workout.exercises[index + 1]
   // Grouped only if an adjacent exercise shares the group (what the screen shows).
   const grouped = Boolean(we.group && (prev?.group === we.group || next?.group === we.group))
+  const [more, setMore] = useState(false)
+  if (more) {
+    return (
+      <div className="pb-2">
+        <button onClick={() => setMore(false)} className="-ml-2 mb-1 flex h-11 items-center gap-1 rounded-full px-2 text-[14px] font-[550] text-muted hover:text-ink">
+          <ChevronDown aria-hidden className="size-4 rotate-90" /> Back
+        </button>
+        <SheetAction icon={<NotebookPen className="size-5" />} label={we.notes ? 'Edit note' : 'Add note'} onClick={() => open({ type: 'notes', we })} />
+        {index > 0 && (
+          <SheetAction icon={<ArrowUp className="size-5" />} label="Move up" onClick={() => { close(); void update({ workoutExerciseId: we._id, position: index - 1 }) }} />
+        )}
+        {index < workout.exercises.length - 1 && (
+          <SheetAction icon={<ArrowDown className="size-5" />} label="Move down" onClick={() => { close(); void update({ workoutExerciseId: we._id, position: index + 1 }) }} />
+        )}
+      </div>
+    )
+  }
   return (
-    <div className="space-y-1 pb-2">
-      <SheetAction icon={<Info className="size-4" />} label="Form & history" onClick={() => open({ type: 'info', we })} />
-      <SheetAction icon={<Repeat className="size-4" />} label="Replace exercise" hint="Keeps your logged sets" onClick={() => open({ type: 'swap', we })} />
+    <div className="pb-2">
+      <SheetAction icon={<Info className="size-5" />} label="Form & history" onClick={() => open({ type: 'info', we })} />
+      <SheetAction icon={<Repeat className="size-5" />} label="Replace exercise" onClick={() => open({ type: 'swap', we })} />
       {grouped ? (
         <SheetAction
-          icon={<Link2Off className="size-4" />}
-          label="Remove from superset"
+          icon={<Link2Off className="size-5" />}
+          label="Unpair superset"
           onClick={async () => {
             close()
             await update({ workoutExerciseId: we._id, group: null })
@@ -1254,9 +1279,8 @@ function ExerciseMenu({
         />
       ) : next ? (
         <SheetAction
-          icon={<Link2 className="size-4" />}
-          label="Superset with next"
-          hint={next.exercise.name}
+          icon={<Link2 className="size-5" />}
+          label={`Pair with ${next.exercise.name}`}
           onClick={async () => {
             close()
             await update({ workoutExerciseId: we._id, linkNext: true })
@@ -1264,15 +1288,10 @@ function ExerciseMenu({
           }}
         />
       ) : null}
-      <SheetAction icon={<Timer className="size-4" />} label="Rest timer" hint={we.restSec ? fmtClock(we.restSec) : 'Off'} onClick={() => open({ type: 'rest', we })} />
-      <SheetAction icon={<NotebookPen className="size-4" />} label={we.notes ? 'Edit note' : 'Add note'} onClick={() => open({ type: 'notes', we })} />
-      {index > 0 && (
-        <SheetAction icon={<ArrowUp className="size-4" />} label="Move up" onClick={() => { close(); void update({ workoutExerciseId: we._id, position: index - 1 }) }} />
-      )}
-      {index < workout.exercises.length - 1 && (
-        <SheetAction icon={<ArrowDown className="size-4" />} label="Move down" onClick={() => { close(); void update({ workoutExerciseId: we._id, position: index + 1 }) }} />
-      )}
-      <SheetAction icon={<Trash2 className="size-4" />} label="Remove exercise" tone="danger" onClick={remove} />
+      <SheetAction icon={<Timer className="size-5" />} label="Rest duration" value={we.restSec ? fmtClock(we.restSec) : 'Off'} onClick={() => open({ type: 'rest', we })} />
+      <SheetAction icon={<MoreHorizontal className="size-5" />} label="More" value={<ChevronRight aria-hidden className="size-4" />} onClick={() => setMore(true)} />
+      <SheetDivider />
+      <SheetAction icon={<Trash2 className="size-5" />} label="Remove exercise" tone="danger" onClick={remove} />
     </div>
   )
 }
@@ -1375,10 +1394,11 @@ function RestStrip({
                   style={{ transition: 'stroke-dashoffset 250ms linear' }}
                 />
               </svg>
-              <div className="min-w-0 flex-1">
-                <div className="text-[12px] font-[600] text-muted">Rest</div>
-                <div aria-hidden className="num text-[24px] font-[680] leading-7 tracking-[-0.02em]">{fmtClock(remaining)}</div>
-              </div>
+              {/* Tap the time to jump to the next set (named for screen readers). */}
+              <button onClick={goNext} className="min-w-0 flex-1 text-left" aria-label={upNext ? `Next: ${upNext.text}` : 'Rest'}>
+                <div className="text-[12px] font-[500] text-muted">Rest</div>
+                <div aria-hidden className="num text-[22px] font-[550] leading-[26px] tracking-[-0.02em]">{fmtClock(remaining)}</div>
+              </button>
               <button onClick={() => onAdjust(-15)} aria-label="15 seconds less" className="press num h-11 rounded-full px-3 text-[14px] font-[650] text-muted hover:bg-pressed">
                 −15
               </button>
@@ -1391,12 +1411,6 @@ function RestStrip({
             </>
           )}
         </div>
-        {upNext && (
-          <button onClick={goNext} className="flex h-9 w-full items-center gap-2 border-t border-line px-4 text-left text-[13px] text-muted hover:text-ink">
-            <span className="shrink-0 font-[650] text-subtle">Next</span>
-            <span className="num min-w-0 truncate">{upNext.text}</span>
-          </button>
-        )}
       </div>
     </aside>
   )

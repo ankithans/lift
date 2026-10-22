@@ -1,12 +1,11 @@
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useMutation, useQuery } from 'convex/react'
-import { Check, MoreHorizontal, Pencil, Plus, Trash2, Trophy } from 'lucide-react'
+import { Check, Clock, Medal, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { api } from '../../../../convex/_generated/api'
 import type { Id } from '../../../../convex/_generated/dataModel'
-import { ExerciseThumb } from '#/components/ExerciseThumb'
 import { PageHeader } from '#/components/PageHeader'
-import { Sheet, SheetAction } from '#/components/Sheet'
+import { Sheet, SheetAction, SheetDivider } from '#/components/Sheet'
 import { BlockSkeleton } from '#/components/Skeletons'
 import { fmtDate, fmtDuration, fmtNum, fmtSet, fmtVolume, fromDisplayWeight, toDisplayWeight } from '#/lib/format'
 import { useUnit } from '#/lib/me'
@@ -58,165 +57,185 @@ function WorkoutDetail() {
   const prSets = workout.exercises.flatMap((we) => we.sets.filter((x) => x.isPr).map((x) => ({ we, set: x })))
   const blocks = toBlocks(workout.exercises as never)
 
+  const stats = s
+    ? [
+        [fmtDuration(s.durationSec), 'Duration'],
+        [String(s.sets), 'Sets'],
+        ...(s.volumeKg > 0 ? [[fmtVolume(s.volumeKg, unit), `Volume, ${unit}`]] : []),
+      ]
+    : []
+
   return (
     <main className="page">
       {done ? (
-        <section className="pt-[calc(var(--safe-top)+28px)] text-center animate-rise">
-          <span className="mx-auto grid size-16 place-items-center rounded-full bg-accent text-accent-ink animate-pop">
-            <Check className="size-8" strokeWidth={2.8} />
+        <section className="pb-2 pt-[calc(var(--safe-top)+40px)] animate-rise">
+          <span className="grid size-12 place-items-center rounded-full bg-accent text-accent-ink animate-pop">
+            <Check aria-hidden className="size-6" strokeWidth={2.8} />
           </span>
-          <h1 className="mt-5 t-large">Workout complete</h1>
-          <p className="mt-2 text-muted">{workout.title} · {fmtDate(workout.startedAt, { weekday: 'long', month: 'short', day: 'numeric' })}</p>
+          <div className="mt-5 text-[13px] text-muted">{fmtDate(workout.startedAt, { weekday: 'long', day: 'numeric', month: 'short' })}</div>
+          <h1 className="mt-1 text-[28px] font-[650] leading-[34px] tracking-[-0.03em]">{workout.title} complete</h1>
         </section>
       ) : (
         <PageHeader
           back
-          eyebrow={fmtDate(workout.startedAt, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+          size="medium"
+          eyebrow={fmtDate(workout.startedAt, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
           title={workout.title}
           action={
-            <button className="icon-btn" onClick={() => setMenu('options')} aria-label="Workout options">
+            <button className="icon-btn size-12" onClick={() => setMenu('options')} aria-label="Workout options">
               <MoreHorizontal className="size-5" />
             </button>
           }
         />
       )}
 
-      {s && (
-        <dl className={`grid grid-cols-3 gap-2 ${done ? 'mt-8' : ''}`}>
-          {[
-            ['Duration', fmtDuration(s.durationSec)],
-            ['Sets', String(s.sets)],
-            [`Volume ${unit}`, fmtVolume(s.volumeKg, unit)],
-          ].map(([k, v]) => (
-            <div key={k} className="card px-4 py-3.5">
-              <dt className="text-[12px] font-[550] text-subtle">{k}</dt>
-              <dd className="num mt-0.5 text-[22px] font-[680] tracking-[-0.02em]">{v}</dd>
+      {stats.length > 0 && (
+        <dl className={`-mt-3 flex gap-8 ${done ? 'mt-6' : ''}`}>
+          {stats.map(([v, k]) => (
+            <div key={k}>
+              <dd className="num text-[20px] font-[550] leading-6 tracking-[-0.01em]">{v}</dd>
+              <dt className="mt-0.5 text-[12px] text-muted">{k}</dt>
             </div>
           ))}
         </dl>
       )}
 
       {prSets.length > 0 && (
-        <section className="mt-4 rounded-[20px] bg-pr-dim p-4 animate-rise">
-          <h2 className="flex items-center gap-2 text-[14px] font-[650] text-pr">
-            <Trophy className="size-4" /> {prSets.length} personal record{prSets.length > 1 ? 's' : ''}
-          </h2>
-          <ul className="mt-2 space-y-1.5">
-            {prSets.map(({ we, set }) => (
-              <li key={set._id} className="flex items-baseline justify-between gap-3 text-[15px]">
-                <span className="truncate">{we.exercise.name}</span>
-                <span className="num shrink-0 font-[650]">{fmtSet(set, we.exercise.tracking, unit)}</span>
-              </li>
-            ))}
-          </ul>
+        <section className="mt-7 border-y border-line py-3" aria-label="Personal records">
+          {prSets.map(({ we, set }) => (
+            <div key={set._id} className="flex min-h-10 items-center gap-2">
+              <Medal aria-hidden className="size-4 shrink-0 text-pr" />
+              <span className="min-w-0 flex-1 truncate text-[15px]">{we.exercise.name}</span>
+              <span className="num shrink-0 text-[15px] text-pr">{fmtSet(set, we.exercise.tracking, unit)}</span>
+            </div>
+          ))}
         </section>
       )}
 
-      {workout.notes && <p className="mt-4 rounded-[18px] bg-surface p-4 text-[15px] italic text-muted">“{workout.notes}”</p>}
+      {workout.notes && <p className="mt-6 line-clamp-3 text-[15px] leading-6 text-muted">“{workout.notes}”</p>}
 
-      <section className="mt-8 space-y-6">
+      {editing && (
+        <div className="mt-6 flex items-center justify-between rounded-[14px] bg-surface px-4 py-2">
+          <span className="text-[14px] text-muted">Editing sets</span>
+          <button className="h-10 px-2 text-[15px] font-[600] text-accent" onClick={() => setEditing(false)}>
+            Done
+          </button>
+        </div>
+      )}
+
+      <section className="mt-8 space-y-8">
         {blocks.map((b) => (
-          <div key={b.items[0].we._id} className={b.group ? 'border-l-2 border-accent/25 pl-3' : ''}>
+          <div key={b.items[0].we._id} className={b.group ? 'relative space-y-6 pl-3 before:absolute before:inset-y-1 before:left-0 before:w-px before:bg-line-strong' : 'space-y-6'}>
             {b.items.map(({ we, letter }) => (
-              <article key={we._id} className="mb-5 last:mb-0">
-                <Link to="/library/$slug" params={{ slug: we.exercise.slug }} className="press flex items-center gap-3">
-                  <ExerciseThumb src={we.exercise.thumbnailUrl} size={40} />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      {letter && <span className="num grid size-5 place-items-center rounded-md bg-accent/15 text-[11px] font-[750] text-accent">{letter}</span>}
-                      <h2 className="truncate text-[16px] font-[600]">{we.exercise.name}</h2>
-                    </div>
-                    {we.notes && <p className="truncate text-[13px] italic text-subtle">{we.notes}</p>}
-                  </div>
+              <article key={we._id}>
+                <Link to="/library/$slug" params={{ slug: we.exercise.slug }} className="press block">
+                  <h2 className="text-[17px] font-[600] leading-[23px]">
+                    {letter && <span className="num mr-1.5 text-[13px] font-[600] text-accent">{letter}</span>}
+                    {we.exercise.name}
+                  </h2>
+                  {we.notes && <p className="mt-0.5 line-clamp-2 text-[13px] text-muted">{we.notes}</p>}
                 </Link>
-                <div className="mt-2 divide-hair rounded-[16px] bg-surface px-4">
-                  {we.sets.map((set, i) => (
-                    <div key={set._id} className={`flex items-center gap-3 ${editing ? 'min-h-14 flex-wrap py-1.5' : 'h-12'}`}>
-                      <span className={`num relative w-7 shrink-0 text-[13px] font-[700] ${set.kind !== 'working' ? 'text-warning' : 'text-subtle'}`}>
-                        {setLabel(set as never, we.sets.filter((x, j) => j < i && x.kind === 'working').length, letter)}
-                        {set.isPr && editing && <Trophy aria-label="Personal record" className="absolute -right-1 -top-2 size-3 text-pr" />}
-                      </span>
-                      {editing ? (
-                        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-                          {we.exercise.tracking !== 'reps' && we.exercise.tracking !== 'duration' && (
-                            <NumField
-                              key={`w-${unit}-${set.weightKg}`}
-                              label={`Set ${i + 1} weight`}
-                              value={toDisplayWeight(set.weightKg, unit)}
-                              suffix={unit}
-                              decimal
-                              onCommit={(v) => updateSet({ setId: set._id, weightKg: v === null ? null : fromDisplayWeight(v, unit) })}
-                            />
-                          )}
-                          {we.exercise.tracking === 'duration' ? (
-                            <NumField key={`d-${set.durationSec}`} label={`Set ${i + 1} seconds`} value={set.durationSec ?? null} suffix="s" onCommit={(v) => updateSet({ setId: set._id, durationSec: v })} />
+                <ul className="mt-1">
+                  {we.sets.map((set, i) => {
+                    const label = setLabel(set as never, we.sets.filter((x, j) => j < i && x.kind !== 'warmup').length, letter)
+                    return (
+                      <li
+                        key={set._id}
+                        className={`relative flex items-center gap-3 ${editing ? 'min-h-14 flex-wrap py-1.5' : 'min-h-12'} ${set.isPr ? '-mx-2 rounded-[12px] bg-pr/[0.05] px-2' : ''}`}
+                      >
+                        {set.isPr && <span aria-hidden className="absolute left-0 top-1/2 h-8 w-[2px] -translate-y-1/2 rounded-full bg-pr" />}
+                        <span className={`num w-10 shrink-0 text-[13px] ${set.kind === 'warmup' ? 'text-warning' : 'text-muted'}`}>
+                          {set.isPr ? (
+                            <span className="inline-flex items-center gap-0.5 text-pr">
+                              <Medal aria-hidden className="size-3" />
+                              <span className="text-[11px] font-[600]">PR</span>
+                              <span className="sr-only">, set {label}, personal record</span>
+                            </span>
                           ) : (
-                            <NumField key={`r-${set.reps}`} label={`Set ${i + 1} reps`} value={set.reps ?? null} suffix="reps" onCommit={(v) => updateSet({ setId: set._id, reps: v })} />
+                            label
                           )}
-                          <NumField key={`rir-${set.rir}`} label={`Set ${i + 1} reps in reserve`} value={set.rir ?? null} suffix="RIR" narrow onCommit={(v) => updateSet({ setId: set._id, rir: v })} />
-                          <button
-                            className="icon-btn -mr-2 shrink-0 text-subtle hover:text-danger"
-                            aria-label={`Delete set ${i + 1}`}
-                            onClick={() => void removeSet({ setId: set._id })}
-                          >
-                            <Trash2 className="size-4" />
-                          </button>
-                        </div>
-                      ) : (
-                        <span className="num flex-1 text-[16px] font-[560]">
-                          {fmtSet(set, we.exercise.tracking, unit)}
-                          {we.exercise.tracking !== 'duration' && we.exercise.tracking !== 'reps' && set.weightKg ? <span className="text-[13px] text-muted"> {unit}</span> : null}
                         </span>
-                      )}
-                      {set.rir !== undefined && !editing && <span className="num text-[13px] text-subtle">RIR {set.rir}</span>}
-                      {set.isPr && !editing && <Trophy className="size-4 text-pr" aria-label="Personal record" />}
-                    </div>
-                  ))}
+                        {editing ? (
+                          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+                            {we.exercise.tracking !== 'reps' && we.exercise.tracking !== 'duration' && (
+                              <NumField
+                                key={`w-${unit}-${set.weightKg}`}
+                                label={`Set ${i + 1} weight`}
+                                value={toDisplayWeight(set.weightKg, unit)}
+                                suffix={unit}
+                                decimal
+                                onCommit={(v) => updateSet({ setId: set._id, weightKg: v === null ? null : fromDisplayWeight(v, unit) })}
+                              />
+                            )}
+                            {we.exercise.tracking === 'duration' ? (
+                              <NumField key={`d-${set.durationSec}`} label={`Set ${i + 1} seconds`} value={set.durationSec ?? null} suffix="s" onCommit={(v) => updateSet({ setId: set._id, durationSec: v })} />
+                            ) : (
+                              <NumField key={`r-${set.reps}`} label={`Set ${i + 1} reps`} value={set.reps ?? null} suffix="reps" onCommit={(v) => updateSet({ setId: set._id, reps: v })} />
+                            )}
+                            <NumField key={`rir-${set.rir}`} label={`Set ${i + 1} reps in reserve`} value={set.rir ?? null} suffix="RIR" narrow onCommit={(v) => updateSet({ setId: set._id, rir: v })} />
+                            <button className="icon-btn -mr-2 shrink-0 text-muted hover:text-danger" aria-label={`Delete set ${i + 1}`} onClick={() => void removeSet({ setId: set._id })}>
+                              <Trash2 className="size-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <span className="num flex-1 text-[16px]">
+                              {fmtSet(set, we.exercise.tracking, unit)}
+                              {we.exercise.tracking !== 'duration' && we.exercise.tracking !== 'reps' && set.weightKg ? <span className="text-[13px] text-muted"> {unit}</span> : null}
+                            </span>
+                            {set.rir !== undefined && <span className="num text-[13px] text-muted">{set.rir} RIR</span>}
+                          </>
+                        )}
+                      </li>
+                    )
+                  })}
                   {editing && (
-                    <button
-                      className="press flex h-12 w-full items-center justify-center gap-1.5 text-[14px] font-[600] text-muted hover:text-ink"
-                      onClick={async () => {
-                        const last = we.sets[we.sets.length - 1]
-                        const id = await addSet({ workoutExerciseId: we._id })
-                        // Copy the previous set; fall back to the rep target rather than inventing "1".
-                        await completeSet({
-                          setId: id,
-                          weightKg: last?.weightKg ?? null,
-                          reps: last?.reps ?? (we.exercise.tracking === 'duration' ? null : we.repLow || 8),
-                          durationSec: last?.durationSec ?? (we.exercise.tracking === 'duration' ? 30 : null),
-                          rir: last?.rir ?? null,
-                        })
-                      }}
-                    >
-                      <Plus aria-hidden className="size-4" /> Add set
-                    </button>
+                    <li>
+                      <button
+                        className="press flex h-12 w-full items-center gap-1.5 text-[14px] font-[600] text-muted hover:text-ink"
+                        onClick={async () => {
+                          const last = we.sets[we.sets.length - 1]
+                          const id = await addSet({ workoutExerciseId: we._id })
+                          // Copy the previous set; fall back to the rep target rather than inventing "1".
+                          await completeSet({
+                            setId: id,
+                            weightKg: last?.weightKg ?? null,
+                            reps: last?.reps ?? (we.exercise.tracking === 'duration' ? null : we.repLow || 8),
+                            durationSec: last?.durationSec ?? (we.exercise.tracking === 'duration' ? 30 : null),
+                            rir: last?.rir ?? null,
+                          })
+                        }}
+                      >
+                        <Plus aria-hidden className="size-4" /> Add set
+                      </button>
+                    </li>
                   )}
-                </div>
+                </ul>
               </article>
             ))}
           </div>
         ))}
       </section>
 
-      <div className="mt-10 space-y-2">
-        {done ? (
-          <Link to="/" className="btn btn-primary w-full">Done</Link>
-        ) : (
-          <button className="btn btn-secondary w-full" onClick={() => setEditing(!editing)}>
-            {editing ? <><Check className="size-5" /> Done editing</> : <><Pencil className="size-[18px]" /> Edit sets</>}
-          </button>
-        )}
-      </div>
-      <p className="num mt-4 text-center text-[13px] text-subtle">
-        {fmtDate(workout.startedAt, { hour: 'numeric', minute: '2-digit' })}
-        {workout.finishedAt ? ` – ${fmtDate(workout.finishedAt, { hour: 'numeric', minute: '2-digit' })}` : ''}
-        {workout.source === 'import' ? ' · imported' : workout.source === 'agent' ? ' · logged by agent' : ''}
-      </p>
+      {done && (
+        <Link to="/" className="btn btn-primary mt-10 w-full">
+          Done
+        </Link>
+      )}
 
-      <Sheet open={menu === 'options'} onClose={() => setMenu(null)} title="Workout">
-        <div className="space-y-1 pb-2">
-          <SheetAction icon={<Pencil className="size-4" />} label="Edit sets" onClick={() => { setEditing(true); setMenu(null) }} />
-          <SheetAction icon={<Trash2 className="size-4" />} label="Delete workout" tone="danger" onClick={() => setMenu('delete')} />
+      <Sheet open={menu === 'options'} onClose={() => setMenu(null)} title={workout.title}>
+        <div className="pb-2">
+          <SheetAction icon={<Pencil className="size-5" />} label="Edit sets" onClick={() => { setEditing(true); setMenu(null) }} />
+          <div className="flex min-h-14 items-center gap-4 text-[14px] text-muted">
+            <Clock aria-hidden className="size-5 shrink-0" />
+            <span className="num">
+              {fmtDate(workout.startedAt, { hour: 'numeric', minute: '2-digit' })}
+              {workout.finishedAt ? ` – ${fmtDate(workout.finishedAt, { hour: 'numeric', minute: '2-digit' })}` : ''}
+              {workout.source === 'import' ? ' · imported' : workout.source === 'agent' ? ' · logged by an agent' : ''}
+            </span>
+          </div>
+          <SheetDivider />
+          <SheetAction icon={<Trash2 className="size-5" />} label="Delete workout" tone="danger" onClick={() => setMenu('delete')} />
         </div>
       </Sheet>
       <Sheet open={menu === 'delete'} onClose={() => setMenu(null)} title="Delete this workout?">
@@ -270,9 +289,9 @@ function NumField({
         }}
         onFocus={(e) => e.currentTarget.select()}
         aria-label={label}
-        className="num w-full min-w-0 bg-transparent text-[16px] font-[600] outline-none"
+        className="num w-full min-w-0 bg-transparent text-[16px] font-[500] outline-none"
       />
-      <span className="text-[12px] text-subtle">{suffix}</span>
+      <span className="text-[12px] text-muted">{suffix}</span>
     </label>
   )
 }

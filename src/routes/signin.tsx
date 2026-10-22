@@ -74,15 +74,11 @@ function SignIn() {
 
   return (
     <main className="relative min-h-dvh overflow-hidden bg-black">
-      {/* Quiet backdrop: a single faint mint horizon */}
-      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-[55dvh] bg-[radial-gradient(120%_70%_at_50%_0%,#b8f4d014,transparent_70%)]" />
       <div className="relative mx-auto flex min-h-dvh max-w-[420px] flex-col px-6 pb-[calc(var(--safe-bottom)+28px)] pt-[calc(var(--safe-top)+18vh)]">
         <div className="animate-rise">
-          <Logo size={52} />
-          <h1 className="mt-8 text-[44px] font-[720] leading-[1] tracking-[-0.045em]">Lift.</h1>
-          <p className="mt-3 max-w-[300px] text-[17px] leading-[25px] text-muted">
-            Your program, every set, every PR. Quiet, fast, and yours.
-          </p>
+          <Logo size={40} />
+          <h1 className="mt-5 text-[40px] font-[650] leading-[44px] tracking-[-0.04em]">Lift.</h1>
+          <p className="mt-3 text-[16px] leading-6 text-muted">Your next set starts here.</p>
         </div>
 
         <div className="mt-auto space-y-3 pt-12 animate-rise [animation-delay:80ms]">
@@ -96,7 +92,7 @@ function SignIn() {
                 {busy === 'google' ? <Loader2 className="size-5 animate-spin" /> : <GoogleMark />}
                 Continue with Google
               </button>
-              <button onClick={() => setMode('email')} className="btn btn-secondary w-full">
+              <button onClick={() => setMode('email')} className="btn w-full border border-line-strong bg-black text-ink hover:bg-surface">
                 <Mail className="size-[18px]" strokeWidth={1.75} />
                 Continue with email
               </button>
@@ -146,8 +142,9 @@ function SignIn() {
             </form>
           )}
           {error && <p id="signin-error" role="alert" className="pt-1 text-center text-[14px] text-danger animate-fade">{error}</p>}
-          <p className="pt-4 text-center text-[12px] leading-[18px] text-subtle">
-            By continuing you agree to keep lifting. <a href="/privacy" className="inline-block px-1 py-3 underline decoration-subtle underline-offset-2">Privacy</a>
+          <p className="flex justify-center gap-4 pt-3 text-[12px] text-muted">
+            <a href="/privacy" className="inline-flex min-h-12 items-center px-2 hover:text-ink">Privacy</a>
+            <a href="/terms" className="inline-flex min-h-12 items-center px-2 hover:text-ink">Terms</a>
           </p>
         </div>
       </div>

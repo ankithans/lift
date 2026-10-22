@@ -1,10 +1,10 @@
 import { Link } from '@tanstack/react-router'
 import { useQuery } from 'convex/react'
 import type { FunctionReturnType } from 'convex/server'
-import { Play, Trophy } from 'lucide-react'
+import { ChevronDown, Medal, Play } from 'lucide-react'
 import { useState } from 'react'
 import { api } from '../../convex/_generated/api'
-import { fmtDate, fmtRelativeDay, fmtSet, fmtWeight, toDisplayWeight } from '#/lib/format'
+import { fmtDate, fmtSet, toDisplayWeight } from '#/lib/format'
 import { useUnit } from '#/lib/me'
 import { LineChart } from './LineChart'
 import { BlockSkeleton } from './Skeletons'
@@ -54,120 +54,136 @@ export function VideoPlayer({ url, poster, name }: { url: string | null; poster?
 
 export function ExerciseBody({ data, compact = false }: { data: ExerciseData; compact?: boolean }) {
   const unit = useUnit()
-  const [tab, setTab] = useState<'about' | 'history'>(data.sessions.length > 0 && compact ? 'history' : 'about')
-  // "All Glutes" next to "Glutes" is noise; keep the more specific labels.
+  // Sheets opened mid-workout default to History (what you need between sets); the page defaults to Form.
+  const [tab, setTab] = useState<'form' | 'history'>(compact && data.sessions.length > 0 ? 'history' : 'form')
+  const [allSteps, setAllSteps] = useState(false)
+  const [musclesOpen, setMusclesOpen] = useState(false)
+  // "All Glutes" next to "Glutes" is noise; keep the specific labels.
   const muscles = data.muscles.filter((m, i, all) => !(m.name.startsWith('All ') && all.some((o, j) => j !== i && o.group === m.group)))
   const primary = muscles.filter((m) => m.role === 'primary')
-  const secondary = muscles.filter((m) => m.role === 'secondary' && !primary.some((p) => p.group === m.group && p.name === m.name))
-  const chartPoints = [...data.sessions]
-    .reverse()
-    .filter((s) => s.bestE1rmKg > 0)
-    .map((s) => ({ x: s.at, y: toDisplayWeight(s.bestE1rmKg, unit) ?? 0 }))
+  const secondary = muscles.filter((m) => m.role === 'secondary' && !primary.some((p) => p.name === m.name))
+  const steps = data.steps.map((s) => s.trim()).filter(Boolean)
+  const shownSteps = allSteps ? steps : steps.slice(0, 3)
+
+  // One metric, clearly named: heaviest working set per session (reps for bodyweight, time for holds).
+  const loaded = data.tracking === 'weight_reps' || data.tracking === 'weighted_bodyweight'
+  const metricName = data.tracking === 'duration' ? 'Longest hold' : loaded ? 'Heaviest set' : 'Most reps'
+  const perSession = [...data.sessions].reverse().map((s) => {
+    const top = s.sets.reduce<(typeof s.sets)[number] | null>((best, x) => {
+      const v = data.tracking === 'duration' ? (x.durationSec ?? 0) : loaded ? (x.weightKg ?? 0) * 1000 + (x.reps ?? 0) : (x.reps ?? 0)
+      const b = best ? (data.tracking === 'duration' ? (best.durationSec ?? 0) : loaded ? (best.weightKg ?? 0) * 1000 + (best.reps ?? 0) : (best.reps ?? 0)) : -1
+      return v > b ? x : best
+    }, null)
+    return { at: s.at, top }
+  })
+  const value = (x: { weightKg: number | null; reps: number | null; durationSec: number | null } | null) =>
+    !x ? 0 : data.tracking === 'duration' ? (x.durationSec ?? 0) : loaded ? (toDisplayWeight(x.weightKg, unit) ?? 0) : (x.reps ?? 0)
+  const points = perSession.filter((p) => p.top).map((p) => ({ x: p.at, y: value(p.top) }))
+  const bestIdx = perSession.reduce((bi, p, i) => (value(p.top) > value(perSession[bi]?.top ?? null) ? i : bi), 0)
+  const best = perSession[bestIdx]
+  const metricUnit = data.tracking === 'duration' ? 's' : loaded ? unit : 'reps'
 
   return (
     <div>
-      {data.videoUrl ? (
-        <VideoPlayer url={data.videoUrl} name={data.name} />
-      ) : data.custom ? null : (
-        <div className="grid h-24 place-items-center rounded-[18px] bg-surface text-[14px] text-subtle">No form video for this one yet</div>
-      )}
-
-      <div className="mt-5 grid grid-cols-2 rounded-full bg-surface p-1">
-        {(['about', 'history'] as const).map((t) => (
+      <div role="tablist" aria-label="Exercise view" className="grid grid-cols-2 rounded-[12px] bg-surface p-1">
+        {(['form', 'history'] as const).map((t) => (
           <button
             key={t}
-            aria-pressed={tab === t}
+            role="tab"
+            aria-selected={tab === t}
             onClick={() => setTab(t)}
-            className={`press h-10 rounded-full text-[14px] font-[600] capitalize transition-colors ${tab === t ? 'bg-raised text-ink' : 'text-subtle'}`}
+            className={`press h-10 rounded-[9px] text-[14px] font-[550] capitalize transition-colors ${tab === t ? 'bg-pressed text-ink' : 'text-muted'}`}
           >
-            {t === 'history' ? `History${data.sessions.length ? ` · ${data.sessions.length}` : ''}` : 'Form'}
+            {t}
           </button>
         ))}
       </div>
 
-      {tab === 'about' ? (
-        <div className="mt-6 space-y-7 animate-fade">
-          <section>
-            <h2 className="t-eyebrow text-subtle">Muscles</h2>
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              {primary.map((m) => (
-                <span key={m.name} className="rounded-full bg-accent-dim px-3 py-1.5 text-[13px] font-[600] text-accent">
-                  {m.name}
-                </span>
-              ))}
-              {secondary.map((m) => (
-                <span key={m.name} className="rounded-full bg-raised px-3 py-1.5 text-[13px] font-[550] text-muted">
-                  {m.name}
-                </span>
-              ))}
-            </div>
-            {data.equipment.length > 0 && <p className="mt-3 text-[14px] text-subtle">Equipment · {data.equipment.join(', ')}</p>}
-          </section>
-          {data.steps.length > 0 && (
-            <section>
-              <h2 className="t-eyebrow text-subtle">How to</h2>
+      {tab === 'form' ? (
+        <div role="tabpanel" className="mt-4 animate-fade">
+          {data.videoUrl ? <VideoPlayer url={data.videoUrl} name={data.name} /> : null}
+          {steps.length > 0 && (
+            <section className="mt-7">
+              <h2 className="text-[18px] font-[600] leading-6">Technique</h2>
               <ol className="mt-3 space-y-4">
-                {data.steps.map((s, i) => (
+                {shownSteps.map((s, i) => (
                   <li key={i} className="flex gap-3">
-                    <span className="num mt-[1px] grid size-6 shrink-0 place-items-center rounded-full bg-raised text-[12px] font-[650] text-muted">{i + 1}</span>
-                    <p className="text-[15px] leading-[23px] text-ink/85">{s.trim()}</p>
+                    <span className="num w-4 shrink-0 pt-[1px] text-[14px] text-muted">{i + 1}</span>
+                    <p className={`text-[16px] leading-6 text-ink/90 ${allSteps ? '' : 'line-clamp-3'}`}>{s}</p>
                   </li>
                 ))}
               </ol>
+              {(steps.length > 3 || steps.some((s) => s.length > 160)) && (
+                <button onClick={() => setAllSteps(!allSteps)} className="mt-3 h-11 text-[14px] font-[600] text-accent">
+                  {allSteps ? 'Show less' : 'Full instructions'}
+                </button>
+              )}
+              {data.cues[0] && allSteps && <p className="mt-2 text-[15px] leading-6 text-muted">{data.cues[0]}</p>}
             </section>
           )}
-          {(data.cues.length > 0 || data.tips) && (
-            <section className="rounded-[18px] bg-surface p-4">
-              <h2 className="t-eyebrow text-subtle">Cues</h2>
-              {data.cues.map((c, i) => (
-                <p key={i} className="mt-2 text-[15px] leading-[23px] text-ink/85">{c}</p>
-              ))}
-              {data.tips && <p className="mt-2 text-[15px] leading-[23px] text-muted">{data.tips}</p>}
+          {muscles.length > 0 && (
+            <section className="mt-6 border-t border-line">
+              <button onClick={() => setMusclesOpen(!musclesOpen)} aria-expanded={musclesOpen} className="flex min-h-16 w-full items-center gap-3 text-left">
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[16px] font-[550]">Muscles</span>
+                  <span className="block truncate text-[13px] text-muted">
+                    {primary.map((m) => m.name).join(', ')}
+                    {secondary.length ? ` · also ${secondary.map((m) => m.name).join(', ')}` : ''}
+                  </span>
+                </span>
+                <ChevronDown aria-hidden className={`size-4 text-muted transition-transform ${musclesOpen ? 'rotate-180' : ''}`} />
+              </button>
+              {musclesOpen && (
+                <dl className="pb-3 text-[15px] animate-fade">
+                  <dt className="text-[13px] text-muted">Primary</dt>
+                  <dd className="mb-3">{primary.map((m) => m.name).join(', ') || '—'}</dd>
+                  {secondary.length > 0 && (
+                    <>
+                      <dt className="text-[13px] text-muted">Secondary</dt>
+                      <dd>{secondary.map((m) => m.name).join(', ')}</dd>
+                    </>
+                  )}
+                </dl>
+              )}
             </section>
           )}
         </div>
       ) : (
-        <div className="mt-6 animate-fade">
+        <div role="tabpanel" className="mt-5 animate-fade">
           {data.sessions.length === 0 ? (
-            <p className="py-10 text-center text-[15px] text-muted">No sets logged yet. Your first one sets the bar.</p>
+            <div className="py-10 text-center">
+              <p className="text-[16px] font-[550]">No sets logged yet</p>
+              <p className="mt-1 text-[14px] text-muted">Your first session sets the baseline.</p>
+            </div>
           ) : (
             <>
-              {data.stats?.bestE1rmKg || data.stats?.bestReps ? (
-                <div className="flex items-center gap-3 rounded-[18px] bg-pr-dim p-4">
-                  <Trophy className="size-5 text-pr" />
-                  <div className="min-w-0 flex-1">
-                    <div className="text-[13px] font-[600] text-pr">Best set</div>
-                    <div className="num text-[17px] font-[650]">
-                      {fmtSet({ weightKg: data.stats.bestWeightKg, reps: data.stats.bestReps }, data.tracking, unit)}
-                      {data.tracking === 'weight_reps' && data.stats.bestE1rmKg ? (
-                        <span className="ml-2 text-[13px] font-[500] text-muted">
-                          {unit} ≈ {fmtWeight(data.stats.bestE1rmKg, unit)} {unit} 1RM
-                        </span>
-                      ) : null}
-                    </div>
-                  </div>
-                  {data.stats.bestSetAt && <div className="text-[12px] text-subtle">{fmtDate(data.stats.bestSetAt, { month: 'short', day: 'numeric' })}</div>}
-                </div>
-              ) : null}
-              {chartPoints.length >= 2 && (
-                <div className="mt-5">
-                  <div className="t-eyebrow mb-2 text-subtle">Estimated 1RM</div>
-                  <LineChart points={chartPoints} unit={unit} />
+              <div className="text-[13px] text-muted">{metricName}</div>
+              {best?.top && (
+                <div className="mt-1 flex items-baseline gap-2">
+                  <span className="num text-[28px] font-[550] leading-[34px] tracking-[-0.02em]">{fmtSet(best.top, data.tracking, unit)}</span>
+                  <span className="inline-flex items-center gap-1 text-[13px] font-[500] text-pr">
+                    <Medal aria-hidden className="size-3.5" /> Best
+                  </span>
+                  <span className="text-[13px] text-muted">{fmtDate(best.at, { day: 'numeric', month: 'short' })}</span>
                 </div>
               )}
-              <ul className="mt-5 divide-hair">
+              {points.length >= 2 && (
+                <div className="mt-3">
+                  <LineChart points={points} unit={metricUnit} height={160} hideReadout />
+                </div>
+              )}
+              <ul className="mt-4">
                 {data.sessions.map((s) => (
-                  <li key={s.workoutId}>
+                  <li key={s.workoutId} className="border-t border-line">
                     <Link to="/history/$workoutId" params={{ workoutId: s.workoutId }} className="press block py-3.5">
-                      <div className="flex items-baseline justify-between gap-3">
-                        <span className="text-[15px] font-[580]">{fmtRelativeDay(s.at)}</span>
-                        <span className="truncate text-[13px] text-subtle">{s.title}</span>
+                      <div className="text-[13px] text-muted">
+                        {fmtDate(s.at, { day: 'numeric', month: 'short' })} · {s.title}
                       </div>
-                      <div className="num mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[14px] text-muted">
+                      <div className="num mt-1 flex flex-wrap gap-x-4 gap-y-1 text-[16px]">
                         {s.sets.map((x, i) => (
-                          <span key={i} className={x.isPr ? 'text-pr' : ''}>
-                            {x.isPr && <span className="sr-only">Personal record: </span>}
-                            {fmtSet(x, data.tracking, unit, '×')}
+                          <span key={i} className={x.isPr ? 'inline-flex items-center gap-1 text-pr' : ''}>
+                            {x.isPr && <Medal aria-label="Personal record" className="size-3.5" />}
+                            {fmtSet(x, data.tracking, unit)}
                           </span>
                         ))}
                       </div>

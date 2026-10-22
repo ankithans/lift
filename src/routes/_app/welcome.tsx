@@ -1,10 +1,9 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useMutation, useQuery } from 'convex/react'
-import { ArrowRight, Check, Loader2, Sparkles } from 'lucide-react'
+import { Check, Info, Loader2 } from 'lucide-react'
 import { useState } from 'react'
 import { api } from '../../../convex/_generated/api'
-import { Logo } from '#/components/Logo'
-import { BlockSkeleton } from '#/components/Skeletons'
+import { Sheet } from '#/components/Sheet'
 import { WEEKDAYS } from '#/lib/format'
 import { useMe } from '#/lib/me'
 import { tap } from '#/lib/haptics'
@@ -19,8 +18,9 @@ function Welcome() {
   const createEmpty = useMutation(api.programs.createEmpty)
   const update = useMutation(api.profile.update)
   const navigate = useNavigate()
-  const [choice, setChoice] = useState<string>('ulppl')
+  const [choice, setChoice] = useState<string>('')
   const [busy, setBusy] = useState(false)
+  const [info, setInfo] = useState<string | null>(null)
   const unit = me.profile?.unit ?? 'kg'
   const switching = Boolean(me.profile?.activeProgramId)
 
@@ -36,22 +36,72 @@ function Welcome() {
     }
   }
 
+  const options = templates
+    ? [
+        ...templates.map((t) => ({
+          key: t.key,
+          title: `${t.daysPerWeek} days a week`,
+          line: [...new Set(t.days.filter((d) => d.kind === 'workout').map((d) => d.title.split(/[ ·(]/)[0]))].join(' / '),
+          t,
+        })),
+        { key: 'empty', title: 'Start from scratch', line: 'Build your own week', t: null },
+      ]
+    : null
+  const selected = options?.find((o) => o.key === choice)
+
   return (
-    <main className="mx-auto min-h-dvh max-w-[560px] px-5 pb-[calc(var(--safe-bottom)+120px)] pt-[calc(var(--safe-top)+40px)]">
+    <main className="mx-auto min-h-dvh max-w-[560px] px-5 pb-[calc(var(--safe-bottom)+120px)] pt-[calc(var(--safe-top)+48px)]">
       <div className="animate-rise">
-        <Logo size={40} />
-        <h1 className="mt-6 t-large">{switching ? 'Switch program' : `Welcome${me.name ? `, ${me.name}` : ''}.`}</h1>
-        <p className="mt-2 text-[16px] leading-6 text-muted">
-          {switching ? 'Your history stays. The new plan takes over your week.' : 'Pick a plan to fill your week. You can change every exercise later.'}
-        </p>
+        <h1 className="text-[28px] font-[650] leading-[34px] tracking-[-0.03em]">{switching ? 'Switch program' : 'Choose your week'}</h1>
+        <p className="mt-2 text-[14px] leading-5 text-muted">{switching ? 'Your history and records stay.' : 'You can change it later.'}</p>
+      </div>
+
+      <div role="radiogroup" aria-label="Program" className="mt-7 overflow-hidden rounded-[20px] bg-surface animate-rise [animation-delay:60ms]">
+        {options === null
+          ? [0, 1, 2].map((i) => <div key={i} className="h-20 border-t border-line first:border-0" />)
+          : options.map((o, i) => {
+              const on = choice === o.key
+              return (
+                <div key={o.key} className={`flex items-center ${i > 0 ? 'border-t border-line' : ''} ${on ? 'bg-accent/[0.05]' : ''}`}>
+                  <button
+                    role="radio"
+                    aria-checked={on}
+                    onClick={() => {
+                      tap()
+                      setChoice(o.key)
+                    }}
+                    className="flex min-h-20 min-w-0 flex-1 items-center gap-4 pl-4 text-left"
+                  >
+                    <span aria-hidden className={`grid size-5 shrink-0 place-items-center rounded-full border-[1.5px] transition-colors ${on ? 'border-accent bg-accent' : 'border-edge'}`}>
+                      {on && <Check className="size-3 text-accent-ink" strokeWidth={3.5} />}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block text-[16px] font-[550] leading-[22px]">{o.title}</span>
+                      <span className="block truncate text-[13px] text-muted">{o.line}</span>
+                    </span>
+                  </button>
+                  {o.t && (
+                    <button className="icon-btn mr-2 shrink-0" aria-label={`About ${o.title}`} onClick={() => setInfo(o.key)}>
+                      <Info className="size-5" />
+                    </button>
+                  )}
+                </div>
+              )
+            })}
       </div>
 
       {!switching && (
-        <div className="mt-8 flex items-center justify-between animate-rise [animation-delay:60ms]">
-          <span className="text-[15px] font-[560]">I lift in</span>
-          <div role="radiogroup" aria-label="Units" className="flex rounded-full bg-raised p-1">
+        <div className="mt-6 flex min-h-14 items-center justify-between animate-rise [animation-delay:100ms]">
+          <span className="text-[16px]">Weight unit</span>
+          <div role="radiogroup" aria-label="Weight unit" className="flex rounded-[12px] bg-surface p-1">
             {(['kg', 'lb'] as const).map((u) => (
-              <button key={u} role="radio" aria-checked={unit === u} onClick={() => update({ unit: u })} className={`press h-10 w-14 rounded-full text-[14px] font-[650] ${unit === u ? 'bg-ink text-black' : 'text-muted'}`}>
+              <button
+                key={u}
+                role="radio"
+                aria-checked={unit === u}
+                onClick={() => update({ unit: u })}
+                className={`press h-10 w-14 rounded-[9px] text-[14px] font-[550] ${unit === u ? 'bg-pressed text-ink' : 'text-muted'}`}
+              >
                 {u}
               </button>
             ))}
@@ -59,64 +109,55 @@ function Welcome() {
         </div>
       )}
 
-      <div role="radiogroup" aria-label="Program" className="mt-6 space-y-2.5">
-        {templates === undefined
-          ? [0, 1, 2].map((i) => <BlockSkeleton key={i} h={118} />)
-          : [...templates, { key: 'empty', name: 'Start from scratch', goal: 'Build your own', level: 'Any level', description: 'An empty week. Add your own days and exercises.', daysPerWeek: 0, days: [] }].map((t, i) => {
-              const on = choice === t.key
-              return (
-                <button
-                  key={t.key}
-                  role="radio"
-                  aria-checked={on}
-                  onClick={() => { tap(); setChoice(t.key) }}
-                  className={`press w-full rounded-[22px] border p-4 text-left transition-colors animate-rise ${
-                    on ? 'border-accent/60 bg-accent/[0.06]' : 'border-line bg-surface hover:border-line-strong'
-                  }`}
-                  style={{ animationDelay: `${100 + i * 50}ms` }}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[17px] font-[650] tracking-[-0.01em]">{t.name}</span>
-                        {t.key === 'ulppl' && <span className="inline-flex items-center gap-1 rounded-full bg-accent-dim px-2 py-0.5 text-[11px] font-[650] text-accent"><Sparkles className="size-3" />Popular</span>}
-                      </div>
-                      <div className="mt-0.5 text-[13px] text-subtle">{t.goal} · {t.level}</div>
-                      <p className="mt-2 text-[14px] leading-5 text-muted">{t.description}</p>
-                    </div>
-                    <span className={`grid size-6 shrink-0 place-items-center rounded-full border transition-colors ${on ? 'border-accent bg-accent text-accent-ink' : 'border-line-strong'}`}>
-                      {on && <Check className="size-4" strokeWidth={3} />}
-                    </span>
-                  </div>
-                  {t.days.length > 0 && (
-                    <div className="mt-3 grid grid-cols-7 gap-1">
-                      {[0, 1, 2, 3, 4, 5, 6].map((wd) => {
-                        const d = t.days.find((x) => x.weekday === wd)
-                        const work = d?.kind === 'workout'
-                        return (
-                          <div key={wd} className={`rounded-[8px] px-1 py-1.5 text-center ${work ? 'bg-raised' : ''}`}>
-                            <div className="text-[10px] font-[650] text-subtle">{WEEKDAYS[wd][0]}</div>
-                            <div className={`truncate text-[10px] font-[600] ${work ? 'text-ink/80' : 'text-subtle'}`}>{work ? d!.title.split(' ')[0] : '—'}</div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )}
-                </button>
-              )
-            })}
-      </div>
-
-      <div className="fixed inset-x-0 bottom-0 z-30 bg-gradient-to-t from-black via-black/95 to-transparent px-5 pb-[calc(var(--safe-bottom)+16px)] pt-8">
+      <div className="fixed inset-x-0 bottom-0 z-30 bg-black px-5 pb-[calc(var(--safe-bottom)+16px)] pt-4">
         <div className="mx-auto flex max-w-[560px] gap-2">
-          {switching && <button className="btn btn-secondary" onClick={() => navigate({ to: '/settings' })}>Cancel</button>}
-          <button disabled={busy} onClick={go} className="btn btn-primary flex-1">
+          {switching && (
+            <button className="btn btn-secondary" onClick={() => navigate({ to: '/settings' })}>
+              Cancel
+            </button>
+          )}
+          <button disabled={busy || !selected} onClick={go} className="btn btn-primary flex-1">
             {busy ? <Loader2 className="size-5 animate-spin" /> : null}
-            {switching ? 'Switch program' : 'Let’s lift'}
-            {!busy && <ArrowRight className="size-5" />}
+            {selected ? (selected.t ? `Use ${selected.t.daysPerWeek}-day plan` : 'Start from scratch') : 'Choose a plan'}
           </button>
         </div>
       </div>
+
+      <Sheet open={info !== null} onClose={() => setInfo(null)} title={options?.find((o) => o.key === info)?.t?.name ?? ''}>
+        {(() => {
+          const t = options?.find((o) => o.key === info)?.t
+          if (!t) return null
+          return (
+            <div className="pb-2">
+              <p className="text-[15px] leading-6 text-muted">{t.description}</p>
+              <p className="mt-1 text-[13px] text-muted">
+                {t.level} · {t.goal}
+              </p>
+              <ul className="mt-4">
+                {[0, 1, 2, 3, 4, 5, 6].map((wd) => {
+                  const d = t.days.find((x) => x.weekday === wd)
+                  return (
+                    <li key={wd} className="flex min-h-11 items-center gap-4 border-b border-line text-[15px]">
+                      <span className="w-10 text-[13px] text-muted">{WEEKDAYS[wd]}</span>
+                      <span className={d?.kind === 'workout' ? '' : 'text-muted'}>{d?.kind === 'workout' ? d.title : 'Rest'}</span>
+                      {d?.kind === 'workout' && <span className="num ml-auto text-[13px] text-muted">{d.exercises} ex</span>}
+                    </li>
+                  )
+                })}
+              </ul>
+              <button
+                className="btn btn-primary mt-5 w-full"
+                onClick={() => {
+                  setChoice(t.key)
+                  setInfo(null)
+                }}
+              >
+                Use this plan
+              </button>
+            </div>
+          )
+        })()}
+      </Sheet>
     </main>
   )
 }

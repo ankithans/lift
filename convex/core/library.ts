@@ -67,6 +67,24 @@ export const searchExercises = defineQuery({
   },
 });
 
+export const recentExercises = defineQuery({
+  name: "list_recent_exercises",
+  description: "Exercises the user has logged, most recently used first.",
+  args: { limit: v.optional(v.number()) },
+  run: async (ctx, { userId }, { limit }) => {
+    const rows = await ctx.db
+      .query("exerciseStats")
+      .withIndex("by_userId_and_exerciseId", (q) => q.eq("userId", userId))
+      .take(1000);
+    const out = [];
+    for (const r of rows.filter((r) => r.lastDoneAt).sort((a, b) => (b.lastDoneAt ?? 0) - (a.lastDoneAt ?? 0)).slice(0, Math.max(1, Math.min(limit ?? 40, 200)))) {
+      const e = await ctx.db.get(r.exerciseId);
+      if (e) out.push({ ...exerciseSummary(e), categories: e.categories, lastDoneAt: r.lastDoneAt ?? null });
+    }
+    return out;
+  },
+});
+
 export const getExercise = defineQuery({
   name: "get_exercise",
   description:

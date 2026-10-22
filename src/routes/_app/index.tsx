@@ -1,31 +1,42 @@
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useMutation, useQuery } from 'convex/react'
+import { useMutation, usePaginatedQuery, useQuery } from 'convex/react'
 import type { FunctionReturnType } from 'convex/server'
-import { Check, ChevronLeft, ChevronRight, Footprints, GripVertical, Loader2, Play, Plus } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Check, ChevronLeft, ChevronRight, GripVertical, Loader2, Lock, Play } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { api } from '../../../convex/_generated/api'
 import type { Id } from '../../../convex/_generated/dataModel'
 import { PageHeader } from '#/components/PageHeader'
 import { Sheet } from '#/components/Sheet'
 import { BlockSkeleton } from '#/components/Skeletons'
-import { fmtDate, fmtDuration, fmtVolume, WEEKDAYS, WEEKDAYS_LONG } from '#/lib/format'
+import { announce } from '#/lib/announce'
+import { fmtDate, fmtDuration, WEEKDAYS, WEEKDAYS_LONG } from '#/lib/format'
 import { tap } from '#/lib/haptics'
-import { useMe, useUnit } from '#/lib/me'
+import { useMe } from '#/lib/me'
 import { startOfDay, weekBoundaries } from '#/lib/time'
 import { toast } from '#/lib/toast'
-import { announce } from '#/lib/announce'
 import { useNow } from '#/lib/useNow'
 
 export const Route = createFileRoute('/_app/')({
-  head: () => ({ meta: [{ title: 'Train · Lift' }] }), component: Train })
+  head: () => ({ meta: [{ title: 'Train · Lift' }] }),
+  component: Train,
+})
 
 type Week = NonNullable<FunctionReturnType<typeof api.programs.week>>
 type Day = Week['days'][number]
-type Planned = NonNullable<Day['planned']>
 
-const ROW_H = 76
+const ROW_H = 60
 // The click that ends a drag must not also open the day.
 let lastDragEnd = 0
+
+const dayName = (d: Day | undefined) => (d?.planned?.kind === 'workout' ? d.planned.title : 'Rest')
+
+function rangeLabel(start: number, end: number) {
+  const a = new Date(start)
+  const b = new Date(end - 1)
+  return a.getMonth() === b.getMonth()
+    ? `${a.getDate()}–${b.getDate()} ${fmtDate(start, { month: 'short' })}`
+    : `${fmtDate(start, { day: 'numeric', month: 'short' })} – ${fmtDate(b.getTime(), { day: 'numeric', month: 'short' })}`
+}
 
 function Train() {
   const me = useMe()
@@ -34,103 +45,52 @@ function Train() {
   const today = startOfDay(now)
   const [offset, setOffset] = useState(0)
   const boundaries = useMemo(() => weekBoundaries(today, weekStartsOn, offset), [today, weekStartsOn, offset])
-  // Day-granular `now` keeps the query args stable (no refetch every minute).
   const week = useQuery(api.programs.week, { boundaries, now: today })
+  const thisWeekBounds = useMemo(() => weekBoundaries(today, weekStartsOn, 0), [today, weekStartsOn])
+  const thisWeek = useQuery(api.programs.week, offset === 0 ? 'skip' : { boundaries: thisWeekBounds, now: today })
 
-  // Days before the account existed aren't "skipped".
+  // Days before the account existed aren't "missed".
   const joined = startOfDay(me.profile?._creationTime ?? 0)
-  const days = useMemo(
-    () => week?.days.map((d) => (d.status === 'missed' && d.start < joined ? { ...d, status: 'upcoming' as const } : d)),
-    [week, joined],
-  )
-  const todayDay = days?.find((d) => d.isToday)
+  const fix = (w: Week | undefined) => w?.days.map((d) => (d.status === 'missed' && d.start < joined ? { ...d, status: 'upcoming' as const } : d))
+  const days = useMemo(() => fix(week), [week, joined])
+  const currentDays = useMemo(() => (offset === 0 ? days : fix(thisWeek)), [offset, days, thisWeek, joined])
+  const todayDay = currentDays?.find((d) => d.isToday)
 
-  const greeting = (() => {
-    const h = new Date(now).getHours()
-    return h < 5 ? 'Late session' : h < 12 ? 'Morning' : h < 17 ? 'Afternoon' : 'Evening'
-  })()
+  const planned = days?.filter((d) => d.planned?.kind === 'workout').length ?? 0
+  const doneCount = days?.filter((d) => d.status === 'done').length ?? 0
 
   return (
     <main className="page">
-      <PageHeader
-        eyebrow={fmtDate(now, { weekday: 'long', month: 'long', day: 'numeric' })}
-        title={`${greeting}${me.name ? `, ${me.name}` : ''}`}
-      />
-      {todayDay && offset === 0 && <TodayLine day={todayDay} />}
+      <PageHeader eyebrow={fmtDate(now, { weekday: 'short', day: 'numeric', month: 'short' })} title="Train" />
 
       {week === undefined || !days ? (
-        <div className="mt-6 space-y-2">
-          {Array.from({ length: 7 }, (_, i) => <BlockSkeleton key={i} h={ROW_H - 8} />)}
+        <div className="space-y-3">
+          <BlockSkeleton h={150} />
+          <BlockSkeleton h={420} />
         </div>
       ) : !week.program ? (
         <NoProgram />
       ) : (
-        <section aria-labelledby="week-title" className="mt-7 animate-fade">
-          <div className="mb-2 flex items-center justify-between gap-2">
-            <div className="min-w-0">
-              <h2 id="week-title" className="text-[15px] font-[650] tracking-[-0.01em]">
-                {offset === 0 ? 'This week' : offset === -1 ? 'Last week' : offset === 1 ? 'Next week' : `Week of ${fmtDate(boundaries[0], { month: 'short', day: 'numeric' })}`}
-              </h2>
-              <Link to="/program" className="-my-2 flex min-h-11 items-center truncate text-[13px] text-subtle hover:text-ink">
-                {week.program.name}
-              </Link>
-            </div>
-            <div className="flex items-center">
-              <button className="icon-btn" aria-label="Previous week" onClick={() => setOffset(offset - 1)}>
-                <ChevronLeft className="size-5" />
-              </button>
-              {offset !== 0 && (
-                <button className="h-9 rounded-full px-2.5 text-[13px] font-[650] text-accent" onClick={() => setOffset(0)}>
-                  Today
-                </button>
-              )}
-              <button className="icon-btn" aria-label="Next week" onClick={() => setOffset(offset + 1)}>
-                <ChevronRight className="size-5" />
-              </button>
-            </div>
-          </div>
-          <WeekList days={days} />
-          <DragHint />
-        </section>
+        <>
+          {todayDay && <TodayHero day={todayDay} days={currentDays!} />}
+          <WeekSection
+            key={offset}
+            days={days}
+            title={offset === 0 ? 'This week' : offset === -1 ? 'Last week' : offset === 1 ? 'Next week' : 'Week'}
+            range={rangeLabel(boundaries[0], boundaries[7])}
+            summary={planned ? `${doneCount} of ${planned} sessions` : ''}
+            offset={offset}
+            setOffset={setOffset}
+          />
+          {offset === 0 && <LastSession />}
+        </>
       )}
     </main>
   )
 }
 
-/** One quiet line under the greeting: what today is, and the fastest way to start. */
-function TodayLine({ day }: { day: Day }) {
-  const start = useStartWorkout()
-  const p = day.planned
-  if (day.status === 'active') {
-    // The dock at the bottom is the one place to resume; here, just say what's happening.
-    return (
-      <p className="-mt-2 flex items-center gap-2 text-[15px] text-muted">
-        <span aria-hidden className="size-2 rounded-full bg-accent" /> {day.workout?.title} in progress
-      </p>
-    )
-  }
-  if (day.status === 'done') {
-    return (
-      <p className="-mt-2 flex items-center gap-1.5 text-[15px] text-muted">
-        <Check className="size-4 text-accent" strokeWidth={2.6} /> {day.workout?.title} done today. Nice work.
-      </p>
-    )
-  }
-  if (!p || p.kind === 'rest') {
-    return <p className="-mt-2 text-[15px] text-muted">Rest day. Recovery is where you grow.</p>
-  }
-  return (
-    <div className="-mt-1">
-      <p className="text-[15px] text-muted">
-        Today is <span className="font-[600] text-ink">{p.title}</span> · {p.exercises.length} exercises · ~{p.estimatedMinutes} min
-      </p>
-      <button disabled={start.busy} onClick={() => start.run(p._id)} className="btn btn-primary mt-4 w-full">
-        {start.busy ? <Loader2 className="size-5 animate-spin" /> : <Play className="size-[18px] fill-current" />}
-        Start {p.title}
-      </button>
-    </div>
-  )
-}
+// ---------------------------------------------------------------------------
+// Today: one decision, one action.
 
 function useStartWorkout() {
   const startMut = useMutation(api.workouts.start)
@@ -157,72 +117,162 @@ function useStartWorkout() {
   }
 }
 
+function TodayHero({ day, days }: { day: Day; days: Day[] }) {
+  const me = useMe()
+  const start = useStartWorkout()
+  const now = useNow(60_000)
+  const p = day.planned
+  const active = me.activeWorkout
+
+  let label = 'Today'
+  let title: string
+  let support: string
+  let action: ReactNode
+  let titleLink: Id<'programDays'> | null = null
+
+  if (active) {
+    label = 'In progress'
+    title = active.title
+    support = `Started ${Math.max(1, Math.round((now - active.startedAt) / 60000))} min ago`
+    action = (
+      <Link to="/workout" className="btn btn-primary w-full">
+        <Play aria-hidden className="size-[18px] fill-current" /> Resume {active.title}
+      </Link>
+    )
+  } else if (day.status === 'done' && day.workout) {
+    title = day.workout.title
+    support = day.workout.stats ? `Done · ${fmtDuration(day.workout.stats.durationSec)} · ${day.workout.stats.sets} sets` : 'Done'
+    action = (
+      <Link to="/history/$workoutId" params={{ workoutId: day.workout._id }} className="btn btn-secondary w-full">
+        <Check aria-hidden className="size-5 text-accent" strokeWidth={2.6} /> View session
+      </Link>
+    )
+  } else if (!p || p.kind === 'rest') {
+    const next = days.slice(days.indexOf(day) + 1).find((d) => d.planned?.kind === 'workout')
+    title = 'Rest day'
+    support = next ? `Next: ${next.planned!.title} · ${WEEKDAYS_LONG[next.weekday]}` : 'Recovery is where you grow.'
+    action = (
+      <div className="flex gap-2">
+        {next && (
+          <Link to="/day/$dayId" params={{ dayId: next.planned!._id }} className="btn btn-secondary flex-1">
+            Preview {next.planned!.title}
+          </Link>
+        )}
+        <button disabled={start.busy} onClick={() => start.run()} className="btn btn-ghost flex-1 border border-line-strong text-ink">
+          Train anyway
+        </button>
+      </div>
+    )
+  } else {
+    title = p.title
+    titleLink = p._id
+    support = `${p.exercises.length} exercises · about ${p.estimatedMinutes} min`
+    action = (
+      <button disabled={start.busy} onClick={() => start.run(p._id)} className="btn btn-primary w-full">
+        {start.busy ? <Loader2 className="size-5 animate-spin" /> : <Play aria-hidden className="size-[18px] fill-current" />}
+        Start {p.title}
+      </button>
+    )
+  }
+
+  const titleClass = 'mt-1 block text-[28px] font-[600] leading-[34px] tracking-[-0.025em]'
+  return (
+    <section aria-labelledby="today-title" className="animate-fade">
+      <div className={`text-[13px] leading-[18px] ${active ? 'text-accent' : 'text-muted'}`}>{label}</div>
+      {titleLink ? (
+        <Link to="/day/$dayId" params={{ dayId: titleLink }} id="today-title" className={`${titleClass} hover:text-ink/80`}>
+          {title}
+        </Link>
+      ) : (
+        <h2 id="today-title" className={titleClass}>
+          {title}
+        </h2>
+      )}
+      <p className="mt-1 text-[14px] leading-5 text-muted">{support}</p>
+      <div className="mt-4">{action}</div>
+    </section>
+  )
+}
+
 // ---------------------------------------------------------------------------
-// The week: fixed weekday rail on the left, draggable plan cards on the right.
+// The week: dates fixed on the left; in Arrange mode, workouts swap between days.
 
 type DragState = { from: number; to: number; dy: number; pointerId: number }
 
-function WeekList({ days }: { days: Day[] }) {
+function WeekSection({
+  days,
+  title,
+  range,
+  summary,
+  offset,
+  setOffset,
+}: {
+  days: Day[]
+  title: string
+  range: string
+  summary: string
+  offset: number
+  setOffset: (n: number) => void
+}) {
   const arrange = useMutation(api.programs.arrangeWeek)
-  // Local order of plan content per weekday slot; reset whenever the server answers.
   const [order, setOrder] = useState<Day[]>(days)
   useEffect(() => setOrder(days), [days])
+  const [editing, setEditing] = useState(false)
   const [drag, setDrag] = useState<DragState | null>(null)
-  const [restSheet, setRestSheet] = useState<Day | null>(null)
   const [moveFrom, setMoveFrom] = useState<number | null>(null)
-  // After a swap: where each moved card animates in from, and which rows flash.
   const [settle, setSettle] = useState<{ key: number; offsets: Record<number, number> } | null>(null)
-  const [flash, setFlash] = useState<{ key: number; rows: number[] } | null>(null)
-  useEffect(() => {
-    if (!flash) return
-    const t = setTimeout(() => setFlash(null), 1200)
-    return () => clearTimeout(t)
-  }, [flash])
+  const [changed, setChanged] = useState<{ key: number; rows: number[] } | null>(null)
   const startY = useRef(0)
   const press = useRef<{ timer: ReturnType<typeof setTimeout>; x: number; y: number; id: number } | null>(null)
+  const today = startOfDay(Date.now())
 
-  const commit = async (next: Day[]) => {
+  useEffect(() => {
+    if (!changed) return
+    const t = setTimeout(() => setChanged(null), 1000)
+    return () => clearTimeout(t)
+  }, [changed])
+
+  /** Done, in-progress and past days can't move: they already happened. */
+  const movable = (i: number) => {
+    const d = days[i]
+    return Boolean(d) && d.status !== 'done' && d.status !== 'active' && d.start + 86400000 > today
+  }
+
+  const commit = async (next: Day[], previous: Day[]) => {
     setOrder(next)
     try {
       await arrange({ slots: days.map((d, i) => ({ weekday: d.weekday, dayId: next[i]?.planned?._id ?? null })) })
     } catch {
-      setOrder(days)
-      toast('Could not move that day. Try again.', { tone: 'error' })
+      setOrder(previous)
+      toast('Couldn’t save. Week restored.', { tone: 'error' })
     }
   }
 
-  /**
-   * A week has fixed slots: dropping a day onto another weekday swaps the two.
-   * `releaseY` is where the dragged card was let go (so it glides home from there).
-   */
-  const move = (from: number, to: number, releaseY?: number) => {
-    if (from === to) return
+  const swap = (from: number, to: number, releaseY?: number) => {
+    if (from === to || !movable(from) || !movable(to)) return
     const before = order
     const next = [...order]
-    const item = next[from]
-    next[from] = next[to]
-    next[to] = item
-    void commit(next)
+    ;[next[from], next[to]] = [next[to], next[from]]
+    void commit(next, before)
     tap('success')
+    const a = dayName(order[from])
+    const b = dayName(order[to])
+    // Both contents travel along their direct path; the dragged one from where it was let go.
     setSettle({
       key: Date.now(),
-      offsets: {
-        [to]: releaseY !== undefined ? releaseY - (to - from) * ROW_H : (from - to) * ROW_H,
-        // While dragging, the other day already previewed its move; otherwise it slides too.
-        [from]: releaseY !== undefined ? 0 : (to - from) * ROW_H,
-      },
+      offsets: { [to]: releaseY !== undefined ? releaseY - (to - from) * ROW_H : (from - to) * ROW_H, [from]: (to - from) * ROW_H },
     })
-    setFlash({ key: Date.now(), rows: [from, to] })
-    const name = (d: Day | undefined) => (d?.planned?.kind === 'workout' ? d.planned.title : 'Rest')
-    announce(`${name(item)} moved to ${WEEKDAYS_LONG[days[to].weekday]}. ${name(next[from])} is now on ${WEEKDAYS_LONG[days[from].weekday]}.`)
-    toast(`${name(item)} → ${WEEKDAYS_LONG[days[to].weekday]}`, {
-      ms: 4500,
+    setChanged({ key: Date.now(), rows: [from, to] })
+    const outcome =
+      b === 'Rest' ? `${a} moved to ${WEEKDAYS_LONG[days[to].weekday]}` : a === 'Rest' ? `${b} moved to ${WEEKDAYS_LONG[days[from].weekday]}` : `${a} ↔ ${b} swapped`
+    announce(`${a} moved to ${WEEKDAYS_LONG[days[to].weekday]}. ${b} moved to ${WEEKDAYS_LONG[days[from].weekday]}. Undo available.`)
+    toast(outcome, {
       action: {
         label: 'Undo',
         run: () => {
-          void commit(before)
+          void commit(before, next)
           setSettle({ key: Date.now(), offsets: { [from]: (to - from) * ROW_H, [to]: (from - to) * ROW_H } })
-          setFlash({ key: Date.now(), rows: [from, to] })
+          setChanged({ key: Date.now(), rows: [from, to] })
           announce('Move undone.')
         },
       },
@@ -230,44 +280,47 @@ function WeekList({ days }: { days: Day[] }) {
   }
 
   const begin = (index: number, pointerId: number, clientY: number) => {
+    if (!movable(index)) return
+    setEditing(true)
     startY.current = clientY
     setDrag({ from: index, to: index, dy: 0, pointerId })
     tap()
   }
 
-  // While dragging, follow the pointer anywhere on the page and stop touch scrolling.
+  // While dragging, follow the pointer anywhere and stop touch scrolling.
   useEffect(() => {
     if (!drag) return
     const prevent = (e: TouchEvent) => e.preventDefault()
     const onMove = (e: PointerEvent) => {
       if (e.pointerId !== drag.pointerId) return
       const dy = e.clientY - startY.current
-      const to = Math.max(0, Math.min(order.length - 1, drag.from + Math.round(dy / ROW_H)))
-      if (to !== drag.to) tap()
+      // Target = slot under the card's centre, with hysteresis so it doesn't flicker on a boundary.
+      const raw = drag.from + dy / ROW_H
+      let to = drag.to
+      if (Math.abs(raw - drag.to) > 0.6) to = Math.max(0, Math.min(days.length - 1, Math.round(raw)))
+      if (to !== drag.to && movable(to)) tap()
       setDrag((d) => (d ? { ...d, dy, to } : d))
     }
     const onUp = (e: PointerEvent) => {
       if (e.pointerId !== drag.pointerId) return
       setDrag(null)
       lastDragEnd = Date.now()
-      // A tap on the handle (no real movement) opens the "Move to…" sheet instead.
       if (Math.abs(drag.dy) < 6 && drag.from === drag.to) setMoveFrom(drag.from)
-      else move(drag.from, drag.to, drag.dy)
+      else if (drag.to !== drag.from && movable(drag.to)) swap(drag.from, drag.to, drag.dy)
+      else setSettle({ key: Date.now(), offsets: { [drag.from]: drag.dy } }) // cancelled: glide home
     }
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setDrag(null)
-    }
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setDrag(null)
     document.addEventListener('touchmove', prevent, { passive: false })
     window.addEventListener('pointermove', onMove)
     window.addEventListener('pointerup', onUp)
     window.addEventListener('pointercancel', onUp)
     window.addEventListener('keydown', onKey)
     return () => {
-      window.removeEventListener('keydown', onKey)
       document.removeEventListener('touchmove', prevent)
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)
       window.removeEventListener('pointercancel', onUp)
+      window.removeEventListener('keydown', onKey)
     }
   })
 
@@ -276,8 +329,37 @@ function WeekList({ days }: { days: Day[] }) {
     press.current = null
   }
 
+  const target = drag && drag.to !== drag.from && movable(drag.to) ? drag.to : null
+
   return (
-    <>
+    <section aria-labelledby="week-title" className="mt-10">
+      <div className="mb-2 flex items-end justify-between gap-3">
+        <div className="min-w-0">
+          <h2 id="week-title" className="text-[18px] font-[600] leading-6 tracking-[-0.01em]">
+            {title}
+          </h2>
+          <div className="num mt-0.5 text-[13px] text-muted">
+            {range}
+            {summary && !editing ? ` · ${summary}` : ''}
+          </div>
+        </div>
+        {editing ? (
+          <button onClick={() => setEditing(false)} className="h-11 rounded-full px-4 text-[15px] font-[600] text-accent">
+            Done
+          </button>
+        ) : (
+          <div className="-mr-3 flex items-center">
+            <button className="icon-btn" aria-label="Previous week" onClick={() => setOffset(offset - 1)}>
+              <ChevronLeft className="size-5" />
+            </button>
+            <button className="icon-btn" aria-label="Next week" onClick={() => setOffset(offset + 1)}>
+              <ChevronRight className="size-5" />
+            </button>
+          </div>
+        )}
+      </div>
+      {editing && <p className="mb-2 text-[13px] text-muted animate-fade">Drag a workout onto another day to swap them.</p>}
+
       <ol
         className="relative select-none"
         onPointerMove={(e) => {
@@ -288,44 +370,54 @@ function WeekList({ days }: { days: Day[] }) {
       >
         {days.map((slot, i) => {
           const item = order[i]
-          // The day being hovered previews the swap by sliding into the origin slot.
-          const shift = drag && i === drag.to && i !== drag.from ? (drag.from - drag.to) * ROW_H : 0
-          const dragging = drag?.from === i
-          const involved = drag && (i === drag.from || i === drag.to)
+          const isSource = drag?.from === i
+          const isTarget = target === i
           const settling = settle && settle.offsets[i] !== undefined ? settle : null
+          const locked = editing && !movable(i)
           return (
             <li key={slot.start} className="relative flex items-stretch" style={{ height: ROW_H }}>
-              {/* Drop target: a soft outline where the dragged day will land. */}
-              {drag && i === drag.to && i !== drag.from && (
-                <span aria-hidden className="pointer-events-none absolute inset-y-1 left-12 right-0 rounded-[18px] border border-dashed border-accent/50 bg-accent/[0.04]" />
-              )}
-              <div className={`flex w-12 shrink-0 flex-col justify-center ${slot.isToday ? 'text-accent' : 'text-subtle'}`} aria-hidden>
-                <span className="text-[12px] font-[700] uppercase tracking-[0.06em]">{WEEKDAYS[slot.weekday]}</span>
-                <span className={`num text-[19px] font-[680] leading-6 ${slot.isToday ? 'text-accent' : 'text-ink/80'}`}>{new Date(slot.start).getDate()}</span>
+              <div aria-hidden className={`flex w-14 shrink-0 items-center gap-1 text-[13px] ${slot.isToday ? 'text-accent' : 'text-muted'}`}>
+                <span className="font-[600]">{WEEKDAYS[slot.weekday]}</span>
+                <span className="num">{new Date(slot.start).getDate()}</span>
               </div>
+
+              {/* Source ghost: the slot the workout is leaving. */}
+              {isSource && (
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-y-1.5 left-14 right-0 flex items-center rounded-[14px] border border-dashed border-[#464646] pl-3 text-[16px] font-[550] text-ink/35"
+                >
+                  {dayName(item)}
+                </div>
+              )}
+
               <div
                 key={settling ? `${slot.start}-${settling.key}` : slot.start}
-                className={`relative min-w-0 flex-1 py-1 ${settling ? 'animate-[settle_380ms_cubic-bezier(0.22,1,0.36,1)_both]' : ''}`}
+                className={`relative min-w-0 flex-1 py-1.5 ${settling ? 'animate-[settle_220ms_cubic-bezier(0.22,1,0.36,1)_both]' : ''}`}
                 style={{
-                  transform: settling ? undefined : `translateY(${dragging ? drag.dy : shift}px)`,
-                  transition: dragging ? 'none' : 'transform 220ms cubic-bezier(0.22,1,0.36,1), opacity 160ms',
-                  zIndex: dragging ? 20 : settling && settle?.offsets[i] ? 10 : undefined,
-                  opacity: drag && !involved ? 0.45 : 1,
+                  transform: isSource ? `translateY(${drag!.dy}px) scale(1.025)` : undefined,
+                  transition: isSource ? 'none' : undefined,
+                  zIndex: isSource ? 20 : settling ? 10 : undefined,
                   ['--settle-y' as string]: settling ? `${settling.offsets[i]}px` : undefined,
                 }}
                 onAnimationEnd={(e) => e.target === e.currentTarget && settling && setSettle(null)}
               >
-                <DayCard
+                <DayRow
                   slot={slot}
                   item={item}
                   index={i}
-                  dragging={dragging}
-                  flash={Boolean(flash?.rows.includes(i))}
-                  flashKey={flash?.key ?? 0}
+                  editing={editing}
+                  locked={locked}
+                  dragging={isSource}
+                  target={isTarget ? dayName(order[i]) : null}
+                  floating={isSource && target !== null ? `${dayName(item)} → ${WEEKDAYS[days[target].weekday]} ${new Date(days[target].start).getDate()}` : null}
+                  changed={Boolean(changed?.rows.includes(i))}
+                  changedKey={changed?.key ?? 0}
                   onHandleDown={(e) => begin(i, e.pointerId, e.clientY)}
                   onPressStart={(e) => {
                     const { pointerId, clientX, clientY } = e
                     cancelPress()
+                    if (!movable(i)) return
                     press.current = {
                       id: pointerId,
                       x: clientX,
@@ -333,16 +425,16 @@ function WeekList({ days }: { days: Day[] }) {
                       timer: setTimeout(() => {
                         press.current = null
                         begin(i, pointerId, clientY)
-                      }, 380),
+                      }, 300),
                     }
                   }}
                   onKeyMove={(dir) => {
-                    const to = i + dir
-                    if (to < 0 || to >= order.length) return
-                    move(i, to)
+                    let to = i + dir
+                    while (to >= 0 && to < days.length && !movable(to)) to += dir
+                    if (to < 0 || to >= days.length) return
+                    swap(i, to)
                     requestAnimationFrame(() => (document.querySelector(`[data-handle="${to}"]`) as HTMLElement | null)?.focus())
                   }}
-                  onRest={() => setRestSheet(slot)}
                   onOpenMove={() => setMoveFrom(i)}
                 />
               </div>
@@ -350,31 +442,36 @@ function WeekList({ days }: { days: Day[] }) {
           )
         })}
       </ol>
+
+      {!editing && (
+        <button onClick={() => setEditing(true)} className="mt-2 h-12 w-full rounded-2xl text-[14px] font-[600] text-muted hover:bg-surface hover:text-ink">
+          Arrange week
+        </button>
+      )}
+
       <p id="reorder-help" className="sr-only">Press Enter to choose a new day, or use the up and down arrow keys to swap with the neighbouring day.</p>
-      <RestSheet day={restSheet} onClose={() => setRestSheet(null)} />
-      <Sheet
-        open={moveFrom !== null}
-        onClose={() => setMoveFrom(null)}
-        title={moveFrom !== null ? `Move ${order[moveFrom]?.planned?.kind === 'workout' ? order[moveFrom].planned!.title : 'Rest'} to…` : ''}
-      >
+      <Sheet open={moveFrom !== null} onClose={() => setMoveFrom(null)} title={moveFrom !== null ? `Move ${dayName(order[moveFrom])} to…` : ''}>
         {moveFrom !== null && (
-          <ul className="space-y-1 pb-2">
+          <ul className="pb-2">
             {days.map((d, j) => {
-              const there = order[j]?.planned?.kind === 'workout' ? order[j].planned!.title : 'Rest'
               const current = j === moveFrom
+              const disabled = current || !movable(j)
+              const there = dayName(order[j])
               return (
                 <li key={d.start}>
                   <button
-                    disabled={current}
+                    disabled={disabled}
                     aria-current={current ? 'true' : undefined}
                     onClick={() => {
                       setMoveFrom(null)
-                      move(moveFrom, j)
+                      swap(moveFrom, j)
                     }}
-                    className={`press flex min-h-14 w-full items-center gap-4 rounded-2xl px-3 text-left ${current ? 'bg-raised' : 'hover:bg-raised'}`}
+                    className={`press -mx-2 flex min-h-14 w-[calc(100%+16px)] items-center gap-4 rounded-2xl px-2 text-left ${disabled ? 'opacity-50' : 'hover:bg-raised'}`}
                   >
-                    <span className="w-24 shrink-0 text-[15px] font-[600]">{WEEKDAYS_LONG[d.weekday]}</span>
-                    <span className="min-w-0 flex-1 truncate text-[14px] text-subtle">{current ? 'Current day' : there === 'Rest' ? 'Rest — move here' : `Swap with ${there}`}</span>
+                    <span className="w-24 shrink-0 text-[16px] font-[500]">{WEEKDAYS_LONG[d.weekday]}</span>
+                    <span className="min-w-0 flex-1 truncate text-[14px] text-muted">
+                      {current ? 'Current day' : !movable(j) ? 'Already happened' : there === 'Rest' ? 'Rest' : `Swap with ${there}`}
+                    </span>
                   </button>
                 </li>
               )
@@ -382,76 +479,68 @@ function WeekList({ days }: { days: Day[] }) {
           </ul>
         )}
       </Sheet>
-    </>
+    </section>
   )
 }
 
-function DayCard({
+function DayRow({
   slot,
   item,
   index,
+  editing,
+  locked,
   dragging,
-  flash,
-  flashKey,
+  target,
+  floating,
+  changed,
+  changedKey,
   onHandleDown,
   onPressStart,
   onKeyMove,
-  onRest,
   onOpenMove,
 }: {
   slot: Day
   item: Day
   index: number
+  editing: boolean
+  locked: boolean
   dragging: boolean
-  flash: boolean
-  flashKey: number
+  target: string | null
+  floating: string | null
+  changed: boolean
+  changedKey: number
   onHandleDown: (e: React.PointerEvent) => void
   onPressStart: (e: React.PointerEvent) => void
   onKeyMove: (dir: -1 | 1) => void
-  onRest: () => void
   onOpenMove: () => void
 }) {
-  const unit = useUnit()
-  const start = useStartWorkout()
   const navigate = useNavigate()
-  // Status belongs to the slot only while its content hasn't been moved locally.
   const moved = item !== slot
-  const planned: Planned | null = item.planned ?? null
+  const planned = item.planned ?? null
   const isRest = !planned || planned.kind === 'rest'
   const status = moved ? (isRest ? 'rest' : slot.isToday ? 'today' : 'upcoming') : slot.status
   const workout = moved ? null : slot.workout
   const title = workout?.title ?? (isRest ? 'Rest' : planned.title)
 
   const open = () => {
-    if (Date.now() - lastDragEnd < 500) return
+    if (Date.now() - lastDragEnd < 500 || editing) return
     if (workout?.status === 'completed') navigate({ to: '/history/$workoutId', params: { workoutId: workout._id } })
     else if (status === 'active') navigate({ to: '/workout' })
     else if (!isRest) navigate({ to: '/day/$dayId', params: { dayId: planned._id } })
-    else onRest()
   }
-
-  const meta = workout?.stats
-    ? `${fmtDuration(workout.stats.durationSec)} · ${workout.stats.sets} sets`
-    : status === 'active'
-      ? 'In progress'
-      : !isRest
-        ? `${planned.exercises.length} exercises · ~${planned.estimatedMinutes} min`
-        : null
-
-  const highlight = status === 'today' || status === 'active'
 
   return (
     <div
-      key={flash ? flashKey : 'idle'}
-      className={`flex h-full items-center gap-1 rounded-[18px] pl-4 transition-[background-color,box-shadow,transform] duration-200 ${
-        flash ? 'animate-[swap-flash_1100ms_ease-out_both] ' : ''
-      }${
+      key={changed ? changedKey : 'idle'}
+      className={`flex h-full items-center rounded-[14px] pl-3 transition-[background-color,box-shadow,opacity] duration-150 ${
+        changed ? 'animate-[swap-flash_1000ms_ease-out_both]' : ''
+      } ${
         dragging
-          ? 'scale-[1.04] bg-raised shadow-[0_24px_48px_-12px_#000,0_0_0_1px_var(--color-accent)]'
-          : highlight
-            ? 'bg-surface ring-1 ring-accent/25'
-            : 'hover:bg-surface/70'
-      }`}
+          ? 'bg-raised shadow-[0_8px_24px_#0008,0_0_0_1px_rgba(255,255,255,0.16)]'
+          : target !== null
+            ? 'bg-accent/[0.06] shadow-[inset_0_0_0_1px_rgba(184,244,208,0.65)]'
+            : ''
+      } ${locked ? 'opacity-45' : ''}`}
     >
       <button
         onClick={open}
@@ -463,112 +552,96 @@ function DayCard({
         className="flex h-full min-w-0 flex-1 items-center gap-3 text-left [-webkit-touch-callout:none]"
       >
         <span className="min-w-0 flex-1">
-          <span className="sr-only">{WEEKDAYS_LONG[slot.weekday]}{status === 'today' ? ', today' : ''}: </span>
+          <span className="sr-only">
+            {WEEKDAYS_LONG[slot.weekday]}
+            {slot.isToday ? ', today' : ''}:{' '}
+          </span>
           <span
-            className={`flex items-center gap-1.5 text-[16px] font-[600] tracking-[-0.01em] ${
-              isRest && !workout ? 'text-subtle' : status === 'missed' ? 'text-muted' : ''
+            className={`block truncate text-[16px] leading-[22px] ${isRest && !workout ? 'font-[450] text-muted' : 'font-[550]'} ${
+              status === 'missed' ? 'text-muted' : ''
             }`}
           >
-            {isRest && !workout && <Footprints className="size-4 shrink-0" strokeWidth={1.75} />}
-            <span className="truncate">{title}</span>
+            {floating ?? title}
           </span>
-          {meta && (
-            <span className="num block truncate text-[13px] text-subtle">
-              {meta}
-              {workout?.stats && workout.stats.volumeKg > 0 && (
-                <span className="max-[389px]:hidden"> · {fmtVolume(workout.stats.volumeKg, unit)} {unit}</span>
-              )}
-            </span>
-          )}
-          {!moved && slot.extras.length > 0 && (
-            <span className="block truncate text-[13px] text-subtle">+ {slot.extras.map((w) => w.title).join(', ')}</span>
-          )}
+          {target !== null && <span className="block text-[13px] text-accent">Swap with {target}</span>}
         </span>
-        <span className="shrink-0 text-[13px] font-[600]">
-          {status === 'done' && (
-            <span className="flex items-center gap-1 text-accent">
-              <Check aria-hidden className="size-4" strokeWidth={2.6} />
-              <span className="max-[389px]:sr-only">Done</span>
-            </span>
-          )}
-          {status === 'missed' && <span className="text-muted">Skipped</span>}
-          {status === 'active' && <span className="text-accent">Resume</span>}
-        </span>
+        {!editing && (
+          <span className="shrink-0 pr-2 text-[13px]">
+            {status === 'done' && (
+              <>
+                <Check aria-hidden className="size-[18px] text-accent" strokeWidth={2.6} />
+                <span className="sr-only">, done</span>
+              </>
+            )}
+            {status === 'today' && <span className="font-[500] text-accent">Today</span>}
+            {status === 'active' && <span className="font-[500] text-accent">Now</span>}
+            {status === 'missed' && <span className="text-muted">Missed</span>}
+            {status === 'upcoming' && !isRest && <ChevronRight aria-hidden className="size-4 text-muted" />}
+          </span>
+        )}
       </button>
-      {status === 'today' && !isRest && (
-        <button
-          disabled={start.busy}
-          onClick={() => start.run(planned._id)}
-          className="press flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-accent pl-3 pr-3.5 text-[14px] font-[650] text-accent-ink"
-          aria-label={`Start ${title}`}
-        >
-          {start.busy ? <Loader2 className="size-4 animate-spin" /> : <Play className="size-3.5 fill-current" />}
-          Start
-        </button>
-      )}
-      <button
-        data-handle={index}
-        onPointerDown={(e) => {
-          if (e.pointerType !== 'mouse') e.preventDefault()
-          onHandleDown(e)
-        }}
-        onClick={(e) => {
-          // Keyboard activation (Enter/Space) has detail 0; pointer taps are handled by the drag logic.
-          if (e.detail === 0) onOpenMove()
-        }}
-        onKeyDown={(e) => {
-          if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-            e.preventDefault()
-            onKeyMove(e.key === 'ArrowUp' ? -1 : 1)
-          }
-        }}
-        aria-label={`Move ${title}, ${WEEKDAYS_LONG[slot.weekday]}, ${index + 1} of 7`}
-        aria-describedby="reorder-help"
-        className="grid h-full w-11 shrink-0 cursor-grab touch-none place-items-center rounded-r-[18px] text-subtle hover:text-muted active:cursor-grabbing"
-      >
-        <GripVertical className="size-[18px]" />
-      </button>
+      {editing &&
+        (locked ? (
+          <span className="grid size-11 shrink-0 place-items-center text-muted" aria-label="Already happened, can’t move">
+            <Lock aria-hidden className="size-4" />
+          </span>
+        ) : (
+          <button
+            data-handle={index}
+            onPointerDown={(e) => {
+              if (e.pointerType !== 'mouse') e.preventDefault()
+              onHandleDown(e)
+            }}
+            onClick={(e) => {
+              if (e.detail === 0) onOpenMove()
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                e.preventDefault()
+                onKeyMove(e.key === 'ArrowUp' ? -1 : 1)
+              }
+            }}
+            aria-label={`Move ${title}, ${WEEKDAYS_LONG[slot.weekday]}`}
+            aria-describedby="reorder-help"
+            className="grid h-full w-12 shrink-0 cursor-grab touch-none place-items-center rounded-r-[14px] text-muted animate-fade hover:text-ink active:cursor-grabbing"
+          >
+            <GripVertical className="size-[18px]" />
+          </button>
+        ))}
     </div>
   )
 }
 
-function RestSheet({ day, onClose }: { day: Day | null; onClose: () => void }) {
-  const start = useStartWorkout()
+/** One quiet row: the most recent saved session. */
+function LastSession() {
+  const { results } = usePaginatedQuery(api.workouts.list, {}, { initialNumItems: 1 })
+  const w = results[0]
+  if (!w) return null
   return (
-    <Sheet open={day !== null} onClose={onClose} title={day ? `${WEEKDAYS_LONG[day.weekday]} · Rest` : ''}>
-      <p className="text-[15px] leading-[22px] text-muted">Nothing planned. Want to train anyway?</p>
-      <button disabled={start.busy} onClick={() => start.run()} className="btn btn-secondary mb-2 mt-5 w-full">
-        {start.busy ? <Loader2 className="size-5 animate-spin" /> : <Plus className="size-5" />} Start an empty workout
-      </button>
-    </Sheet>
+    <section className="mt-8">
+      <h2 className="text-[18px] font-[600] leading-6 tracking-[-0.01em]">Last session</h2>
+      <Link to="/history/$workoutId" params={{ workoutId: w._id }} className="press -mx-2 mt-1 flex min-h-16 items-center gap-3 rounded-2xl px-2 hover:bg-surface">
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-[16px] font-[550]">{w.title}</span>
+          <span className="num block text-[13px] text-muted">
+            {fmtDate(w.startedAt, { weekday: 'short', day: 'numeric', month: 'short' })}
+            {w.stats ? ` · ${fmtDuration(w.stats.durationSec)}` : ''}
+          </span>
+        </span>
+        <ChevronRight aria-hidden className="size-4 text-muted" />
+      </Link>
+    </section>
   )
 }
 
 function NoProgram() {
   return (
-    <section className="card mt-6 p-6 text-center animate-rise">
-      <h2 className="t-title">No program yet</h2>
-      <p className="mt-2 text-[15px] text-muted">Pick a plan and your week fills itself in.</p>
-      <Link to="/welcome" className="btn btn-primary mt-5">Choose a program</Link>
+    <section className="py-10 text-center animate-fade">
+      <h2 className="text-[20px] font-[550]">Set up your week</h2>
+      <p className="mt-2 text-[14px] text-muted">Pick a plan and your days fill themselves in.</p>
+      <Link to="/welcome" className="btn btn-primary mt-6">
+        Choose a plan
+      </Link>
     </section>
-  )
-}
-
-/** Teach the reorder gesture for the first few visits, then get out of the way. */
-function DragHint() {
-  const [show] = useState(() => {
-    try {
-      const n = Number(localStorage.getItem('lift:drag-hint') ?? '0')
-      localStorage.setItem('lift:drag-hint', String(n + 1))
-      return n < 3
-    } catch {
-      return false
-    }
-  })
-  if (!show) return null
-  return (
-    <p className="mt-3 text-[13px] text-subtle animate-fade">
-      Tip: drag a day by its handle, or press and hold, to swap it with another. Tap the handle to pick a day.
-    </p>
   )
 }

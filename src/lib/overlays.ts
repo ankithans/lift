@@ -10,6 +10,17 @@
 type Overlay = { id: number; close: () => void }
 
 const stack: Overlay[] = []
+const countListeners = new Set<() => void>()
+const emitCount = () => countListeners.forEach((l) => l())
+
+/** Number of open overlays (sheets, keypad), for layout decisions like toast placement. */
+export function subscribeOverlays(l: () => void) {
+  countListeners.add(l)
+  return () => {
+    countListeners.delete(l)
+  }
+}
+export const overlayCount = () => stack.length
 let pushed = false
 let ignoreNextPop = false
 let scheduled = false
@@ -59,10 +70,17 @@ export function openOverlay(close: () => void) {
   }
   const entry = { id: nextId++, close }
   stack.push(entry)
+  // Push synchronously so a Back pressed immediately can never leave the page.
+  if (!pushed && typeof window !== 'undefined') {
+    window.history.pushState({ ...(window.history.state ?? {}), liftOverlay: true }, '')
+    pushed = true
+  }
   schedule()
+  emitCount()
   return () => {
     const i = stack.findIndex((o) => o.id === entry.id)
     if (i >= 0) stack.splice(i, 1)
     schedule()
+    emitCount()
   }
 }

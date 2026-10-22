@@ -14,6 +14,7 @@ export const TOOLS: AnyCommand[] = [
   profile.updateProfile,
 
   library.searchExercises,
+  library.recentExercises,
   library.getExercise,
   library.createExercise,
 

@@ -123,7 +123,7 @@ export function Sheet({
     >
       <div
         onClick={onClose}
-        className={`absolute inset-0 bg-black/70 backdrop-blur-[2px] transition-opacity duration-250 ${visible ? 'opacity-100' : 'opacity-0'}`}
+        className={`absolute inset-0 bg-black/55 transition-opacity duration-150 ${visible ? 'opacity-100' : 'opacity-0'}`}
       />
       <div className="pointer-events-none absolute inset-0 flex items-end justify-center md:items-center md:p-6">
         <div
@@ -131,30 +131,30 @@ export function Sheet({
           tabIndex={-1}
           style={{
             transform: visible ? `translateY(${drag}px)` : 'translateY(100%)',
-            transition: startY.current !== null ? 'none' : 'transform 300ms cubic-bezier(0.22,1,0.36,1), opacity 200ms',
+            transition: startY.current !== null ? 'none' : `transform ${visible ? 240 : 180}ms cubic-bezier(0.22,1,0.36,1), opacity 160ms`,
           }}
-          className={`pointer-events-auto flex w-full max-w-[560px] flex-col rounded-t-[28px] border border-b-0 border-line bg-[#0c0c0d] pb-[var(--safe-bottom)] shadow-[0_-20px_80px_-20px_#000] md:rounded-[28px] md:border-b md:pb-0 ${
+          className={`pointer-events-auto flex w-full max-w-[560px] flex-col rounded-t-[28px] border border-b-0 border-[#303030] bg-surface pb-[var(--safe-bottom)] md:rounded-[28px] md:border-b md:pb-0 ${
             size === 'tall' ? 'h-[92dvh] md:h-[80dvh]' : 'max-h-[92dvh] md:max-h-[80dvh]'
           } ${visible ? 'md:opacity-100' : 'md:opacity-0'} outline-none`}
         >
           <div
-            className="shrink-0 cursor-grab touch-none select-none px-5 pt-2.5 active:cursor-grabbing"
+            className="shrink-0 cursor-grab touch-none select-none px-5 pt-3 active:cursor-grabbing"
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
             onPointerCancel={onPointerUp}
           >
-            <div aria-hidden className="mx-auto h-[5px] w-10 rounded-full bg-line-strong md:hidden" />
+            <div aria-hidden className="mx-auto h-1 w-9 rounded-full bg-[#666] md:hidden" />
             {title !== undefined && (
-              <div className="flex min-h-12 items-center justify-between gap-3 pt-2">
-                <h2 id={titleId} className="min-w-0 flex-1 t-title">{title}</h2>
+              <div className="flex min-h-12 items-center justify-between gap-3 pt-3">
+                <h2 id={titleId} className="line-clamp-2 min-w-0 flex-1 text-[18px] font-[600] leading-6 tracking-[-0.01em]">{title}</h2>
                 <button onClick={onClose} className="icon-btn -mr-2" aria-label="Close" onPointerDown={(e) => e.stopPropagation()}>
                   <X className="size-5" />
                 </button>
               </div>
             )}
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-5">{children}</div>
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-4 pt-3">{children}</div>
           {footer && <div className="shrink-0 border-t border-line px-5 py-4">{footer}</div>}
         </div>
       </div>
@@ -163,30 +163,41 @@ export function Sheet({
   )
 }
 
-/** A list of large tappable actions for sheets. */
+/** One 56px action row: icon straight on the surface, label, optional value on the right. */
 export function SheetAction({
   icon,
   label,
   hint,
+  value,
   onClick,
   tone = 'default',
 }: {
   icon: ReactNode
   label: string
+  /** Only for a real consequence; most rows need none. */
   hint?: string
+  value?: ReactNode
   onClick: () => void
   tone?: 'default' | 'danger'
 }) {
   return (
     <button
       onClick={onClick}
-      className={`press flex min-h-14 w-full items-center gap-4 rounded-2xl px-3 text-left hover:bg-raised ${tone === 'danger' ? 'text-danger' : ''}`}
+      className={`press -mx-2 flex min-h-14 w-[calc(100%+16px)] items-center gap-4 rounded-2xl px-2 text-left hover:bg-raised ${tone === 'danger' ? 'text-danger' : ''}`}
     >
-      <span className={`grid size-9 shrink-0 place-items-center rounded-full ${tone === 'danger' ? 'bg-danger/10' : 'bg-raised text-muted'}`}>{icon}</span>
-      <span className="min-w-0 flex-1">
-        <span className="block text-[16px] font-[560]">{label}</span>
-        {hint && <span className="block text-[13px] text-subtle">{hint}</span>}
+      <span aria-hidden className={`grid size-5 shrink-0 place-items-center ${tone === 'danger' ? '' : 'text-muted'}`}>
+        {icon}
       </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[16px] font-[500] leading-[22px]">{label}</span>
+        {hint && <span className="block text-[13px] text-muted">{hint}</span>}
+      </span>
+      {value !== undefined && <span className="num shrink-0 text-[14px] text-muted">{value}</span>}
     </button>
   )
+}
+
+/** Hairline + gap that separates destructive actions from routine ones. */
+export function SheetDivider() {
+  return <div aria-hidden className="my-2 h-px bg-line" />
 }

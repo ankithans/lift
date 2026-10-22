@@ -23,7 +23,7 @@ function ExercisePage() {
   if (data === null) return null
   return (
     <main className="page">
-      <PageHeader back eyebrow={[data.primaryGroups.join(' · '), data.equipment[0]].filter(Boolean).join(' — ')} title={data.name} />
+      <PageHeader back size="medium" title={data.name} subtitle={data.equipment.join(' · ') || undefined} />
       <ExerciseBody data={data} />
     </main>
   )

@@ -6,11 +6,11 @@
    ------------------------------------------------------------------------ */
 @theme {
   --color-canvas: #000000;
-  --color-surface: #0e0e0f;
-  --color-raised: #18181a;
-  --color-pressed: #232326;
-  --color-line: #232325;
-  --color-line-strong: #333336;
+  --color-surface: #101010;
+  --color-raised: #1a1a1a;
+  --color-pressed: #242424;
+  --color-line: #262626;
+  --color-line-strong: #383838;
   --color-ink: #f5f5f5;
   --color-muted: #a3a3a3;
   --color-subtle: #8a8a90;
@@ -62,6 +62,11 @@
 @keyframes swap-flash {
   0%, 35% { background-color: #b8f4d014; box-shadow: 0 0 0 1px #b8f4d080; }
   100% { box-shadow: 0 0 0 1px transparent; }
+}
+@keyframes pr-fill {
+  0% { background-color: rgba(233, 199, 120, 0); }
+  45% { background-color: rgba(233, 199, 120, 0.09); }
+  100% { background-color: rgba(233, 199, 120, 0.05); }
 }
 @keyframes pr-sheen {
   from { background-position: 150% 0; }
@@ -202,10 +207,10 @@ button {
   height: 40px;
   padding: 0 14px;
   border-radius: 999px;
-  background: var(--color-surface);
+  background: transparent;
   border: 1px solid var(--color-line-strong);
   color: var(--color-muted);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 550;
   white-space: nowrap;
   transition: background-color 140ms, color 140ms, border-color 140ms, transform 90ms;
@@ -241,12 +246,13 @@ button {
   width: 100%;
   max-width: 640px;
   margin: 0 auto;
-  padding: calc(var(--safe-top) + 12px) 20px calc(var(--tabbar-h) + var(--safe-bottom) + 40px + var(--dock, 0px));
+  /* Top spacing comes from PageHeader's sticky bar (which includes the safe area). */
+  padding: 0 20px calc(var(--tabbar-h) + var(--safe-bottom) + 40px + var(--dock, 0px));
 }
 @media (min-width: 1024px) {
   .page {
     max-width: 760px;
-    padding: 40px 32px 80px;
+    padding: 16px 32px 80px;
   }
   .page-wide { max-width: 1100px; }
 }

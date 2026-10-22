@@ -1,53 +1,83 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { useAuthActions } from '@convex-dev/auth/react'
 import { useAction, useMutation, useQuery } from 'convex/react'
-import { Bot, Check, ChevronRight, Copy, KeyRound, LogOut, Plus, Trash2 } from 'lucide-react'
+import { Check, ChevronRight, Copy, KeyRound, Plus } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { api } from '../../../convex/_generated/api'
 import type { Id } from '../../../convex/_generated/dataModel'
-import { Avatar } from '#/components/Avatar'
 import { PageHeader } from '#/components/PageHeader'
 import { Sheet } from '#/components/Sheet'
 import { MCP_URL } from '#/lib/convex'
-import { fmtClock, fmtRelativeDay } from '#/lib/format'
+import { fmtClock, fmtRelativeDay, WEEKDAYS_LONG } from '#/lib/format'
 import { useMe } from '#/lib/me'
 import { toast } from '#/lib/toast'
 
+
 export const Route = createFileRoute('/_app/settings')({
-  head: () => ({ meta: [{ title: 'Settings · Lift' }] }), component: Settings })
-
-function Row({ label, children, hint }: { label: string; children: ReactNode; hint?: string }) {
-  return (
-    <div className="flex min-h-14 flex-wrap items-center justify-between gap-x-4 gap-y-2 py-2">
-      <div className="min-w-0">
-        <div className="text-[16px] font-[540]">{label}</div>
-        {hint && <div className="text-[13px] text-subtle">{hint}</div>}
-      </div>
-      <div className="shrink-0">{children}</div>
-    </div>
-  )
-}
-
-function Segmented<T extends string | number>({ value, options, onChange, label }: { value: T; options: { value: T; label: string }[]; onChange: (v: T) => void; label: string }) {
-  return (
-    <div role="radiogroup" aria-label={label} className="flex rounded-full bg-raised p-1">
-      {options.map((o) => (
-        <button
-          key={String(o.value)}
-          role="radio"
-          aria-checked={value === o.value}
-          onClick={() => onChange(o.value)}
-          className={`press h-10 min-w-12 rounded-full px-3 text-[14px] font-[600] transition-colors ${value === o.value ? 'bg-ink text-black' : 'text-muted'}`}
-        >
-          {o.label}
-        </button>
-      ))}
-    </div>
-  )
-}
+  head: () => ({ meta: [{ title: 'Settings · Lift' }] }),
+  component: Settings,
+})
 
 function copy(text: string, what = 'Copied') {
   void navigator.clipboard.writeText(text).then(() => toast(what))
+}
+
+function Row({ label, value, onClick, to }: { label: string; value?: ReactNode; onClick?: () => void; to?: string }) {
+  const inner = (
+    <>
+      <span className="flex-1 text-[16px]">{label}</span>
+      {value !== undefined && <span className="num max-w-[55%] truncate text-[14px] text-muted">{value}</span>}
+      <ChevronRight aria-hidden className="size-4 shrink-0 text-muted" />
+    </>
+  )
+  const cls = 'press flex min-h-14 w-full items-center gap-3 border-b border-line text-left'
+  return to ? (
+    <Link to={to} className={cls}>
+      {inner}
+    </Link>
+  ) : (
+    <button onClick={onClick} className={cls}>
+      {inner}
+    </button>
+  )
+}
+
+function Choice<T extends string | number>({
+  open,
+  onClose,
+  title,
+  value,
+  options,
+  onPick,
+}: {
+  open: boolean
+  onClose: () => void
+  title: string
+  value: T
+  options: { value: T; label: string }[]
+  onPick: (v: T) => void
+}) {
+  return (
+    <Sheet open={open} onClose={onClose} title={title}>
+      <div role="radiogroup" aria-label={title} className="pb-2">
+        {options.map((o) => (
+          <button
+            key={String(o.value)}
+            role="radio"
+            aria-checked={value === o.value}
+            onClick={() => {
+              onPick(o.value)
+              onClose()
+            }}
+            className="press -mx-2 flex min-h-14 w-[calc(100%+16px)] items-center justify-between rounded-2xl px-2 text-left text-[16px] hover:bg-raised"
+          >
+            {o.label}
+            {value === o.value && <Check aria-hidden className="size-5 text-accent" strokeWidth={2.4} />}
+          </button>
+        ))}
+      </div>
+    </Sheet>
+  )
 }
 
 function Settings() {
@@ -56,67 +86,73 @@ function Settings() {
   const update = useMutation(api.profile.update)
   const { signOut } = useAuthActions()
   const program = useQuery(api.programs.active)
+  const [sheet, setSheet] = useState<null | 'unit' | 'week' | 'rest' | 'ai'>(null)
 
   return (
     <main className="page">
-      <PageHeader title="Settings" />
+      <PageHeader back title="Settings" />
 
-      <section className="card flex items-center gap-4 p-4">
-        <Avatar size={52} />
-        <div className="min-w-0">
-          <div className="truncate text-[18px] font-[650]">{me.name ?? 'Lifter'}</div>
-          <div className="truncate text-[14px] text-subtle">{me.email}</div>
-        </div>
+      <section className="-mt-3 border-b border-line pb-4">
+        <div className="text-[18px] font-[600]">{me.name ?? 'Lifter'}</div>
+        <div className="text-[14px] text-muted">{me.email}</div>
       </section>
 
-      <h2 className="t-eyebrow mb-1 mt-8 text-subtle">Training</h2>
-      <div className="divide-hair">
-        <Link to="/program" className="press flex min-h-14 items-center justify-between gap-4 py-2">
-          <div className="min-w-0">
-            <div className="text-[16px] font-[540]">Program</div>
-            <div className="truncate text-[13px] text-subtle">{program?.name ?? 'None'}</div>
-          </div>
-          <ChevronRight className="size-5 text-subtle" />
-        </Link>
-        <Link to="/welcome" className="press flex min-h-14 items-center justify-between gap-4 py-2">
-          <div className="min-w-0">
-            <div className="text-[16px] font-[540]">Switch program</div>
-            <div className="text-[13px] text-subtle">Your history and PRs stay</div>
-          </div>
-          <ChevronRight className="size-5 text-subtle" />
-        </Link>
-        <Row label="Units">
-          <Segmented label="Units" value={p.unit} options={[{ value: 'kg', label: 'kg' }, { value: 'lb', label: 'lb' }]} onChange={(unit) => update({ unit })} />
-        </Row>
-        <Row label="Week starts">
-          <Segmented label="Week starts" value={p.weekStartsOn} options={[{ value: 0, label: 'Sun' }, { value: 1, label: 'Mon' }]} onChange={(weekStartsOn) => update({ weekStartsOn })} />
-        </Row>
-        <Row label="Default rest" hint="For exercises you add">
-          <Segmented
-            label="Default rest"
-            value={p.defaultRestSec}
-            options={[60, 90, 120, 180].map((s) => ({ value: s, label: fmtClock(s) }))}
-            onChange={(defaultRestSec) => update({ defaultRestSec })}
-          />
-        </Row>
-      </div>
+      <h2 className="mb-1 mt-7 text-[13px] font-[500] text-muted">Training</h2>
+      <Row label="Program" value={program?.name ?? 'None'} to="/program" />
+      <Row label="Weight unit" value={p.unit} onClick={() => setSheet('unit')} />
+      <Row label="Week starts" value={WEEKDAYS_LONG[p.weekStartsOn]} onClick={() => setSheet('week')} />
+      <Row label="Default rest" value={fmtClock(p.defaultRestSec)} onClick={() => setSheet('rest')} />
 
-      <AiAccess />
+      <h2 className="mb-1 mt-7 text-[13px] font-[500] text-muted">Connections</h2>
+      <Row label="AI access" onClick={() => setSheet('ai')} />
 
-      <h2 className="t-eyebrow mb-1 mt-8 text-subtle">Account</h2>
-      <div className="divide-hair">
-        <button onClick={() => void signOut()} className="press flex min-h-14 w-full items-center gap-3 py-2 text-left text-danger">
-          <LogOut className="size-5" /> Sign out
-        </button>
-      </div>
-      <p className="mt-10 text-center text-[12px] text-subtle">
-        Lift · made for lifting, not scrolling · <a href="/privacy" className="underline underline-offset-2">Privacy</a>
-      </p>
+      <h2 className="mb-1 mt-7 text-[13px] font-[500] text-muted">Account</h2>
+      <a href="/privacy" className="press flex min-h-14 w-full items-center gap-3 border-b border-line text-[16px]">
+        <span className="flex-1">Privacy</span>
+        <ChevronRight aria-hidden className="size-4 text-muted" />
+      </a>
+      <button onClick={() => void signOut()} className="press flex min-h-14 w-full items-center border-b border-line text-left text-[16px] text-danger">
+        Sign out
+      </button>
+      <p className="mt-10 text-center text-[12px] text-muted">Lift 1.0</p>
+
+      <Choice
+        open={sheet === 'unit'}
+        onClose={() => setSheet(null)}
+        title="Weight unit"
+        value={p.unit}
+        options={[
+          { value: 'kg', label: 'Kilograms (kg)' },
+          { value: 'lb', label: 'Pounds (lb)' },
+        ]}
+        onPick={(unit) => update({ unit })}
+      />
+      <Choice
+        open={sheet === 'week'}
+        onClose={() => setSheet(null)}
+        title="Week starts"
+        value={p.weekStartsOn}
+        options={[
+          { value: 1, label: 'Monday' },
+          { value: 0, label: 'Sunday' },
+          { value: 6, label: 'Saturday' },
+        ]}
+        onPick={(weekStartsOn) => update({ weekStartsOn })}
+      />
+      <Choice
+        open={sheet === 'rest'}
+        onClose={() => setSheet(null)}
+        title="Default rest"
+        value={p.defaultRestSec}
+        options={[45, 60, 90, 120, 150, 180, 240].map((s) => ({ value: s, label: fmtClock(s) }))}
+        onPick={(defaultRestSec) => update({ defaultRestSec })}
+      />
+      <AiAccess open={sheet === 'ai'} onClose={() => setSheet(null)} />
     </main>
   )
 }
 
-function AiAccess() {
+function AiAccess({ open: shown, onClose }: { open: boolean; onClose: () => void }) {
   const tokens = useQuery(api.tokens.list)
   const create = useAction(api.tokens.create)
   const revoke = useMutation(api.tokens.revoke)
@@ -136,37 +172,34 @@ function AiAccess() {
 
   return (
     <>
-      <h2 className="t-eyebrow mb-1 mt-8 text-subtle">AI access</h2>
-      <div className="card p-4">
-        <div className="flex gap-3">
-          <span className="grid size-10 shrink-0 place-items-center rounded-full bg-accent-dim text-accent">
-            <Bot className="size-5" />
-          </span>
-          <div>
-            <div className="text-[16px] font-[600]">Connect Claude, Codex & more</div>
-            <p className="mt-1 text-[14px] leading-5 text-muted">
-              Lift speaks MCP. Agents can read your history and plan, log workouts, and adjust programs — every change is recorded.
-            </p>
-          </div>
+      <Sheet open={shown && !open && revoking === null} onClose={onClose} title="AI access" size="tall">
+        <div className="pb-2">
+          <p className="text-[15px] leading-6 text-muted">
+            Let Claude, Codex or any MCP client read your training and log or adjust workouts. Every change they make is recorded.
+          </p>
+          <h3 className="mb-1 mt-6 text-[13px] font-[500] text-muted">Access tokens</h3>
+          {tokens && tokens.length === 0 && <p className="py-3 text-[15px] text-muted">No tokens yet.</p>}
+          <ul>
+            {tokens?.map((t) => (
+              <li key={t._id} className="flex min-h-14 items-center gap-3 border-b border-line">
+                <KeyRound aria-hidden className="size-5 shrink-0 text-muted" />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[16px]">{t.name}</span>
+                  <span className="num block text-[13px] text-muted">
+                    {t.prefix}… · {t.lastUsedAt ? `used ${fmtRelativeDay(t.lastUsedAt).toLowerCase()}` : 'never used'}
+                  </span>
+                </span>
+                <button className="h-11 px-2 text-[14px] font-[550] text-danger" aria-label={`Revoke token ${t.name}`} onClick={() => setRevoking(t)}>
+                  Revoke
+                </button>
+              </li>
+            ))}
+          </ul>
+          <button className="btn btn-secondary mt-5 w-full" onClick={() => { setToken(null); setOpen(true) }}>
+            <Plus className="size-4" /> New token
+          </button>
         </div>
-        <ul className="mt-3 divide-hair">
-          {tokens?.map((t) => (
-            <li key={t._id} className="flex h-12 items-center gap-3">
-              <KeyRound className="size-4 text-subtle" />
-              <span className="min-w-0 flex-1 truncate text-[15px]">
-                {t.name} <span className="num text-[13px] text-subtle">{t.prefix}…</span>
-              </span>
-              <span className="text-[12px] text-subtle">{t.lastUsedAt ? `used ${fmtRelativeDay(t.lastUsedAt).toLowerCase()}` : 'never used'}</span>
-              <button className="icon-btn text-subtle" aria-label={`Revoke token ${t.name}`} onClick={() => setRevoking(t)}>
-                <Trash2 className="size-4" />
-              </button>
-            </li>
-          ))}
-        </ul>
-        <button className="btn btn-secondary btn-sm mt-3 w-full" onClick={() => { setToken(null); setOpen(true) }}>
-          <Plus className="size-4" /> New access token
-        </button>
-      </div>
+      </Sheet>
 
       <Sheet open={revoking !== null} onClose={() => setRevoking(null)} title={revoking ? `Revoke “${revoking.name}”?` : ''}>
         <p className="text-[15px] leading-[22px] text-muted">Agents using this token stop working immediately. You can create a new one any time.</p>

@@ -1,126 +1,115 @@
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useMutation, useQuery } from 'convex/react'
-import { Link2, Loader2, Pencil, Play } from 'lucide-react'
+import { ChevronRight, Info, Loader2, MoreHorizontal, Pencil, Play } from 'lucide-react'
 import { useState } from 'react'
 import { api } from '../../../convex/_generated/api'
 import type { Id } from '../../../convex/_generated/dataModel'
 import { ExerciseInfo } from '#/components/ExerciseDetail'
 import { ExerciseThumb } from '#/components/ExerciseThumb'
 import { PageHeader } from '#/components/PageHeader'
-import { Sheet } from '#/components/Sheet'
+import { Sheet, SheetAction } from '#/components/Sheet'
 import { BlockSkeleton } from '#/components/Skeletons'
-import { fmtClock, fmtRelativeDay, fmtWeight, WEEKDAYS_LONG } from '#/lib/format'
-import { useMe, useUnit } from '#/lib/me'
-import { useTitle } from '#/lib/useTitle'
+import { fmtClock, fmtDate, fmtReps, WEEKDAYS_LONG } from '#/lib/format'
 import { tap } from '#/lib/haptics'
+import { useMe } from '#/lib/me'
+import { startOfDay } from '#/lib/time'
+import { useTitle } from '#/lib/useTitle'
 
 export const Route = createFileRoute('/_app/day/$dayId')({ component: DayPreview })
+
+/** The next date (today or later) that falls on `weekday`. */
+function nextDate(weekday: number) {
+  const d = new Date(startOfDay(Date.now()))
+  d.setDate(d.getDate() + ((weekday - d.getDay() + 7) % 7))
+  return d.getTime()
+}
 
 function DayPreview() {
   const { dayId } = Route.useParams()
   const day = useQuery(api.programs.day, { dayId: dayId as Id<'programDays'> })
   const me = useMe()
-  const unit = useUnit()
   const start = useMutation(api.workouts.start)
   const navigate = useNavigate()
   const [busy, setBusy] = useState(false)
-  const [info, setInfo] = useState<{ id: string; name: string } | null>(null)
+  const [info, setInfo] = useState<{ id: string; name: string; plan: string } | null>(null)
+  const [menu, setMenu] = useState<null | 'menu' | 'details'>(null)
   useTitle(day?.title)
 
   if (day === undefined) {
     return (
       <main className="page space-y-4 pt-20">
-        <BlockSkeleton h={120} />
-        <BlockSkeleton h={320} />
+        <BlockSkeleton h={90} />
+        <BlockSkeleton h={380} />
       </main>
     )
   }
   if (day === null) return null
 
   const active = me.activeWorkout
+  const when = day.weekday !== undefined ? fmtDate(nextDate(day.weekday), { weekday: 'long', day: 'numeric', month: 'short' }) : 'Workout'
+
+  // Position of each exercise inside its superset (A, B, …), if any.
+  const letters = day.exercises.map((e, i) => {
+    const inGroup = Boolean(e.group && (day.exercises[i - 1]?.group === e.group || day.exercises[i + 1]?.group === e.group))
+    if (!inGroup) return null
+    let k = 0
+    for (let j = i - 1; j >= 0 && day.exercises[j].group === e.group; j--) k++
+    return String.fromCharCode(65 + k)
+  })
+
   return (
-    <main className="page">
+    <main className="page pb-[calc(var(--safe-bottom)+120px)]">
       <PageHeader
         back
-        eyebrow={day.weekday !== undefined ? WEEKDAYS_LONG[day.weekday] : 'Workout'}
+        eyebrow={when}
         title={day.title}
+        subtitle={`${day.exercises.length} exercises · about ${day.estimatedMinutes} min`}
         action={
-          <Link to="/program" search={{ day: day._id }} className="icon-btn" aria-label="Edit plan">
-            <Pencil className="size-[18px]" />
-          </Link>
+          <button className="icon-btn size-12" aria-label="Workout options" onClick={() => setMenu('menu')}>
+            <MoreHorizontal className="size-5" />
+          </button>
         }
       />
-      <p className="num -mt-3 text-[15px] text-muted">
-        {day.exercises.length} exercises · {day.totalSets} sets · ~{day.estimatedMinutes} min
-      </p>
 
-      {day.targets.length > 0 && (
-        <section className="mt-6">
-          <h2 className="t-eyebrow text-subtle">Target muscles</h2>
-          <div className="mt-3 flex h-2 overflow-hidden rounded-full bg-raised">
-            {day.targets.map((t, i) => (
-              <div key={t.group} style={{ width: `${t.share * 100}%`, opacity: 1 - i * 0.22 }} className="h-full bg-accent first:rounded-l-full" />
-            ))}
-          </div>
-          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
-            {day.targets.map((t, i) => (
-              <span key={t.group} className="flex items-center gap-1.5 text-[14px]">
-                <span className="size-2 rounded-full bg-accent" style={{ opacity: 1 - i * 0.22 }} />
-                {t.group} <span className="num text-subtle">{Math.round(t.share * 100)}%</span>
-              </span>
-            ))}
-          </div>
-        </section>
-      )}
+      <ol className="-mt-2">
+        {day.exercises.map((e, i) => {
+          const letter = letters[i]
+          const startsGroup = letter === 'A'
+          const rounds = startsGroup ? Math.max(...day.exercises.filter((x) => x.group === e.group).map((x) => x.sets)) : 0
+          const plan = `${e.sets} × ${fmtReps(e.repLow, e.repHigh)}`
+          return (
+            <li key={e._id}>
+              {startsGroup && <div className="mb-1 mt-4 text-[13px] font-[500] text-muted">Superset · {rounds} rounds</div>}
+              <button
+                onClick={() => setInfo({ id: e.exercise._id, name: e.exercise.name, plan: `${plan} reps · rest ${fmtClock(e.restSec)}` })}
+                className={`press -mx-2 flex min-h-[76px] w-[calc(100%+16px)] items-center gap-3 rounded-2xl px-2 text-left hover:bg-surface ${
+                  letter ? 'relative before:absolute before:bottom-2 before:left-[-4px] before:top-2 before:w-px before:bg-line-strong' : ''
+                }`}
+              >
+                <ExerciseThumb src={e.exercise.thumbnailUrl} size={40} />
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[16px] font-[550] leading-[22px]">
+                    {letter && <span className="num mr-1.5 text-[13px] font-[600] text-accent">{letter}</span>}
+                    {e.exercise.name}
+                  </span>
+                  <span className="num block text-[13px] text-muted">{plan}</span>
+                </span>
+                <ChevronRight aria-hidden className="size-4 shrink-0 text-muted" />
+              </button>
+            </li>
+          )
+        })}
+      </ol>
 
-      <section className="mt-8">
-        <h2 className="t-eyebrow text-subtle">Exercises</h2>
-        <ol className="mt-2">
-          {day.exercises.map((e, i) => {
-            const prev = day.exercises[i - 1]
-            const next = day.exercises[i + 1]
-            const startsGroup = e.group && next?.group === e.group && prev?.group !== e.group
-            const inGroup = Boolean(e.group && (prev?.group === e.group || next?.group === e.group))
-            return (
-              <li key={e._id}>
-                {startsGroup && (
-                  <div className="mt-3 flex items-center gap-1.5 text-accent">
-                    <Link2 className="size-3.5" />
-                    <span className="t-eyebrow">Superset</span>
-                  </div>
-                )}
-                <button
-                  onClick={() => setInfo({ id: e.exercise._id, name: e.exercise.name })}
-                  className={`press flex w-full items-center gap-3 py-3 text-left ${inGroup ? 'border-l-2 border-accent/30 pl-3' : ''}`}
-                >
-                  <ExerciseThumb src={e.exercise.thumbnailUrl} size={52} />
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-[16px] font-[580]">{e.exercise.name}</div>
-                    <div className="num text-[14px] text-muted">
-                      {e.sets} sets · {e.repLow === e.repHigh ? e.repHigh : `${e.repLow}–${e.repHigh}`} reps · rest {fmtClock(e.restSec)}
-                    </div>
-                    {e.last && (
-                      <div className="num truncate text-[13px] text-subtle">
-                        Last: {e.last.sets.map((x) => (x.durationSec && !x.reps ? `${x.durationSec}s` : `${x.weightKg ? fmtWeight(x.weightKg, unit) : 'BW'}×${x.reps ?? '—'}`)).join(' · ')}
-                        {e.last.at ? ` · ${fmtRelativeDay(e.last.at)}` : ''}
-                      </div>
-                    )}
-                  </div>
-                </button>
-              </li>
-            )
-          })}
-        </ol>
-      </section>
-
-      {/* Room for the fixed start bar so it never covers the last exercise. */}
-      <div aria-hidden className="h-24 lg:hidden" />
-      <div className="fixed inset-x-0 bottom-[calc(var(--tabbar-h)+var(--safe-bottom)+var(--dock,0px))] z-30 bg-gradient-to-t from-black via-black/90 to-transparent px-4 pb-3 pt-8 lg:static lg:mt-8 lg:bg-none lg:p-0">
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-black px-5 pb-[calc(var(--safe-bottom)+16px)] pt-4 lg:static lg:mt-8 lg:border-0 lg:bg-transparent lg:p-0">
         <div className="mx-auto max-w-[600px]">
           {active ? (
-            <Link to="/workout" className="btn btn-primary w-full shadow-[0_10px_40px_-6px_#000]">
-              Resume {active.title}
-            </Link>
+            <>
+              {active.title !== day.title && <p className="mb-2 text-center text-[13px] text-muted">{active.title} is still in progress.</p>}
+              <Link to="/workout" className="btn btn-primary w-full">
+                <Play aria-hidden className="size-[18px] fill-current" /> Resume {active.title}
+              </Link>
+            </>
           ) : (
             <button
               disabled={busy}
@@ -134,17 +123,58 @@ function DayPreview() {
                   setBusy(false)
                 }
               }}
-              className="btn btn-primary w-full shadow-[0_10px_40px_-6px_#000]"
+              className="btn btn-primary w-full"
             >
-              {busy ? <Loader2 className="size-5 animate-spin" /> : <Play className="size-[18px] fill-current" />}
-              Start workout
+              {busy ? <Loader2 className="size-5 animate-spin" /> : <Play aria-hidden className="size-[18px] fill-current" />}
+              Start {day.title}
             </button>
           )}
         </div>
       </div>
 
+      <Sheet open={menu === 'menu'} onClose={() => setMenu(null)} title={day.title}>
+        <div className="pb-2">
+          <SheetAction icon={<Info className="size-5" />} label="Workout details" onClick={() => setMenu('details')} />
+          <SheetAction
+            icon={<Pencil className="size-5" />}
+            label="Edit workout"
+            onClick={() => {
+              setMenu(null)
+              navigate({ to: '/program', search: { day: day._id } })
+            }}
+          />
+        </div>
+      </Sheet>
+
+      <Sheet open={menu === 'details'} onClose={() => setMenu(null)} title="Workout details">
+        <div className="pb-2">
+          <div className="flex min-h-14 items-center justify-between border-b border-line">
+            <span className="text-[16px]">Working sets</span>
+            <span className="num text-[16px] text-muted">{day.totalSets}</span>
+          </div>
+          <div className="flex min-h-14 items-center justify-between border-b border-line">
+            <span className="text-[16px]">Usual day</span>
+            <span className="text-[16px] text-muted">{day.weekday !== undefined ? WEEKDAYS_LONG[day.weekday] : '—'}</span>
+          </div>
+          <h3 className="mb-1 mt-6 text-[13px] font-[500] text-muted">Muscle emphasis</h3>
+          <ul>
+            {day.targets.map((t) => (
+              <li key={t.group} className="flex min-h-12 items-center justify-between border-b border-line text-[16px]">
+                <span>{t.group}</span>
+                <span className="num text-muted">{Math.round(t.share * 100)}%</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </Sheet>
+
       <Sheet open={info !== null} onClose={() => setInfo(null)} title={info?.name} size="tall">
-        {info && <ExerciseInfo id={info.id} />}
+        {info && (
+          <>
+            <p className="num -mt-1 mb-4 text-[14px] text-muted">{info.plan}</p>
+            <ExerciseInfo id={info.id} />
+          </>
+        )}
       </Sheet>
     </main>
   )

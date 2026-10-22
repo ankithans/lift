@@ -9,11 +9,14 @@ export function LineChart({
   height = 160,
   unit = '',
   color = 'var(--color-accent)',
+  hideReadout = false,
 }: {
   points: Point[]
   height?: number
   unit?: string
   color?: string
+  /** Hide the big value/date row (when the caller shows its own); still shown while scrubbing. */
+  hideReadout?: boolean
 }) {
   const id = useId()
   const [hover, setHover] = useState<number | null>(null)
@@ -49,8 +52,8 @@ export function LineChart({
 
   return (
     <div className="relative select-none">
-      <div className="mb-2 flex items-baseline justify-between">
-        <div className="num text-[26px] font-[680] tracking-[-0.03em]">
+      <div className={`mb-2 flex items-baseline justify-between ${hideReadout && hover === null ? 'invisible' : ''}`}>
+        <div className="num text-[20px] font-[550] tracking-[-0.02em]">
           {fmtNum(active.y)}
           <span className="ml-1 text-[14px] font-[550] text-subtle">{unit}</span>
         </div>

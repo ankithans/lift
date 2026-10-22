@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useMutation, useQuery } from 'convex/react'
 import type { FunctionReturnType } from 'convex/server'
-import { ArrowDown, ArrowUp, ChevronDown, Link2, Link2Off, Minus, MoreHorizontal, Pencil, Plus, Repeat, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, Link2, Link2Off, Minus, MoreHorizontal, Plus, Repeat, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { api } from '../../../convex/_generated/api'
 import type { Id } from '../../../convex/_generated/dataModel'
@@ -50,36 +50,33 @@ function ProgramEditor() {
     <main className="page">
       <PageHeader
         back
-        eyebrow="Program"
+        size="medium"
         title={program.name}
+        subtitle="Changes apply to future workouts."
         action={
-          <button className="icon-btn" aria-label="Rename program" onClick={() => setRenaming(true)}>
-            <Pencil className="size-[18px]" />
+          <button className="icon-btn size-12" aria-label="Program options" onClick={() => setRenaming(true)}>
+            <MoreHorizontal className="size-5" />
           </button>
         }
       />
-      <p className="-mt-3 text-[15px] text-muted">{program.days.filter((d) => d.kind === 'workout').length} training days. Changes apply to future workouts.</p>
 
-      <div className="mt-6 space-y-2">
-        {days.map((d) => {
+      <ul className="-mt-2 overflow-hidden rounded-[20px] bg-surface">
+        {days.map((d, di) => {
           const expanded = open === d._id
           return (
-            <section key={d._id} className={`card overflow-hidden transition-colors ${expanded ? '' : 'hover:bg-raised/50'}`}>
-              <div className="flex items-center">
-                <button onClick={() => setOpen(expanded ? null : d._id)} aria-expanded={expanded} className="flex min-h-16 flex-1 items-center gap-4 pl-4 text-left">
-                  <span className="w-9 text-[13px] font-[650] text-subtle">{d.weekday !== undefined ? WEEKDAYS[d.weekday] : '—'}</span>
-                  <span className="min-w-0 flex-1">
-                    <span className={`block truncate text-[16px] font-[600] ${d.kind === 'rest' ? 'text-subtle' : ''}`}>{d.kind === 'rest' ? 'Rest' : d.title}</span>
-                    {d.kind === 'workout' && <span className="num block text-[13px] text-subtle">{d.exercises.length} exercises · ~{d.estimatedMinutes} min</span>}
-                  </span>
-                  <ChevronDown className={`size-5 text-subtle transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} />
-                </button>
-                <button className="icon-btn mr-2" onClick={() => setDayMenu(d)} aria-label="Day options">
-                  <MoreHorizontal className="size-5" />
-                </button>
-              </div>
+            <li key={d._id} className={di > 0 ? 'border-t border-line' : ''}>
+              <button
+                onClick={() => setOpen(expanded ? null : d._id)}
+                aria-expanded={expanded}
+                className={`press flex w-full items-center gap-3 px-4 text-left ${d.kind === 'rest' ? 'min-h-14' : 'min-h-16'}`}
+              >
+                <span className="w-10 shrink-0 text-[13px] text-muted">{d.weekday !== undefined ? WEEKDAYS[d.weekday] : '—'}</span>
+                <span className={`min-w-0 flex-1 truncate text-[16px] ${d.kind === 'rest' ? 'text-muted' : 'font-[550]'}`}>{d.kind === 'rest' ? 'Rest' : d.title}</span>
+                {d.kind === 'workout' && <span className="num shrink-0 text-[13px] text-muted">{d.exercises.length} ex</span>}
+                <ChevronDown aria-hidden className={`size-4 shrink-0 text-muted transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} />
+              </button>
               {expanded && (
-                <div className="border-t border-line px-2 pb-2 animate-fade">
+                <div className="px-2 pb-2 animate-fade">
                   {d.exercises.map((s, i) => {
                     const prev = d.exercises[i - 1]
                     const next = d.exercises[i + 1]
@@ -88,28 +85,33 @@ function ProgramEditor() {
                       <button
                         key={s._id}
                         onClick={() => setSlotMenu({ slot: s, day: d, index: i })}
-                        className={`press flex w-full items-center gap-3 rounded-2xl px-2 py-2.5 text-left hover:bg-raised ${inGroup ? 'border-l-2 border-accent/30' : ''}`}
+                        className={`press flex min-h-16 w-full items-center gap-3 rounded-2xl px-2 text-left hover:bg-raised ${inGroup ? 'relative before:absolute before:inset-y-2 before:left-0 before:w-px before:bg-line-strong' : ''}`}
                       >
-                        <ExerciseThumb src={s.exercise.thumbnailUrl} size={42} />
+                        <ExerciseThumb src={s.exercise.thumbnailUrl} size={40} />
                         <span className="min-w-0 flex-1">
-                          <span className="block truncate text-[15px] font-[560]">{s.exercise.name}</span>
-                          <span className="num block text-[13px] text-subtle">
-                            {s.sets} × {s.repLow === s.repHigh ? s.repHigh : `${s.repLow}–${s.repHigh}`} · rest {fmtClock(s.restSec)}
-                            {inGroup && <span className="text-accent/80"> · superset</span>}
+                          <span className="block text-[15px] font-[550] leading-5">{s.exercise.name}</span>
+                          <span className="num block text-[13px] text-muted">
+                            {s.sets} × {s.repLow === s.repHigh ? s.repHigh : `${s.repLow}–${s.repHigh}`}
                           </span>
                         </span>
+                        <ChevronRight aria-hidden className="size-4 shrink-0 text-muted" />
                       </button>
                     )
                   })}
-                  <button onClick={() => setAdding(d)} className="press mt-1 flex h-12 w-full items-center justify-center gap-2 rounded-2xl text-[15px] font-[600] text-accent hover:bg-raised">
-                    <Plus className="size-5" /> Add exercise
-                  </button>
+                  <div className="mt-1 flex gap-2 px-2">
+                    <button onClick={() => setAdding(d)} className="press flex h-11 flex-1 items-center justify-center gap-1.5 rounded-xl text-[14px] font-[600] text-accent hover:bg-raised">
+                      <Plus aria-hidden className="size-4" /> Add exercise
+                    </button>
+                    <button onClick={() => setDayMenu(d)} className="press flex h-11 flex-1 items-center justify-center rounded-xl text-[14px] font-[550] text-muted hover:bg-raised hover:text-ink">
+                      Day settings
+                    </button>
+                  </div>
                 </div>
               )}
-            </section>
+            </li>
           )
         })}
-      </div>
+      </ul>
 
       <Sheet open={slotMenu !== null} onClose={() => setSlotMenu(null)} title={slotMenu?.slot.exercise.name}>
         {slotMenu && <SlotEditor key={slotMenu.slot._id} {...slotMenu} close={() => setSlotMenu(null)} onSwap={() => { setSwapping(slotMenu.slot); setSlotMenu(null) }} />}
