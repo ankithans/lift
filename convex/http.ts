@@ -6,7 +6,10 @@ import { auth } from "./auth";
 import { TOOL_BY_NAME } from "./tools/registry";
 import { sha256Hex } from "./tokens";
 
+import { callback as whoopCallback } from "./whoopHttp";
+
 const http = httpRouter();
+http.route({ path: "/whoop/callback", method: "GET", handler: whoopCallback });
 auth.addHttpRoutes(http);
 
 // ---------------------------------------------------------------------------

@@ -15,6 +15,7 @@ import type * as core_profile from "../core/profile.js";
 import type * as core_programs from "../core/programs.js";
 import type * as core_progress from "../core/progress.js";
 import type * as core_workouts from "../core/workouts.js";
+import type * as crons from "../crons.js";
 import type * as data_templates from "../data/templates.js";
 import type * as http from "../http.js";
 import type * as importer from "../importer.js";
@@ -28,6 +29,12 @@ import type * as progress from "../progress.js";
 import type * as seed from "../seed.js";
 import type * as tokens from "../tokens.js";
 import type * as tools_registry from "../tools/registry.js";
+import type * as whoop from "../whoop.js";
+import type * as whoop_api from "../whoop/api.js";
+import type * as whoop_model from "../whoop/model.js";
+import type * as whoopHttp from "../whoopHttp.js";
+import type * as whoopStore from "../whoopStore.js";
+import type * as whoopSync from "../whoopSync.js";
 import type * as workouts from "../workouts.js";
 
 import type {
@@ -44,6 +51,7 @@ declare const fullApi: ApiFromModules<{
   "core/programs": typeof core_programs;
   "core/progress": typeof core_progress;
   "core/workouts": typeof core_workouts;
+  crons: typeof crons;
   "data/templates": typeof data_templates;
   http: typeof http;
   importer: typeof importer;
@@ -57,6 +65,12 @@ declare const fullApi: ApiFromModules<{
   seed: typeof seed;
   tokens: typeof tokens;
   "tools/registry": typeof tools_registry;
+  whoop: typeof whoop;
+  "whoop/api": typeof whoop_api;
+  "whoop/model": typeof whoop_model;
+  whoopHttp: typeof whoopHttp;
+  whoopStore: typeof whoopStore;
+  whoopSync: typeof whoopSync;
   workouts: typeof workouts;
 }>;
 
@@ -86,4 +100,6 @@ export declare const internal: FilterApi<
   FunctionReference<any, "internal">
 >;
 
-export declare const components: {};
+export declare const components: {
+  rateLimiter: import("@convex-dev/rate-limiter/_generated/component.js").ComponentApi<"rateLimiter">;
+};
