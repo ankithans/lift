@@ -6,6 +6,7 @@ import { AppShell } from '#/components/AppShell'
 import { Splash } from '#/components/Splash'
 import { MeProvider } from '#/lib/me'
 import { Toaster } from '#/lib/toast'
+import { Announcer } from '#/lib/announce'
 
 export const Route = createFileRoute('/_app')({
   ssr: false,
@@ -46,6 +47,7 @@ function AppLayout() {
         <Outlet />
       </AppShell>
       <Toaster />
+      <Announcer />
     </MeProvider>
   )
 }

@@ -1,5 +1,5 @@
 import { X } from 'lucide-react'
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 
 /**
@@ -26,6 +26,27 @@ export function Sheet({
   const [drag, setDrag] = useState(0)
   const startY = useRef<number | null>(null)
   const panel = useRef<HTMLDivElement>(null)
+  const titleId = useId()
+  const returnFocus = useRef<HTMLElement | null>(null)
+
+  // Dialog behaviour: focus moves in, background is inert, focus returns on close.
+  useEffect(() => {
+    if (!open) return
+    returnFocus.current = document.activeElement as HTMLElement | null
+    const root = document.getElementById('app-root')
+    root?.setAttribute('inert', '')
+    const id = requestAnimationFrame(() => {
+      const first = panel.current?.querySelector<HTMLElement>('[autofocus], input, textarea, [data-autofocus]')
+      ;(first ?? panel.current)?.focus({ preventScroll: true })
+    })
+    return () => {
+      cancelAnimationFrame(id)
+      // Only release if no other sheet is still open.
+      if (document.querySelectorAll('[data-sheet-open]').length === 0) root?.removeAttribute('inert')
+      const target = returnFocus.current
+      if (target && document.contains(target)) requestAnimationFrame(() => target.focus({ preventScroll: true }))
+    }
+  }, [open])
 
   useEffect(() => {
     if (open) {
@@ -68,7 +89,13 @@ export function Sheet({
   }
 
   return createPortal(
-    <div className="fixed inset-0 z-[60]" role="dialog" aria-modal="true">
+    <div
+      className="fixed inset-0 z-[60]"
+      role="dialog"
+      aria-modal="true"
+      data-sheet-open={open ? '' : undefined}
+      {...(typeof title === 'string' || typeof title === 'number' ? { 'aria-labelledby': titleId } : { 'aria-label': 'Dialog' })}
+    >
       <div
         onClick={onClose}
         className={`absolute inset-0 bg-black/70 backdrop-blur-[2px] transition-opacity duration-250 ${visible ? 'opacity-100' : 'opacity-0'}`}
@@ -76,13 +103,14 @@ export function Sheet({
       <div className="pointer-events-none absolute inset-0 flex items-end justify-center md:items-center md:p-6">
         <div
           ref={panel}
+          tabIndex={-1}
           style={{
             transform: visible ? `translateY(${drag}px)` : 'translateY(100%)',
             transition: startY.current !== null ? 'none' : 'transform 300ms cubic-bezier(0.22,1,0.36,1), opacity 200ms',
           }}
           className={`pointer-events-auto flex w-full max-w-[560px] flex-col rounded-t-[28px] border border-b-0 border-line bg-[#0c0c0d] pb-[var(--safe-bottom)] shadow-[0_-20px_80px_-20px_#000] md:rounded-[28px] md:border-b md:pb-0 ${
             size === 'tall' ? 'h-[92dvh] md:h-[80dvh]' : 'max-h-[92dvh] md:max-h-[80dvh]'
-          } ${visible ? 'md:opacity-100' : 'md:opacity-0'}`}
+          } ${visible ? 'md:opacity-100' : 'md:opacity-0'} outline-none`}
         >
           <div
             className="shrink-0 cursor-grab touch-none select-none px-5 pt-2.5 active:cursor-grabbing"
@@ -91,11 +119,11 @@ export function Sheet({
             onPointerUp={onPointerUp}
             onPointerCancel={onPointerUp}
           >
-            <div className="mx-auto h-[5px] w-10 rounded-full bg-line-strong md:hidden" />
+            <div aria-hidden className="mx-auto h-[5px] w-10 rounded-full bg-line-strong md:hidden" />
             {title !== undefined && (
               <div className="flex min-h-12 items-center justify-between gap-3 pt-2">
-                <div className="min-w-0 flex-1 t-title">{title}</div>
-                <button onClick={onClose} className="icon-btn -mr-2 size-10" aria-label="Close" onPointerDown={(e) => e.stopPropagation()}>
+                <h2 id={titleId} className="min-w-0 flex-1 t-title">{title}</h2>
+                <button onClick={onClose} className="icon-btn -mr-2" aria-label="Close" onPointerDown={(e) => e.stopPropagation()}>
                   <X className="size-5" />
                 </button>
               </div>

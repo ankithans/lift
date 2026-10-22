@@ -9,7 +9,8 @@ import { WEEKDAYS } from '#/lib/format'
 import { useMe } from '#/lib/me'
 import { tap } from '#/lib/haptics'
 
-export const Route = createFileRoute('/_app/welcome')({ component: Welcome })
+export const Route = createFileRoute('/_app/welcome')({
+  head: () => ({ meta: [{ title: 'Choose a program · Lift' }] }), component: Welcome })
 
 function Welcome() {
   const me = useMe()
@@ -48,9 +49,9 @@ function Welcome() {
       {!switching && (
         <div className="mt-8 flex items-center justify-between animate-rise [animation-delay:60ms]">
           <span className="text-[15px] font-[560]">I lift in</span>
-          <div className="flex rounded-full bg-raised p-1">
+          <div role="radiogroup" aria-label="Units" className="flex rounded-full bg-raised p-1">
             {(['kg', 'lb'] as const).map((u) => (
-              <button key={u} onClick={() => update({ unit: u })} className={`press h-8 w-14 rounded-full text-[14px] font-[650] ${unit === u ? 'bg-ink text-black' : 'text-muted'}`}>
+              <button key={u} role="radio" aria-checked={unit === u} onClick={() => update({ unit: u })} className={`press h-10 w-14 rounded-full text-[14px] font-[650] ${unit === u ? 'bg-ink text-black' : 'text-muted'}`}>
                 {u}
               </button>
             ))}
@@ -58,7 +59,7 @@ function Welcome() {
         </div>
       )}
 
-      <div className="mt-6 space-y-2.5">
+      <div role="radiogroup" aria-label="Program" className="mt-6 space-y-2.5">
         {templates === undefined
           ? [0, 1, 2].map((i) => <BlockSkeleton key={i} h={118} />)
           : [...templates, { key: 'empty', name: 'Start from scratch', goal: 'Build your own', level: 'Any level', description: 'An empty week. Add your own days and exercises.', daysPerWeek: 0, days: [] }].map((t, i) => {
@@ -66,6 +67,8 @@ function Welcome() {
               return (
                 <button
                   key={t.key}
+                  role="radio"
+                  aria-checked={on}
                   onClick={() => { tap(); setChoice(t.key) }}
                   className={`press w-full rounded-[22px] border p-4 text-left transition-colors animate-rise ${
                     on ? 'border-accent/60 bg-accent/[0.06]' : 'border-line bg-surface hover:border-line-strong'
@@ -92,8 +95,8 @@ function Welcome() {
                         const work = d?.kind === 'workout'
                         return (
                           <div key={wd} className={`rounded-[8px] px-1 py-1.5 text-center ${work ? 'bg-raised' : ''}`}>
-                            <div className="text-[10px] font-[650] text-faint">{WEEKDAYS[wd][0]}</div>
-                            <div className={`truncate text-[10px] font-[600] ${work ? 'text-ink/80' : 'text-faint'}`}>{work ? d!.title.split(' ')[0] : '—'}</div>
+                            <div className="text-[10px] font-[650] text-subtle">{WEEKDAYS[wd][0]}</div>
+                            <div className={`truncate text-[10px] font-[600] ${work ? 'text-ink/80' : 'text-subtle'}`}>{work ? d!.title.split(' ')[0] : '—'}</div>
                           </div>
                         )
                       })}

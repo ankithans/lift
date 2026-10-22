@@ -11,6 +11,7 @@ import { Sheet } from '#/components/Sheet'
 import { BlockSkeleton } from '#/components/Skeletons'
 import { fmtClock, WEEKDAYS_LONG } from '#/lib/format'
 import { useMe } from '#/lib/me'
+import { useTitle } from '#/lib/useTitle'
 import { tap } from '#/lib/haptics'
 
 export const Route = createFileRoute('/_app/day/$dayId')({ component: DayPreview })
@@ -23,6 +24,7 @@ function DayPreview() {
   const navigate = useNavigate()
   const [busy, setBusy] = useState(false)
   const [info, setInfo] = useState<{ id: string; name: string } | null>(null)
+  useTitle(day?.title)
 
   if (day === undefined) {
     return (

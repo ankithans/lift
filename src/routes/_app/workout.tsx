@@ -31,6 +31,9 @@ import { chime, tap } from '#/lib/haptics'
 import { fmtClock, fmtNum, fmtReps, fmtVolume, fmtWeight, fromDisplayWeight, toDisplayWeight } from '#/lib/format'
 import { useUnit } from '#/lib/me'
 import { toast } from '#/lib/toast'
+import { announce } from '#/lib/announce'
+
+const reducedMotion = () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 import { useNow } from '#/lib/useNow'
 import {
   type ActiveWorkout,
@@ -44,7 +47,8 @@ import {
   toBlocks,
 } from '#/lib/workout'
 
-export const Route = createFileRoute('/_app/workout')({ component: LiveWorkout })
+export const Route = createFileRoute('/_app/workout')({
+  head: () => ({ meta: [{ title: 'Workout · Lift' }] }), component: LiveWorkout })
 
 type Editing = { setId: Id<'sets'>; weId: Id<'workoutExercises'>; field: KeypadField; draft: string; fresh: boolean }
 type Menu =
@@ -93,6 +97,16 @@ function useRest(workout: ActiveWorkout | null | undefined): RestState {
   const [overAt, setOverAt] = useState<number | null>(null)
   const fired = useRef<number | null>(null)
   const expired = Boolean(endsAt && remaining <= 0)
+  const total = workout?.restTotalSec ?? 0
+  // Announce the start of a rest once (not every tick).
+  const announced = useRef<number | null>(null)
+  useEffect(() => {
+    if (!endsAt || endsAt <= Date.now() || announced.current === endsAt) return
+    announced.current = endsAt
+    const m = Math.floor(total / 60)
+    const s = total % 60
+    announce(`Rest started, ${m ? `${m} minute${m > 1 ? 's' : ''}` : ''}${m && s ? ' ' : ''}${s ? `${s} seconds` : ''}.`)
+  }, [endsAt, total])
   useEffect(() => {
     if (!endsAt) return
     if (!expired) {
@@ -104,6 +118,7 @@ function useRest(workout: ActiveWorkout | null | undefined): RestState {
     if (Date.now() - endsAt < 5000) {
       if (document.visibilityState === 'visible') chime()
       tap('success')
+      announce('Rest complete. Next set when you are ready.')
       setOverAt(Date.now())
     }
   }, [endsAt, expired])
@@ -235,7 +250,7 @@ function LiveWorkout() {
     const { text } = displayValue(we, set, index, field)
     setEditing({ setId: set._id, weId: we._id, field, draft: text, fresh: true })
     requestAnimationFrame(() => {
-      document.getElementById(`set-${set._id}`)?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+      document.getElementById(`set-${set._id}`)?.scrollIntoView({ block: 'center', behavior: reducedMotion() ? 'auto' : 'smooth' })
     })
   }
 
@@ -285,7 +300,7 @@ function LiveWorkout() {
         toast(`New PR · ${we.exercise.name}`, { tone: 'pr' })
       }
     } catch {
-      toast('Could not save that set. Check your connection.')
+      toast('Could not save that set. Check your connection.', { tone: 'error' })
     }
   }
 
@@ -500,6 +515,7 @@ function LiveWorkout() {
                     void updateExercise({ workoutExerciseId: menu.we._id, restSec: sec })
                     setMenu(null)
                   }}
+                  aria-pressed={menu.we.restSec === sec}
                   className={`press num h-12 rounded-[14px] text-[16px] font-[600] ${menu.we.restSec === sec ? 'bg-accent text-accent-ink' : 'bg-raised'}`}
                 >
                   {sec === 0 ? 'Off' : fmtClock(sec)}
@@ -534,7 +550,7 @@ function LiveWorkout() {
           setMenu(null)
           for (const p of picked) await addExercise({ workoutId: workout._id, exerciseId: p._id })
           tap('success')
-          requestAnimationFrame(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }))
+          requestAnimationFrame(() => window.scrollTo({ top: document.body.scrollHeight, behavior: reducedMotion() ? 'auto' : 'smooth' }))
         }}
       />
       <ExercisePicker
@@ -562,7 +578,7 @@ function LiveWorkout() {
               try {
                 id = await finish({ workoutId: workout._id, notes: notes || undefined })
               } catch {
-                toast('Could not finish — check your connection and try again.')
+                toast('Could not finish — check your connection and try again.', { tone: 'error' })
                 return
               }
               tap('success')
@@ -606,7 +622,7 @@ function Header({ workout, done, total, onFinish }: { workout: ActiveWorkout; do
           <ChevronDown className="size-6" />
         </Link>
         <div className="min-w-0 flex-1">
-          <div className="truncate text-[16px] font-[650] tracking-[-0.01em]">{workout.title}</div>
+          <h1 className="truncate text-[16px] font-[650] tracking-[-0.01em]">{workout.title}</h1>
           <div className="num text-[13px] text-muted">
             {fmtClock((now - workout.startedAt) / 1000)} · {done}/{total} sets
           </div>
@@ -615,7 +631,7 @@ function Header({ workout, done, total, onFinish }: { workout: ActiveWorkout; do
           Finish
         </button>
       </div>
-      <div className="h-[2px] bg-line">
+      <div className="h-[2px] bg-line" role="progressbar" aria-label="Sets done" aria-valuemin={0} aria-valuemax={total} aria-valuenow={done}>
         <div className="h-full bg-accent transition-[width] duration-500 ease-out" style={{ width: `${pct * 100}%` }} />
       </div>
     </header>
@@ -653,7 +669,7 @@ function ExerciseCard({
   const t = we.exercise.tracking
   const cols: KeypadField[] = t === 'reps' ? ['reps', 'rir'] : t === 'duration' ? ['duration'] : ['weight', 'reps', 'rir']
   const allDone = we.sets.length > 0 && we.sets.every((s) => s.done)
-  const grid = cols.length === 3 ? 'grid-cols-[40px_minmax(0,1fr)_64px_64px_44px_48px]' : cols.length === 2 ? 'grid-cols-[40px_minmax(0,1fr)_72px_52px_48px]' : 'grid-cols-[40px_minmax(0,1fr)_88px_48px]'
+  const grid = cols.length === 3 ? 'grid-cols-[44px_minmax(0,1fr)_62px_62px_42px_46px]' : cols.length === 2 ? 'grid-cols-[44px_minmax(0,1fr)_72px_52px_46px]' : 'grid-cols-[44px_minmax(0,1fr)_88px_46px]'
 
   return (
     <article className={`${inSuperset ? 'pl-3 pr-1' : 'card'} pb-2 pt-4`}>
@@ -684,7 +700,7 @@ function ExerciseCard({
       {we.notes && <p className={`mt-2 text-[14px] italic leading-5 text-muted ${inSuperset ? '' : 'px-4'}`}>“{we.notes}”</p>}
 
       <div className={`mt-3 ${inSuperset ? '' : 'px-2'}`}>
-        <div className={`grid ${grid} items-center gap-1 px-2 pb-1 text-[11px] font-[650] uppercase tracking-[0.08em] text-faint`}>
+        <div className={`grid ${grid} items-center gap-1 px-2 pb-1 text-[11px] font-[650] uppercase tracking-[0.08em] text-subtle`}>
           <span className="text-center">Set</span>
           <span className="pl-1">Previous</span>
           {cols.map((c) => (
@@ -716,19 +732,22 @@ function ExerciseCard({
             >
               <button
                 onClick={() => onSetMenu(set, label)}
-                className={`press num relative mx-auto grid h-8 min-w-8 place-items-center rounded-[10px] px-1 text-[14px] font-[700] ${
+                className={`press num relative mx-auto grid size-11 place-items-center rounded-[12px] text-[14px] font-[700] ${
                   set.kind !== 'working' ? 'text-warning' : set.done ? 'text-accent' : 'text-muted'
                 }`}
-                aria-label={`Set ${label} options`}
+                aria-label={`Set ${label}${set.kind !== 'working' ? `, ${set.kind === 'warmup' ? 'warm-up' : set.kind === 'drop' ? 'drop set' : 'to failure'}` : ''}${set.isPr ? ', personal record' : ''}, options`}
               >
                 {label}
                 {set.isPr && (
-                  <span className="absolute -right-1.5 -top-1.5 grid size-4 place-items-center rounded-full bg-pr text-black animate-pop">
+                  <span aria-hidden className="absolute -right-0.5 -top-0.5 grid size-4 place-items-center rounded-full bg-pr text-black animate-pop">
                     <Trophy className="size-2.5" strokeWidth={2.5} />
                   </span>
                 )}
               </button>
-              <span className="num truncate pl-1 text-[13px] text-subtle">{prevText}</span>
+              <span className="num truncate pl-1 text-[13px] text-subtle">
+                <span className="sr-only">Previous </span>
+                {prevText}
+              </span>
               {cols.map((c) => {
                 const v = displayValue(we, set, i, c)
                 const active = editing?.setId === set._id && editing.field === c
@@ -736,22 +755,24 @@ function ExerciseCard({
                   <button
                     key={c}
                     onClick={() => onCell(we, set, i, c)}
+                    aria-label={`${c === 'weight' ? (t === 'weighted_bodyweight' ? `Added ${unit}` : unit === 'kg' ? 'Kilograms' : 'Pounds') : c === 'reps' ? 'Reps' : c === 'rir' ? 'Reps in reserve' : 'Seconds'} ${v.text || 'empty'}${v.suggested && v.text ? ', suggested from last time' : ''}, set ${label}`}
                     className={`press num h-11 rounded-[12px] text-center text-[19px] font-[620] tracking-[-0.01em] transition-colors ${
                       active ? 'bg-ink text-black' : set.done ? 'text-ink' : 'bg-raised hover:bg-pressed'
-                    } ${v.suggested && !active ? 'text-subtle' : ''}`}
+                    } ${v.suggested && !active ? 'text-subtle italic font-[500]' : ''}`}
                   >
-                    {active ? editing.draft || '0' : v.text || (c === 'rir' ? <span className="text-faint">–</span> : <span className="text-faint">{c === 'reps' && we.repLow ? fmtReps(we.repLow, we.repHigh) : '–'}</span>)}
+                    {active ? editing.draft || '0' : v.text || (c === 'rir' ? <span className="text-subtle">–</span> : <span className="text-subtle">{c === 'reps' && we.repLow ? fmtReps(we.repLow, we.repHigh) : '–'}</span>)}
                   </button>
                 )
               })}
               <button
                 onClick={() => onToggle(we, set, i)}
-                aria-label={set.done ? 'Mark not done' : 'Log set'}
+                aria-label={`Set ${label} done`}
+                aria-pressed={set.done}
                 className={`press mx-auto grid size-11 place-items-center rounded-full transition-all duration-200 ${
-                  set.done ? 'bg-accent text-accent-ink' : 'border-[1.5px] border-line-strong text-faint hover:border-muted hover:text-muted'
+                  set.done ? 'bg-accent text-accent-ink' : 'border-[1.5px] border-edge text-subtle hover:border-muted hover:text-muted'
                 }`}
               >
-                <Check className={`size-5 ${set.done ? 'animate-pop' : ''}`} strokeWidth={2.8} />
+                <Check aria-hidden className={`size-5 ${set.done ? 'animate-pop' : ''}`} strokeWidth={2.8} />
               </button>
             </div>
           )
@@ -858,7 +879,7 @@ function RestStrip({ rest, onAdjust, onSkip }: { rest: RestState; onAdjust: (s: 
   const C = 2 * Math.PI * R
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 px-3 pb-[calc(var(--safe-bottom)+12px)]">
+    <aside aria-label="Rest timer" className="fixed inset-x-0 bottom-0 z-40 px-3 pb-[calc(var(--safe-bottom)+12px)]">
       <div className="mx-auto flex h-[68px] max-w-[560px] items-center gap-3 rounded-[22px] border border-line-strong bg-raised/95 pl-3 pr-2 shadow-[0_16px_50px_-10px_#000] backdrop-blur-xl animate-[rise_240ms_cubic-bezier(0.22,1,0.36,1)_both]">
         {over && !(remaining > 0) ? (
           <>
@@ -875,7 +896,7 @@ function RestStrip({ rest, onAdjust, onSkip }: { rest: RestState; onAdjust: (s: 
           </>
         ) : (
           <>
-            <svg width="46" height="46" viewBox="0 0 46 46" className="-rotate-90 shrink-0">
+            <svg aria-hidden width="46" height="46" viewBox="0 0 46 46" className="-rotate-90 shrink-0">
               <circle cx="23" cy="23" r={R} fill="none" stroke="#2a2a2d" strokeWidth="3.5" />
               <circle
                 cx="23"
@@ -892,12 +913,12 @@ function RestStrip({ rest, onAdjust, onSkip }: { rest: RestState; onAdjust: (s: 
             </svg>
             <div className="min-w-0 flex-1">
               <div className="text-[12px] font-[600] text-subtle">Rest</div>
-              <div className="num text-[24px] font-[680] leading-7 tracking-[-0.02em]">{fmtClock(remaining)}</div>
+              <div aria-hidden className="num text-[24px] font-[680] leading-7 tracking-[-0.02em]">{fmtClock(remaining)}</div>
             </div>
-            <button onClick={() => onAdjust(-15)} className="press num h-11 rounded-full px-3 text-[14px] font-[650] text-muted hover:bg-pressed">
+            <button onClick={() => onAdjust(-15)} aria-label="15 seconds less" className="press num h-11 rounded-full px-3 text-[14px] font-[650] text-muted hover:bg-pressed">
               −15
             </button>
-            <button onClick={() => onAdjust(15)} className="press num h-11 rounded-full px-3 text-[14px] font-[650] text-muted hover:bg-pressed">
+            <button onClick={() => onAdjust(15)} aria-label="15 seconds more" className="press num h-11 rounded-full px-3 text-[14px] font-[650] text-muted hover:bg-pressed">
               +15
             </button>
             <button onClick={onSkip} className="press h-11 rounded-full bg-ink px-4 text-[14px] font-[650] text-black">
@@ -906,7 +927,7 @@ function RestStrip({ rest, onAdjust, onSkip }: { rest: RestState; onAdjust: (s: 
           </>
         )}
       </div>
-    </div>
+    </aside>
   )
 }
 

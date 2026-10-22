@@ -26,7 +26,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const fullscreen = FULLSCREEN.some((p) => pathname.startsWith(p))
 
   return (
-    <div className="min-h-dvh bg-black lg:flex" style={me.activeWorkout ? ({ '--dock': '68px' } as CSSProperties) : undefined}>
+    <div id="app-root" className="min-h-dvh bg-black lg:flex" style={me.activeWorkout ? ({ '--dock': '68px' } as CSSProperties) : undefined}>
       {/* Desktop sidebar */}
       {!fullscreen && (
         <aside className="sticky top-0 hidden h-dvh w-[232px] shrink-0 flex-col border-r border-line px-4 py-6 lg:flex">

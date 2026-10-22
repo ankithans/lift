@@ -13,9 +13,11 @@ import { tap } from '#/lib/haptics'
 import { useMe, useUnit } from '#/lib/me'
 import { startOfDay, weekBoundaries } from '#/lib/time'
 import { toast } from '#/lib/toast'
+import { announce } from '#/lib/announce'
 import { useNow } from '#/lib/useNow'
 
-export const Route = createFileRoute('/_app/')({ component: Train })
+export const Route = createFileRoute('/_app/')({
+  head: () => ({ meta: [{ title: 'Train · Lift' }] }), component: Train })
 
 type Week = NonNullable<FunctionReturnType<typeof api.programs.week>>
 type Day = Week['days'][number]
@@ -88,7 +90,7 @@ function Train() {
             </div>
           </div>
           <WeekList days={days} />
-          <p className="mt-3 text-[12px] text-faint">Drag a day by its handle (or press and hold) onto another day to swap them. This changes your weekly plan.</p>
+          <p className="mt-3 text-[13px] text-subtle">Drag a day by its handle, or press and hold, to swap it with another. Tap the handle to pick a day. This changes your weekly plan.</p>
         </section>
       )}
     </main>
@@ -142,7 +144,7 @@ function useStartWorkout() {
         await startMut(programDayId ? { programDayId } : {})
         navigate({ to: '/workout' })
       } catch {
-        toast('Could not start the workout. Check your connection.')
+        toast('Could not start the workout. Check your connection.', { tone: 'error' })
       } finally {
         setBusy(false)
       }
@@ -161,8 +163,8 @@ function WeekList({ days }: { days: Day[] }) {
   const [order, setOrder] = useState<Day[]>(days)
   useEffect(() => setOrder(days), [days])
   const [drag, setDrag] = useState<DragState | null>(null)
-  const [announce, setAnnounce] = useState('')
   const [restSheet, setRestSheet] = useState<Day | null>(null)
+  const [moveFrom, setMoveFrom] = useState<number | null>(null)
   const startY = useRef(0)
   const press = useRef<{ timer: ReturnType<typeof setTimeout>; x: number; y: number; id: number } | null>(null)
 
@@ -172,7 +174,7 @@ function WeekList({ days }: { days: Day[] }) {
       await arrange({ slots: days.map((d, i) => ({ weekday: d.weekday, dayId: next[i]?.planned?._id ?? null })) })
     } catch {
       setOrder(days)
-      toast('Could not move that day. Try again.')
+      toast('Could not move that day. Try again.', { tone: 'error' })
     }
   }
 
@@ -185,8 +187,8 @@ function WeekList({ days }: { days: Day[] }) {
     next[to] = item
     void commit(next)
     tap('success')
-    const title = item.planned?.kind === 'workout' ? item.planned.title : 'Rest'
-    setAnnounce(`${title} moved to ${WEEKDAYS_LONG[days[to].weekday]}`)
+    const name = (d: Day | undefined) => (d?.planned?.kind === 'workout' ? d.planned.title : 'Rest')
+    announce(`${name(item)} moved to ${WEEKDAYS_LONG[days[to].weekday]}. ${name(next[from])} is now on ${WEEKDAYS_LONG[days[from].weekday]}.`)
   }
 
   const begin = (index: number, pointerId: number, clientY: number) => {
@@ -210,13 +212,20 @@ function WeekList({ days }: { days: Day[] }) {
       if (e.pointerId !== drag.pointerId) return
       setDrag(null)
       lastDragEnd = Date.now()
-      move(drag.from, drag.to)
+      // A tap on the handle (no real movement) opens the "Move to…" sheet instead.
+      if (Math.abs(drag.dy) < 6 && drag.from === drag.to) setMoveFrom(drag.from)
+      else move(drag.from, drag.to)
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setDrag(null)
     }
     document.addEventListener('touchmove', prevent, { passive: false })
     window.addEventListener('pointermove', onMove)
     window.addEventListener('pointerup', onUp)
     window.addEventListener('pointercancel', onUp)
+    window.addEventListener('keydown', onKey)
     return () => {
+      window.removeEventListener('keydown', onKey)
       document.removeEventListener('touchmove', prevent)
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)
@@ -284,15 +293,45 @@ function WeekList({ days }: { days: Day[] }) {
                     requestAnimationFrame(() => (document.querySelector(`[data-handle="${to}"]`) as HTMLElement | null)?.focus())
                   }}
                   onRest={() => setRestSheet(slot)}
+                  onOpenMove={() => setMoveFrom(i)}
                 />
               </div>
             </li>
           )
         })}
       </ol>
-      <p id="reorder-help" className="sr-only">To move a day, focus its handle and press the up or down arrow key to swap it with the neighbouring day.</p>
-      <div aria-live="polite" className="sr-only">{announce}</div>
+      <p id="reorder-help" className="sr-only">Press Enter to choose a new day, or use the up and down arrow keys to swap with the neighbouring day.</p>
       <RestSheet day={restSheet} onClose={() => setRestSheet(null)} />
+      <Sheet
+        open={moveFrom !== null}
+        onClose={() => setMoveFrom(null)}
+        title={moveFrom !== null ? `Move ${order[moveFrom]?.planned?.kind === 'workout' ? order[moveFrom].planned!.title : 'Rest'} to…` : ''}
+      >
+        {moveFrom !== null && (
+          <ul className="space-y-1 pb-2">
+            {days.map((d, j) => {
+              const there = order[j]?.planned?.kind === 'workout' ? order[j].planned!.title : 'Rest'
+              const current = j === moveFrom
+              return (
+                <li key={d.start}>
+                  <button
+                    disabled={current}
+                    aria-current={current ? 'true' : undefined}
+                    onClick={() => {
+                      setMoveFrom(null)
+                      move(moveFrom, j)
+                    }}
+                    className={`press flex min-h-14 w-full items-center gap-4 rounded-2xl px-3 text-left ${current ? 'bg-raised' : 'hover:bg-raised'}`}
+                  >
+                    <span className="w-24 shrink-0 text-[15px] font-[600]">{WEEKDAYS_LONG[d.weekday]}</span>
+                    <span className="min-w-0 flex-1 truncate text-[14px] text-subtle">{current ? 'Current day' : there === 'Rest' ? 'Rest — move here' : `Swap with ${there}`}</span>
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+        )}
+      </Sheet>
     </>
   )
 }
@@ -306,6 +345,7 @@ function DayCard({
   onPressStart,
   onKeyMove,
   onRest,
+  onOpenMove,
 }: {
   slot: Day
   item: Day
@@ -315,6 +355,7 @@ function DayCard({
   onPressStart: (e: React.PointerEvent) => void
   onKeyMove: (dir: -1 | 1) => void
   onRest: () => void
+  onOpenMove: () => void
 }) {
   const unit = useUnit()
   const start = useStartWorkout()
@@ -362,10 +403,10 @@ function DayCard({
           onPressStart(e)
         }}
         onContextMenu={(e) => e.preventDefault()}
-        aria-label={`${WEEKDAYS_LONG[slot.weekday]}: ${title}${status === 'done' ? ', done' : status === 'missed' ? ', skipped' : status === 'today' ? ', today' : ''}`}
         className="flex h-full min-w-0 flex-1 items-center gap-3 text-left [-webkit-touch-callout:none]"
       >
         <span className="min-w-0 flex-1">
+          <span className="sr-only">{WEEKDAYS_LONG[slot.weekday]}{status === 'today' ? ', today' : ''}: </span>
           <span
             className={`flex items-center gap-1.5 text-[16px] font-[600] tracking-[-0.01em] ${
               isRest && !workout ? 'text-subtle' : status === 'missed' ? 'text-muted' : ''
@@ -403,8 +444,12 @@ function DayCard({
       <button
         data-handle={index}
         onPointerDown={(e) => {
-          e.preventDefault()
+          if (e.pointerType !== 'mouse') e.preventDefault()
           onHandleDown(e)
+        }}
+        onClick={(e) => {
+          // Keyboard activation (Enter/Space) has detail 0; pointer taps are handled by the drag logic.
+          if (e.detail === 0) onOpenMove()
         }}
         onKeyDown={(e) => {
           if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
@@ -412,7 +457,7 @@ function DayCard({
             onKeyMove(e.key === 'ArrowUp' ? -1 : 1)
           }
         }}
-        aria-label={`Move ${title}, currently ${WEEKDAYS_LONG[slot.weekday]}`}
+        aria-label={`Move ${title}, ${WEEKDAYS_LONG[slot.weekday]}, ${index + 1} of 7`}
         aria-describedby="reorder-help"
         className="grid h-full w-11 shrink-0 cursor-grab touch-none place-items-center rounded-r-[18px] text-subtle hover:text-muted active:cursor-grabbing"
       >

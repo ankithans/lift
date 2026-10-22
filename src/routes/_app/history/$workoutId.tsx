@@ -10,6 +10,7 @@ import { Sheet, SheetAction } from '#/components/Sheet'
 import { BlockSkeleton } from '#/components/Skeletons'
 import { fmtDate, fmtDuration, fmtNum, fmtVolume, fmtWeight, fromDisplayWeight, toDisplayWeight } from '#/lib/format'
 import { useUnit } from '#/lib/me'
+import { useTitle } from '#/lib/useTitle'
 import { setLabel, toBlocks } from '#/lib/workout'
 
 export const Route = createFileRoute('/_app/history/$workoutId')({
@@ -27,6 +28,7 @@ function WorkoutDetail() {
   const remove = useMutation(api.workouts.remove)
   const [editing, setEditing] = useState(false)
   const [menu, setMenu] = useState<null | 'options' | 'delete'>(null)
+  useTitle(workout ? `${workout.title}, ${fmtDate(workout.startedAt, { month: 'short', day: 'numeric' })}` : null)
 
   if (workout === undefined) {
     return (
@@ -110,7 +112,7 @@ function WorkoutDetail() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       {letter && <span className="num grid size-5 place-items-center rounded-md bg-accent/15 text-[11px] font-[750] text-accent">{letter}</span>}
-                      <h3 className="truncate text-[16px] font-[600]">{we.exercise.name}</h3>
+                      <h2 className="truncate text-[16px] font-[600]">{we.exercise.name}</h2>
                     </div>
                     {we.notes && <p className="truncate text-[13px] italic text-subtle">{we.notes}</p>}
                   </div>
@@ -147,7 +149,7 @@ function WorkoutDetail() {
                         </span>
                       )}
                       {set.rir !== undefined && !editing && <span className="num text-[13px] text-subtle">RIR {set.rir}</span>}
-                      {set.isPr && <Trophy className="size-4 text-pr" />}
+                      {set.isPr && <Trophy className="size-4 text-pr" aria-label="Personal record" />}
                     </div>
                   ))}
                 </div>
@@ -166,7 +168,7 @@ function WorkoutDetail() {
           </button>
         )}
       </div>
-      <p className="num mt-4 text-center text-[13px] text-faint">
+      <p className="num mt-4 text-center text-[13px] text-subtle">
         {fmtDate(workout.startedAt, { hour: 'numeric', minute: '2-digit' })}
         {workout.finishedAt ? ` – ${fmtDate(workout.finishedAt, { hour: 'numeric', minute: '2-digit' })}` : ''}
         {workout.source === 'import' ? ' · imported' : workout.source === 'agent' ? ' · logged by agent' : ''}
@@ -210,7 +212,7 @@ function NumField({
 }) {
   const [text, setText] = useState(value === null ? '' : fmtNum(value))
   return (
-    <label className="flex h-9 flex-1 items-center gap-1 rounded-[10px] bg-raised px-3 focus-within:ring-1 focus-within:ring-line-strong">
+    <label className="flex h-11 flex-1 items-center gap-1 rounded-[10px] bg-raised px-3 focus-within:ring-1 focus-within:ring-line-strong">
       <input
         value={text}
         inputMode={decimal ? 'decimal' : 'numeric'}

@@ -9,7 +9,8 @@ import { ListSkeleton } from '#/components/Skeletons'
 import { fmtDate, fmtDuration, fmtVolume } from '#/lib/format'
 import { useUnit } from '#/lib/me'
 
-export const Route = createFileRoute('/_app/history/')({ component: HistoryList })
+export const Route = createFileRoute('/_app/history/')({
+  head: () => ({ meta: [{ title: 'History · Lift' }] }), component: HistoryList })
 
 function HistoryList() {
   const unit = useUnit()
@@ -35,7 +36,7 @@ function HistoryList() {
           {groups.map((g) => (
             <section key={g.label} className="animate-fade">
               <h2 className="t-eyebrow sticky top-0 z-10 -mx-1 bg-black/85 px-1 py-2 text-subtle backdrop-blur">
-                {g.label} <span className="num ml-1 text-faint">{g.items.length}</span>
+                {g.label} <span className="num ml-1 text-subtle">{g.items.length}</span>
               </h2>
               <ul className="divide-hair">
                 {g.items.map((w) => (

@@ -12,7 +12,8 @@ import { fmtClock, fmtRelativeDay } from '#/lib/format'
 import { useMe } from '#/lib/me'
 import { toast } from '#/lib/toast'
 
-export const Route = createFileRoute('/_app/settings')({ component: Settings })
+export const Route = createFileRoute('/_app/settings')({
+  head: () => ({ meta: [{ title: 'Settings · Lift' }] }), component: Settings })
 
 function Row({ label, children, hint }: { label: string; children: ReactNode; hint?: string }) {
   return (
@@ -26,14 +27,16 @@ function Row({ label, children, hint }: { label: string; children: ReactNode; hi
   )
 }
 
-function Segmented<T extends string | number>({ value, options, onChange }: { value: T; options: { value: T; label: string }[]; onChange: (v: T) => void }) {
+function Segmented<T extends string | number>({ value, options, onChange, label }: { value: T; options: { value: T; label: string }[]; onChange: (v: T) => void; label: string }) {
   return (
-    <div className="flex rounded-full bg-raised p-1">
+    <div role="radiogroup" aria-label={label} className="flex rounded-full bg-raised p-1">
       {options.map((o) => (
         <button
           key={String(o.value)}
+          role="radio"
+          aria-checked={value === o.value}
           onClick={() => onChange(o.value)}
-          className={`press h-8 min-w-12 rounded-full px-3 text-[14px] font-[600] transition-colors ${value === o.value ? 'bg-ink text-black' : 'text-muted'}`}
+          className={`press h-10 min-w-12 rounded-full px-3 text-[14px] font-[600] transition-colors ${value === o.value ? 'bg-ink text-black' : 'text-muted'}`}
         >
           {o.label}
         </button>
@@ -72,20 +75,21 @@ function Settings() {
             <div className="text-[16px] font-[540]">Program</div>
             <div className="truncate text-[13px] text-subtle">{program?.name ?? 'None'}</div>
           </div>
-          <ChevronRight className="size-5 text-faint" />
+          <ChevronRight className="size-5 text-subtle" />
         </Link>
         <Link to="/welcome" className="press flex min-h-14 items-center justify-between gap-4 py-2">
           <div className="text-[16px] font-[540]">Switch program</div>
-          <ChevronRight className="size-5 text-faint" />
+          <ChevronRight className="size-5 text-subtle" />
         </Link>
         <Row label="Units">
-          <Segmented value={p.unit} options={[{ value: 'kg', label: 'kg' }, { value: 'lb', label: 'lb' }]} onChange={(unit) => update({ unit })} />
+          <Segmented label="Units" value={p.unit} options={[{ value: 'kg', label: 'kg' }, { value: 'lb', label: 'lb' }]} onChange={(unit) => update({ unit })} />
         </Row>
         <Row label="Week starts">
-          <Segmented value={p.weekStartsOn} options={[{ value: 0, label: 'Sun' }, { value: 1, label: 'Mon' }]} onChange={(weekStartsOn) => update({ weekStartsOn })} />
+          <Segmented label="Week starts" value={p.weekStartsOn} options={[{ value: 0, label: 'Sun' }, { value: 1, label: 'Mon' }]} onChange={(weekStartsOn) => update({ weekStartsOn })} />
         </Row>
         <Row label="Default rest" hint="For exercises you add">
           <Segmented
+            label="Default rest"
             value={p.defaultRestSec}
             options={[60, 90, 120, 180].map((s) => ({ value: s, label: fmtClock(s) }))}
             onChange={(defaultRestSec) => update({ defaultRestSec })}
@@ -101,7 +105,7 @@ function Settings() {
           <LogOut className="size-5" /> Sign out
         </button>
       </div>
-      <p className="mt-10 text-center text-[12px] text-faint">
+      <p className="mt-10 text-center text-[12px] text-subtle">
         Lift · made for lifting, not scrolling · <a href="/privacy" className="underline underline-offset-2">Privacy</a>
       </p>
     </main>
@@ -145,10 +149,10 @@ function AiAccess() {
             <li key={t._id} className="flex h-12 items-center gap-3">
               <KeyRound className="size-4 text-subtle" />
               <span className="min-w-0 flex-1 truncate text-[15px]">
-                {t.name} <span className="num text-[13px] text-faint">{t.prefix}…</span>
+                {t.name} <span className="num text-[13px] text-subtle">{t.prefix}…</span>
               </span>
               <span className="text-[12px] text-subtle">{t.lastUsedAt ? `used ${fmtRelativeDay(t.lastUsedAt).toLowerCase()}` : 'never used'}</span>
-              <button className="icon-btn size-8 text-faint" aria-label="Revoke" onClick={() => revoke({ tokenId: t._id })}>
+              <button className="icon-btn text-subtle" aria-label={`Revoke token ${t.name}`} onClick={() => revoke({ tokenId: t._id })}>
                 <Trash2 className="size-4" />
               </button>
             </li>
@@ -206,11 +210,11 @@ function Snippet({ title, code }: { title: string; code: string }) {
     <div>
       <div className="mb-1.5 flex items-center justify-between">
         <span className="text-[13px] font-[600] text-muted">{title}</span>
-        <button onClick={() => copy(code)} className="chip h-7 px-2.5 text-[12px]">
+        <button onClick={() => copy(code)} aria-label={`Copy ${title} configuration`} className="chip h-9 px-3 text-[12px]">
           <Copy className="size-3" /> Copy
         </button>
       </div>
-      <pre className="num overflow-x-auto rounded-[14px] bg-raised p-3 text-[12px] leading-[18px] text-ink/85">{code}</pre>
+      <pre tabIndex={0} aria-label={`${title} configuration`} className="num overflow-x-auto rounded-[14px] bg-raised p-3 text-[12px] leading-[18px] text-ink/85">{code}</pre>
     </div>
   )
 }

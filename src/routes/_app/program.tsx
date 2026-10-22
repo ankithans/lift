@@ -14,6 +14,7 @@ import { fmtClock, WEEKDAYS, WEEKDAYS_LONG } from '#/lib/format'
 import { toast } from '#/lib/toast'
 
 export const Route = createFileRoute('/_app/program')({
+  head: () => ({ meta: [{ title: 'Program · Lift' }] }),
   validateSearch: (s: Record<string, unknown>): { day?: string } => (typeof s.day === 'string' ? { day: s.day } : {}),
   component: ProgramEditor,
 })
@@ -61,7 +62,7 @@ function ProgramEditor() {
                     <span className={`block truncate text-[16px] font-[600] ${d.kind === 'rest' ? 'text-subtle' : ''}`}>{d.kind === 'rest' ? 'Rest' : d.title}</span>
                     {d.kind === 'workout' && <span className="num block text-[13px] text-subtle">{d.exercises.length} exercises · ~{d.estimatedMinutes} min</span>}
                   </span>
-                  <ChevronDown className={`size-5 text-faint transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} />
+                  <ChevronDown className={`size-5 text-subtle transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} />
                 </button>
                 <button className="icon-btn mr-2" onClick={() => setDayMenu(d)} aria-label="Day options">
                   <MoreHorizontal className="size-5" />
@@ -217,10 +218,12 @@ function DayEditor({ day, close }: { day: Day; close: () => void }) {
   const [title, setTitle] = useState(day.title)
   return (
     <div className="space-y-4 pb-2">
-      <div className="grid grid-cols-2 rounded-full bg-raised p-1">
+      <div role="radiogroup" aria-label="Day type" className="grid grid-cols-2 rounded-full bg-raised p-1">
         {(['workout', 'rest'] as const).map((k) => (
           <button
             key={k}
+            role="radio"
+            aria-checked={day.kind === k}
             onClick={() => update({ dayId: day._id as Id<'programDays'>, kind: k, ...(k === 'workout' && day.title === 'Rest' ? { title: 'Workout' } : {}) })}
             className={`press h-10 rounded-full text-[14px] font-[600] capitalize ${day.kind === k ? 'bg-ink text-black' : 'text-muted'}`}
           >
@@ -247,6 +250,8 @@ function DayEditor({ day, close }: { day: Day; close: () => void }) {
           {WEEKDAYS.map((w, i) => (
             <button
               key={w}
+              aria-pressed={day.weekday === i}
+              aria-label={WEEKDAYS_LONG[i]}
               onClick={() => { void update({ dayId: day._id, weekday: i }); close() }}
               className={`press h-11 rounded-[12px] text-[13px] font-[650] ${day.weekday === i ? 'bg-ink text-black' : 'bg-raised text-muted'}`}
             >

@@ -17,7 +17,7 @@ export function youtubeId(url: string | null | undefined) {
   return m?.[1] ?? null
 }
 
-export function VideoPlayer({ url, poster }: { url: string | null; poster?: string | null }) {
+export function VideoPlayer({ url, poster, name }: { url: string | null; poster?: string | null; name: string }) {
   const [playing, setPlaying] = useState(false)
   const id = youtubeId(url)
   if (!id) return null
@@ -26,7 +26,7 @@ export function VideoPlayer({ url, poster }: { url: string | null; poster?: stri
       <div className="video-frame animate-fade">
         <iframe
           src={`https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&modestbranding=1&playsinline=1`}
-          title="Form video"
+          title={`Form video: ${name}`}
           allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
           allowFullScreen
         />
@@ -34,7 +34,7 @@ export function VideoPlayer({ url, poster }: { url: string | null; poster?: stri
     )
   }
   return (
-    <button onClick={() => setPlaying(true)} className="video-frame press group block" aria-label="Play form video">
+    <button onClick={() => setPlaying(true)} className="video-frame press group block" aria-label={`Watch form video, ${name}`}>
       <img
         src={poster || `https://i.ytimg.com/vi/${id}/hqdefault.jpg`}
         alt=""
@@ -67,7 +67,7 @@ export function ExerciseBody({ data, compact = false }: { data: ExerciseData; co
   return (
     <div>
       {data.videoUrl ? (
-        <VideoPlayer url={data.videoUrl} />
+        <VideoPlayer url={data.videoUrl} name={data.name} />
       ) : (
         <div className="grid aspect-video place-items-center rounded-[18px] bg-surface text-[14px] text-subtle">Video coming soon</div>
       )}
@@ -76,6 +76,7 @@ export function ExerciseBody({ data, compact = false }: { data: ExerciseData; co
         {(['about', 'history'] as const).map((t) => (
           <button
             key={t}
+            aria-pressed={tab === t}
             onClick={() => setTab(t)}
             className={`press h-10 rounded-full text-[14px] font-[600] capitalize transition-colors ${tab === t ? 'bg-raised text-ink' : 'text-subtle'}`}
           >
@@ -87,7 +88,7 @@ export function ExerciseBody({ data, compact = false }: { data: ExerciseData; co
       {tab === 'about' ? (
         <div className="mt-6 space-y-7 animate-fade">
           <section>
-            <h3 className="t-eyebrow text-subtle">Muscles</h3>
+            <h2 className="t-eyebrow text-subtle">Muscles</h2>
             <div className="mt-3 flex flex-wrap gap-1.5">
               {primary.map((m) => (
                 <span key={m.name} className="rounded-full bg-accent-dim px-3 py-1.5 text-[13px] font-[600] text-accent">
@@ -104,7 +105,7 @@ export function ExerciseBody({ data, compact = false }: { data: ExerciseData; co
           </section>
           {data.steps.length > 0 && (
             <section>
-              <h3 className="t-eyebrow text-subtle">How to</h3>
+              <h2 className="t-eyebrow text-subtle">How to</h2>
               <ol className="mt-3 space-y-4">
                 {data.steps.map((s, i) => (
                   <li key={i} className="flex gap-3">
@@ -117,7 +118,7 @@ export function ExerciseBody({ data, compact = false }: { data: ExerciseData; co
           )}
           {(data.cues.length > 0 || data.tips) && (
             <section className="rounded-[18px] bg-surface p-4">
-              <h3 className="t-eyebrow text-subtle">Cues</h3>
+              <h2 className="t-eyebrow text-subtle">Cues</h2>
               {data.cues.map((c, i) => (
                 <p key={i} className="mt-2 text-[15px] leading-[23px] text-ink/85">{c}</p>
               ))}
@@ -161,6 +162,7 @@ export function ExerciseBody({ data, compact = false }: { data: ExerciseData; co
                       <div className="num mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[14px] text-muted">
                         {s.sets.map((x, i) => (
                           <span key={i} className={x.isPr ? 'text-pr' : ''}>
+                            {x.isPr && <span className="sr-only">Personal record: </span>}
                             {x.weightKg ? `${fmtWeight(x.weightKg, unit)}×` : ''}
                             {x.reps ?? (x.durationSec ? `${fmtNum(x.durationSec)}s` : '—')}
                           </span>

@@ -4,12 +4,14 @@ import { api } from '../../../../convex/_generated/api'
 import { ExerciseBody } from '#/components/ExerciseDetail'
 import { PageHeader } from '#/components/PageHeader'
 import { BlockSkeleton } from '#/components/Skeletons'
+import { useTitle } from '#/lib/useTitle'
 
 export const Route = createFileRoute('/_app/library/$slug')({ component: ExercisePage })
 
 function ExercisePage() {
   const { slug } = Route.useParams()
   const data = useQuery(api.library.get, { slug })
+  useTitle(data?.name)
   if (data === undefined) {
     return (
       <main className="page space-y-4 pt-24">

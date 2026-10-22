@@ -6,6 +6,7 @@ import { ArrowRight, Loader2, Mail } from 'lucide-react'
 import { Logo } from '#/components/Logo'
 
 export const Route = createFileRoute('/signin')({
+  head: () => ({ meta: [{ title: 'Sign in · Lift' }] }),
   ssr: false,
   component: SignIn,
 })
@@ -91,18 +92,25 @@ function SignIn() {
             </>
           ) : (
             <form onSubmit={submit} className="space-y-3 animate-fade">
-              <input name="email" type="email" autoComplete="email" required placeholder="Email" className="field" />
+              <label htmlFor="email" className="sr-only">Email</label>
+              <input id="email" name="email" type="email" autoComplete="email" required placeholder="Email" className="field" aria-invalid={error ? true : undefined} aria-describedby={error ? 'signin-error' : undefined} />
+              <label htmlFor="password" className="sr-only">Password</label>
               <input
                 name="password"
                 type="password"
                 autoComplete={flow === 'signIn' ? 'current-password' : 'new-password'}
                 required
                 minLength={8}
+                id="password"
                 placeholder="Password"
+                aria-invalid={error ? true : undefined} aria-describedby={error ? 'signin-error' : undefined}
                 className="field"
               />
               {flow === 'signUp' && (
-                <input name="name" type="text" autoComplete="given-name" placeholder="First name (optional)" className="field" />
+                <>
+                  <label htmlFor="name" className="sr-only">First name (optional)</label>
+                  <input id="name" name="name" type="text" autoComplete="given-name" placeholder="First name (optional)" className="field" />
+                </>
               )}
               <button type="submit" disabled={busy !== null} className="btn btn-primary w-full">
                 {busy === 'email' ? <Loader2 className="size-5 animate-spin" /> : null}
@@ -110,12 +118,12 @@ function SignIn() {
                 {busy !== 'email' && <ArrowRight className="size-[18px]" />}
               </button>
               <div className="flex items-center justify-between pt-1 text-[14px]">
-                <button type="button" className="text-muted hover:text-ink" onClick={() => setMode('choose')}>
+                <button type="button" className="min-h-11 px-1 text-muted hover:text-ink" onClick={() => setMode('choose')}>
                   Back
                 </button>
                 <button
                   type="button"
-                  className="text-accent"
+                  className="min-h-11 px-1 text-accent"
                   onClick={() => {
                     setFlow(flow === 'signIn' ? 'signUp' : 'signIn')
                     setError(null)
@@ -126,9 +134,9 @@ function SignIn() {
               </div>
             </form>
           )}
-          {error && <p className="pt-1 text-center text-[14px] text-danger animate-fade">{error}</p>}
+          {error && <p id="signin-error" role="alert" className="pt-1 text-center text-[14px] text-danger animate-fade">{error}</p>}
           <p className="pt-4 text-center text-[12px] leading-[18px] text-subtle">
-            By continuing you agree to keep lifting. <a href="/privacy" className="underline decoration-faint underline-offset-2">Privacy</a>
+            By continuing you agree to keep lifting. <a href="/privacy" className="inline-block py-2 underline decoration-subtle underline-offset-2">Privacy</a>
           </p>
         </div>
       </div>

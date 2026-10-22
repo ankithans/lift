@@ -14,7 +14,8 @@ import { useMe, useUnit } from '#/lib/me'
 import { weekBoundaries } from '#/lib/time'
 import { useNow } from '#/lib/useNow'
 
-export const Route = createFileRoute('/_app/progress')({ component: Progress })
+export const Route = createFileRoute('/_app/progress')({
+  head: () => ({ meta: [{ title: 'Progress · Lift' }] }), component: Progress })
 
 function Progress() {
   const me = useMe()
@@ -57,7 +58,12 @@ function Consistency({ summary }: { summary: NonNullable<ReturnType<typeof useQu
         <Tile label="Workouts" value={String(summary.totalWorkouts)} />
       </div>
       <div className="card mt-2 p-4">
-        <div className="flex h-28 items-end gap-1.5">
+        <ul className="sr-only">
+          {summary.weeks.map((w) => (
+            <li key={w.start}>Week of {fmtDate(w.start, { month: 'short', day: 'numeric' })}: {w.workouts} workouts</li>
+          ))}
+        </ul>
+        <div aria-hidden className="flex h-28 items-end gap-1.5">
           {summary.weeks.map((w, i) => (
             <div key={w.start} className="flex h-full flex-1 flex-col justify-end" title={`${w.workouts} workouts`}>
               <div
@@ -67,7 +73,7 @@ function Consistency({ summary }: { summary: NonNullable<ReturnType<typeof useQu
             </div>
           ))}
         </div>
-        <div className="mt-2 flex justify-between text-[11px] text-faint">
+        <div className="mt-2 flex justify-between text-[11px] text-subtle">
           <span>{fmtDate(summary.weeks[0].start, { month: 'short', day: 'numeric' })}</span>
           <span>This week</span>
         </div>
@@ -102,11 +108,11 @@ function MuscleCoverage() {
       <div className="flex items-center justify-between">
         <h2 className="t-eyebrow text-subtle">Weekly sets per muscle</h2>
         <div className="flex items-center">
-          <button className="icon-btn size-8" onClick={() => setOffset(offset - 1)} aria-label="Previous week"><ChevronLeft className="size-4" /></button>
+          <button className="icon-btn" onClick={() => setOffset(offset - 1)} aria-label="Previous week"><ChevronLeft className="size-4" /></button>
           <span className="num min-w-[78px] text-center text-[13px] font-[600] text-muted">
             {offset === 0 ? 'This week' : fmtDate(b[0], { month: 'short', day: 'numeric' })}
           </span>
-          <button className="icon-btn size-8" disabled={offset >= 0} onClick={() => setOffset(Math.min(0, offset + 1))} aria-label="Next week"><ChevronRight className="size-4" /></button>
+          <button className="icon-btn" disabled={offset >= 0} onClick={() => setOffset(Math.min(0, offset + 1))} aria-label="Next week"><ChevronRight className="size-4" /></button>
         </div>
       </div>
       <div className="card mt-3 p-4">
@@ -120,12 +126,15 @@ function MuscleCoverage() {
                 const zone = g.sets >= 10 && g.sets <= 20 ? 'bg-accent' : g.sets > 20 ? 'bg-warning' : 'bg-accent/45'
                 return (
                   <li key={g.group} className="grid grid-cols-[92px_1fr_36px] items-center gap-3">
-                    <span className={`text-[14px] ${g.sets ? 'text-ink' : 'text-faint'}`}>{g.group}</span>
+                    <span className={`text-[14px] ${g.sets ? 'text-ink' : 'text-subtle'}`}>{g.group}</span>
                     <span className="relative h-2 overflow-hidden rounded-full bg-raised">
                       <span className="absolute inset-y-0 border-x border-black/60 bg-white/[0.04]" style={{ left: `${(10 / max) * 100}%`, width: `${(10 / max) * 100}%` }} />
                       <span className={`absolute inset-y-0 left-0 rounded-full ${zone} transition-[width] duration-700 ease-out`} style={{ width: `${pct * 100}%` }} />
                     </span>
-                    <span className="num text-right text-[14px] font-[600] text-muted">{fmtNum(g.sets)}</span>
+                    <span className="num text-right text-[14px] font-[600] text-muted">
+                      {fmtNum(g.sets)}
+                      {g.sets > 20 && <span className="sr-only"> sets, above the 10 to 20 range</span>}
+                    </span>
                   </li>
                 )
               })}
@@ -153,7 +162,7 @@ function BodyWeight() {
     <section className="animate-rise">
       <div className="flex items-center justify-between">
         <h2 className="t-eyebrow text-subtle">Body weight</h2>
-        <button className="chip h-8" onClick={() => { setText(rows?.[0] ? fmtNum(toDisplayWeight(rows[0].value, unit)) : ''); setOpen(true) }}>
+        <button className="chip" onClick={() => { setText(rows?.[0] ? fmtNum(toDisplayWeight(rows[0].value, unit)) : ''); setOpen(true) }}>
           <Plus className="size-3.5" /> Log
         </button>
       </div>
@@ -176,7 +185,7 @@ function BodyWeight() {
                 <span className="text-muted">{fmtRelativeDay(r.measuredAt)}</span>
                 <span className="flex items-center gap-2">
                   <span className="num font-[600]">{fmtWeight(r.value, unit)} {unit}</span>
-                  <button className="icon-btn size-8 text-faint" onClick={() => del({ metricId: r._id })} aria-label="Delete">
+                  <button className="icon-btn text-subtle" onClick={() => del({ metricId: r._id })} aria-label={`Delete weigh-in ${fmtWeight(r.value, unit)} ${unit}, ${fmtRelativeDay(r.measuredAt)}`}>
                     <Trash2 className="size-3.5" />
                   </button>
                 </span>
@@ -203,7 +212,7 @@ function BodyWeight() {
               onChange={(e) => setText(e.target.value)}
               inputMode="decimal"
               placeholder="0.0"
-              className="num w-full bg-transparent text-[40px] font-[680] tracking-[-0.03em] outline-none placeholder:text-faint"
+              className="num w-full bg-transparent text-[40px] font-[680] tracking-[-0.03em] outline-none placeholder:text-subtle"
             />
             <span className="text-[18px] font-[600] text-subtle">{unit}</span>
           </label>

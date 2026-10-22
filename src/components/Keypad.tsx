@@ -1,5 +1,6 @@
 import { Check, ChevronDown, Delete, Minus, Plus } from 'lucide-react'
-import { useEffect, type ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
+import { announce } from '#/lib/announce'
 import { tap } from '#/lib/haptics'
 
 export type KeypadField = 'weight' | 'reps' | 'rir' | 'duration'
@@ -50,6 +51,15 @@ export function Keypad({
   accessory?: ReactNode
 }) {
   const decimal = field === 'weight'
+  const activeTab = useRef<HTMLButtonElement>(null)
+  const active = tabs.find((t) => t.field === field)
+
+  // Move focus into the keypad when it opens or the field changes, and say so.
+  useEffect(() => {
+    activeTab.current?.focus({ preventScroll: true })
+    announce(`${active?.label ?? ''} ${value || 'empty'}. Type a number, then Next.`)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [field])
 
   const press = (key: string) => {
     tap()
@@ -102,12 +112,12 @@ export function Keypad({
   const key = 'press grid h-[54px] place-items-center rounded-[14px] bg-raised text-[22px] font-[560] active:bg-pressed num'
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-50 animate-[rise_220ms_cubic-bezier(0.22,1,0.36,1)_both]">
+    <section role="group" aria-label={`Keypad, ${context}`} className="fixed inset-x-0 bottom-0 z-50 animate-[rise_220ms_cubic-bezier(0.22,1,0.36,1)_both]">
       <div className="mx-auto max-w-[640px] rounded-t-[26px] border border-b-0 border-line bg-[#0b0b0c]/95 px-3 pb-[calc(var(--safe-bottom)+10px)] pt-3 shadow-[0_-24px_60px_-12px_#000] backdrop-blur-xl lg:mb-4 lg:rounded-[26px] lg:border-b">
         <div className="flex items-center gap-2 px-1">
           <div className="min-w-0 flex-1 truncate text-[13px] font-[550] text-subtle">{context}</div>
           {accessory}
-          <button onClick={onClose} className="icon-btn size-9" aria-label="Close keypad">
+          <button onClick={onClose} className="icon-btn" aria-label="Close keypad">
             <ChevronDown className="size-5" />
           </button>
         </div>
@@ -117,6 +127,9 @@ export function Keypad({
             return (
               <button
                 key={t.field}
+                ref={on ? activeTab : undefined}
+                aria-pressed={on}
+                aria-label={`${t.label}: ${(on ? value : t.value) || 'empty'}`}
                 onClick={() => onField(t.field)}
                 className={`press flex h-[58px] flex-col items-start justify-center rounded-[14px] px-3 text-left transition-colors ${
                   on ? 'bg-ink text-black' : 'bg-surface text-ink'
@@ -126,11 +139,11 @@ export function Keypad({
                 <span className="num text-[22px] font-[650] leading-[26px] tracking-[-0.02em]">
                   {on ? (
                     <>
-                      <span className={fresh && value ? 'rounded bg-black/10 px-0.5' : ''}>{value || <span className="text-black/30">0</span>}</span>
-                      <span className="ml-0.5 inline-block h-[20px] w-[2px] translate-y-[2px] animate-pulse bg-black/70" />
+                      <span className={fresh && value ? 'rounded bg-black/10 px-0.5' : ''}>{value || <span className="text-black/55">0</span>}</span>
+                      <span aria-hidden className="ml-0.5 inline-block h-[20px] w-[2px] translate-y-[2px] animate-pulse bg-black/70" />
                     </>
                   ) : (
-                    t.value || <span className="text-faint">—</span>
+                    t.value || <span className="text-subtle">—</span>
                   )}
                 </span>
               </button>
@@ -140,12 +153,15 @@ export function Keypad({
 
         {field === 'rir' ? (
           <div className="mt-2">
-            <div className="grid grid-cols-5 gap-2">
+            <div role="radiogroup" aria-label="Reps in reserve" className="grid grid-cols-5 gap-2">
               {RIR_OPTIONS.map((o) => {
                 const on = value === String(o.v)
                 return (
                   <button
                     key={o.v}
+                    role="radio"
+                    aria-checked={on}
+                    aria-label={o.v === 0 ? 'Failure, nothing left' : `${o.label} reps left`}
                     onClick={() => {
                       tap()
                       onInput(String(o.v), true)
@@ -191,8 +207,8 @@ export function Keypad({
               {nextLabel === 'Log set' ? <Check className="size-6" strokeWidth={2.6} /> : null}
               {nextLabel}
             </button>
-            <button className={`${key} ${decimal ? '' : 'text-faint'}`} onClick={() => press('.')} disabled={!decimal}>
-              {decimal ? '.' : ''}
+            <button className={key} onClick={() => press('.')} aria-label="Decimal point" aria-disabled={!decimal} tabIndex={decimal ? undefined : -1}>
+              <span aria-hidden className={decimal ? '' : 'opacity-0'}>.</span>
             </button>
             <button className={key} onClick={() => press('0')}>0</button>
             <button className={`${key} text-muted`} onClick={() => press('back')} aria-label="Delete">
@@ -201,6 +217,6 @@ export function Keypad({
           </div>
         )}
       </div>
-    </div>
+    </section>
   )
 }

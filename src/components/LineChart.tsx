@@ -19,7 +19,7 @@ export function LineChart({
   const [hover, setHover] = useState<number | null>(null)
   const w = 600
   const h = height
-  const pad = { t: 16, r: 12, b: 22, l: 12 }
+  const pad = { t: 16, r: 12, b: 28, l: 12 }
 
   const geo = useMemo(() => {
     if (points.length === 0) return null
@@ -57,6 +57,8 @@ export function LineChart({
         <div className="text-[13px] text-subtle">{fmtDate(active.x, { month: 'short', day: 'numeric', year: 'numeric' })}</div>
       </div>
       <svg
+        role="img"
+        aria-label={`Line chart, ${points.length} points from ${fmtDate(geo.minX, { month: 'short', day: 'numeric' })} to ${fmtDate(geo.maxX, { month: 'short', day: 'numeric' })}. Latest ${fmtNum(points[points.length - 1].y)} ${unit}, highest ${fmtNum(Math.max(...points.map((p) => p.y)))} ${unit}.`}
         viewBox={`0 0 ${w} ${h}`}
         className="h-auto w-full touch-none overflow-visible"
         onPointerMove={(e) => {
@@ -82,10 +84,10 @@ export function LineChart({
         {geo.pts.length <= 40 &&
           geo.pts.map((p, i) => <circle key={i} cx={p.px} cy={p.py} r={i === hover ? 5 : 2.6} fill={i === hover ? color : '#000'} stroke={color} strokeWidth="1.75" />)}
         {hover !== null && <line x1={active.px} x2={active.px} y1={pad.t} y2={h - pad.b} stroke="#3a3a3e" strokeDasharray="3 4" />}
-        <text x={pad.l} y={h - 4} fill="#6f6f73" fontSize="12">
+        <text x={pad.l} y={h - 4} fill="#8a8a90" fontSize="17">
           {fmtDate(geo.minX, { month: 'short', day: 'numeric' })}
         </text>
-        <text x={w - pad.r} y={h - 4} fill="#6f6f73" fontSize="12" textAnchor="end">
+        <text x={w - pad.r} y={h - 4} fill="#8a8a90" fontSize="17" textAnchor="end">
           {fmtDate(geo.maxX, { month: 'short', day: 'numeric' })}
         </text>
       </svg>

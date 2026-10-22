@@ -11,6 +11,7 @@ import { ListSkeleton } from '#/components/Skeletons'
 type Search = { q?: string; group?: string }
 
 export const Route = createFileRoute('/_app/library/')({
+  head: () => ({ meta: [{ title: 'Library · Lift' }] }),
   validateSearch: (s: Record<string, unknown>): Search => ({
     q: typeof s.q === 'string' && s.q ? s.q : undefined,
     group: typeof s.group === 'string' && s.group ? s.group : undefined,
@@ -49,6 +50,7 @@ function Library() {
             onChange={(e) => set({ q: e.target.value || undefined })}
             placeholder={`Search ${results && !query && !group ? results.length : ''} exercises`.replace('  ', ' ')}
             className="field pl-11 pr-10"
+            aria-label="Search exercises"
             enterKeyHint="search"
             autoComplete="off"
           />
@@ -71,7 +73,7 @@ function Library() {
         <div className="pt-1">
           {sections.map((s) => (
             <section key={s.letter || 'all'}>
-              {s.letter && <h2 className="t-eyebrow pb-1 pt-5 text-faint">{s.letter}</h2>}
+              {s.letter && <h2 className="t-eyebrow pb-1 pt-5 text-subtle">{s.letter}</h2>}
               <ul>
                 {s.items.map((e) => (
                   <li key={e._id}>

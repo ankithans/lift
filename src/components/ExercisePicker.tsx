@@ -11,12 +11,12 @@ export const GROUPS = ['Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps', 'Quads
 
 export function MuscleChips({ value, onChange }: { value: string | null; onChange: (g: string | null) => void }) {
   return (
-    <div className="no-scrollbar -mx-5 flex gap-2 overflow-x-auto px-5 py-1">
-      <button className="chip" data-on={value === null} onClick={() => onChange(null)}>
+    <div role="group" aria-label="Filter by muscle" className="no-scrollbar -mx-5 flex gap-2 overflow-x-auto px-5 py-1">
+      <button className="chip" data-on={value === null} aria-pressed={value === null} onClick={() => onChange(null)}>
         All
       </button>
       {GROUPS.map((g) => (
-        <button key={g} className="chip" data-on={value === g} onClick={() => onChange(value === g ? null : g)}>
+        <button key={g} className="chip" data-on={value === g} aria-pressed={value === g} onClick={() => onChange(value === g ? null : g)}>
           {g}
         </button>
       ))}
@@ -77,6 +77,7 @@ export function ExercisePicker({
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Search 326 exercises"
+            aria-label="Search exercises"
             className="field pl-11 pr-10"
             autoComplete="off"
             enterKeyHint="search"
@@ -104,6 +105,7 @@ export function ExercisePicker({
             return (
               <li key={e._id}>
                 <button
+                  aria-pressed={multi ? on : undefined}
                   className="press flex w-full items-center gap-3 rounded-2xl px-2 py-2 text-left hover:bg-raised"
                   onClick={() => {
                     const item = { _id: e._id, name: e.name }
