@@ -236,8 +236,8 @@ function CreateExercise({
         </div>
       </fieldset>
       <fieldset>
-        <legend className="text-[14px] text-muted">How you log it</legend>
-        <div role="radiogroup" className="mt-2 grid grid-cols-2 gap-2">
+        <legend id="tracking-legend" className="text-[14px] text-muted">How you log it</legend>
+        <div role="radiogroup" aria-labelledby="tracking-legend" className="mt-2 grid grid-cols-2 gap-2">
           {TRACKING.map((t) => (
             <button
               type="button"

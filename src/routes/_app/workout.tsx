@@ -65,6 +65,8 @@ type Editing = {
   fresh: boolean
   /** Draft the user already confirmed despite the "looks off" warning. */
   warned?: string
+  /** Opened by auto-advance (the move was already announced). */
+  auto?: boolean
 }
 
 type Menu =
@@ -109,7 +111,7 @@ type Rest = { endsAt: number | null; total: number; endedAt: number | null; dism
  * doesn't re-render while resting. Only a natural expiry alerts — chime when
  * visible, a system notification when Lift is in the background.
  */
-function useRest(workout: ActiveWorkout | null | undefined): Rest {
+function useRest(workout: ActiveWorkout | null | undefined, quietUntil: { current: number }): Rest {
   const endsAt = workout?.restEndsAt ?? null
   const total = workout?.restTotalSec ?? 0
   const [endedAt, setEndedAt] = useState<number | null>(null)
@@ -133,11 +135,15 @@ function useRest(workout: ActiveWorkout | null | undefined): Rest {
       return
     }
     setEndedAt(null)
-    if (announced.current !== endsAt) {
+    // Optimistic and server timestamps differ slightly: treat them as one rest.
+    if (announced.current === null || Math.abs(announced.current - endsAt) > 3000) {
       announced.current = endsAt
-      const m = Math.floor(total / 60)
-      const s = total % 60
-      announce(`Rest started, ${m ? `${m} minute${m > 1 ? 's' : ''}` : ''}${m && s ? ' ' : ''}${s ? `${s} seconds` : ''}.`)
+      // logSet already announced the rest as part of its sentence.
+      if (Date.now() >= quietUntil.current) {
+        const m = Math.floor(total / 60)
+        const s = total % 60
+        announce(`Rest started, ${m ? `${m} minute${m > 1 ? 's' : ''}` : ''}${m && s ? ' ' : ''}${s ? `${s} seconds` : ''}.`)
+      }
     }
     const t = setTimeout(fire, endsAt - Date.now())
     // Background tabs throttle timers; re-check as soon as we're visible again.
@@ -215,14 +221,31 @@ function LiveWorkout() {
   const workout = useQuery(api.workouts.active)
   const navigate = useNavigate()
   const unit = useUnit()
-  const online = useOnline()
   const [editing, setEditing] = useState<Editing | null>(null)
   const [menu, setMenu] = useState<Menu>(null)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [prFlash, setPrFlash] = useState(0)
   const lastToggle = useRef(new Map<string, number>())
+  const quietUntil = useRef(0)
+  const focusAfter = useRef<string | null>(null)
   useWakeLock(Boolean(workout))
-  const rest = useRest(workout)
+  const rest = useRest(workout, quietUntil)
+
+  // Put keyboard/screen-reader focus somewhere sensible after the keypad closes or cards fold.
+  useEffect(() => {
+    if (!focusAfter.current) return
+    const target = document.getElementById(focusAfter.current)
+    focusAfter.current = null
+    target?.focus({ preventScroll: true })
+  })
+
+  const online = useOnline()
+  const wasOnline = useRef(true)
+  useEffect(() => {
+    if (wasOnline.current === online) return
+    wasOnline.current = online
+    announce(online ? 'Back online. Everything is saved.' : 'Offline. Sets will save when you are back online.')
+  }, [online])
 
   // PR/info toasts sit below the workout header instead of covering Finish.
   useEffect(() => {
@@ -420,6 +443,9 @@ function LiveWorkout() {
     tap('success')
     rest.dismiss()
     askNotifyPermission()
+    const restSec = restAfter(workout!, we)
+    const said = [`Set ${setLabel(set, workingIndex(we, index), null)} of ${we.exercise.name} logged.`, restSec ? `Rest ${fmtClock(restSec)}.` : '']
+    quietUntil.current = Date.now() + 1500
 
     // Keep the keypad open on the next set (superset partner first), prefilled.
     if (own) {
@@ -431,12 +457,17 @@ function LiveWorkout() {
         const nset = nwe.sets[next.index]
         const field = tabsFor(nwe.exercise.tracking)[0]
         const { text } = displayValue(nwe, nset, next.index, field)
-        setEditing({ setId: nset._id, weId: nwe._id, field, draft: text, initial: text, fresh: true })
+        setEditing({ setId: nset._id, weId: nwe._id, field, draft: text, initial: text, fresh: true, auto: true })
+        said.push(`Next: ${nwe._id === we._id ? '' : `${nwe.exercise.name}, `}set ${workingIndex(nwe, next.index) + 1}, ${fieldLabel(field, nwe.exercise.tracking, unit)} ${text || 'empty'}.`)
         requestAnimationFrame(() =>
           document.getElementById(`set-${nset._id}`)?.scrollIntoView({ block: 'center', behavior: reducedMotion() ? 'auto' : 'smooth' }),
         )
-      } else setEditing(null)
+      } else {
+        setEditing(null)
+        focusAfter.current = `tick-${set._id}`
+      }
     } else if (e?.setId === set._id) setEditing(null)
+    announce(said.filter(Boolean).join(' '))
 
     try {
       const res = await completeSet({ setId: set._id, ...values })
@@ -571,7 +602,10 @@ function LiveWorkout() {
                       we={we}
                       letter={letter}
                       inSuperset={Boolean(block.group)}
-                      onExpand={() => setExpanded(new Set(expanded).add(we._id))}
+                      onExpand={() => {
+                        focusAfter.current = `ex-${we._id}`
+                        setExpanded(new Set(expanded).add(we._id))
+                      }}
                     />
                   ) : (
                     <ExerciseCard
@@ -592,6 +626,7 @@ function LiveWorkout() {
                           ? () => {
                               const n = new Set(expanded)
                               n.delete(we._id)
+                              focusAfter.current = `fold-${we._id}`
                               setExpanded(n)
                             }
                           : undefined
@@ -639,14 +674,18 @@ function LiveWorkout() {
           value={editing.draft}
           fresh={editing.fresh}
           step={stepFor(editingWe, editing.field, unit)}
+          focusKey={editing.setId}
+          quiet={editing.auto}
           nextLabel={editing.field === mainFields[mainFields.length - 1] ? 'Log set' : 'Next'}
           accessory={<RestPill rest={rest} />}
-          onInput={(draft, fresh) => setEditing({ ...editing, draft, fresh })}
+          onInput={(draft, fresh) => setEditing({ ...editing, draft, fresh, auto: false })}
           onField={switchField}
           onNext={nextField}
           onDone={() => void logSet(editingWe, editingSet, editingIndex, editing)}
           onClose={() => {
-            if (commitEditing()) setEditing(null)
+            if (!commitEditing()) return
+            focusAfter.current = `cell-${editing.setId}-${editing.field}`
+            setEditing(null)
           }}
         />
       )}
@@ -866,18 +905,19 @@ function Header({
           <h1 className="truncate text-[16px] font-[650] tracking-[-0.01em]">{workout.title}</h1>
           <div className="num flex items-center gap-1.5 text-[13px] text-muted">
             <span aria-hidden>{fmtClock((now - workout.startedAt) / 1000)}</span>
+            <span className="sr-only">{Math.floor((now - workout.startedAt) / 60000)} minutes in,</span>
             <span aria-hidden>·</span>
             <span>
               {done}/{total} sets
             </span>
             {!online && (
-              <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-warning/10 px-2 py-0.5 text-[12px] font-[600] text-warning" role="status">
+              <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-warning/10 px-2 py-0.5 text-[12px] font-[600] text-warning">
                 <CloudOff aria-hidden className="size-3" /> Offline · saving when back
               </span>
             )}
           </div>
         </div>
-        <button onClick={onFinish} className="btn btn-sm btn-primary mr-1">
+        <button onClick={onFinish} className="btn btn-sm btn-primary mr-1 h-11">
           Finish
         </button>
       </div>
@@ -910,6 +950,7 @@ function FoldedCard({ we, letter, inSuperset, onExpand }: { we: WorkoutExercise;
   const prs = we.sets.filter((s) => s.isPr).length
   return (
     <button
+      id={`fold-${we._id}`}
       onClick={onExpand}
       aria-expanded={false}
       aria-label={`${we.exercise.name}, done: ${summary}${prs ? `, ${prs} personal record` : ''}. Show sets`}
@@ -988,7 +1029,7 @@ const ExerciseCard = memo(function ExerciseCard({
         <button onClick={onInfo} className="min-w-0 flex-1 pt-0.5 text-left">
           <div className="flex items-start gap-2">
             {letter && <span className="num mt-0.5 grid size-5 shrink-0 place-items-center rounded-md bg-accent/15 text-[11px] font-[750] text-accent">{letter}</span>}
-            <h2 className={`line-clamp-2 text-[17px] font-[620] leading-[22px] tracking-[-0.015em] ${allDone ? 'text-muted' : ''}`}>{we.exercise.name}</h2>
+            <h2 id={`ex-${we._id}`} tabIndex={-1} className={`line-clamp-2 text-[17px] outline-none font-[620] leading-[22px] tracking-[-0.015em] ${allDone ? 'text-muted' : ''}`}>{we.exercise.name}</h2>
           </div>
           <div className="num mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[13px] text-muted">
             {we.repLow ? <span>{fmtReps(we.repLow, we.repHigh)} reps</span> : null}
@@ -1006,7 +1047,7 @@ const ExerciseCard = memo(function ExerciseCard({
           </div>
         </button>
         {onCollapse && (
-          <button onClick={onCollapse} className="icon-btn -mt-1 shrink-0" aria-label="Collapse" aria-expanded>
+          <button onClick={onCollapse} className="icon-btn -mt-1 shrink-0" aria-label={`Collapse ${we.exercise.name}`} aria-expanded>
             <ChevronDown className="size-5 rotate-180" />
           </button>
         )}
@@ -1063,10 +1104,11 @@ const ExerciseCard = memo(function ExerciseCard({
                 return (
                   <button
                     key={c}
+                    id={`cell-${set._id}-${c}`}
                     onClick={() => onCell(we, set, i, c)}
                     aria-label={`${
                       c === 'weight' ? (t === 'weighted_bodyweight' ? `Added ${unit}` : unit === 'kg' ? 'Kilograms' : 'Pounds') : c === 'reps' ? 'Reps' : c === 'rir' ? 'Reps in reserve' : 'Seconds'
-                    } ${v.text || 'empty'}${v.suggested && v.text ? ', suggested from last time' : ''}, set ${label}`}
+                    } ${(active ? editing.draft : v.text) || 'empty'}${v.suggested && v.text && !active ? ', suggested from last time' : ''}, set ${label}`}
                     className={`press num h-11 min-w-0 rounded-[12px] text-center text-[19px] font-[620] tracking-[-0.01em] transition-colors ${
                       active ? 'bg-ink text-black' : set.done ? 'text-ink' : 'bg-raised hover:bg-pressed'
                     } ${v.suggested && !active ? 'font-[500] italic text-subtle' : ''}`}
@@ -1080,6 +1122,7 @@ const ExerciseCard = memo(function ExerciseCard({
                 )
               })}
               <button
+                id={`tick-${set._id}`}
                 onClick={() => onToggle(we, set, i)}
                 aria-label={`Set ${label} done`}
                 aria-pressed={set.done}
@@ -1089,7 +1132,7 @@ const ExerciseCard = memo(function ExerciseCard({
               >
                 <Check aria-hidden className={`size-5 ${set.done ? 'animate-pop' : ''}`} strokeWidth={2.8} />
               </button>
-              <span aria-hidden className="num col-span-full -mt-1 hidden pb-1.5 pl-[44px] text-[12px] text-muted max-[389px]:block">
+              <span className="num col-span-full -mt-1 hidden pb-1.5 pl-[44px] text-[12px] text-muted max-[389px]:block">
                 Last: {prevText}
               </span>
             </div>
@@ -1131,7 +1174,7 @@ function ExerciseMenu({
   index: number
   close: () => void
   open: (m: Menu) => void
-  update: (args: { workoutExerciseId: Id<'workoutExercises'>; group?: string | null; position?: number }) => Promise<null>
+  update: (args: { workoutExerciseId: Id<'workoutExercises'>; group?: string | null; position?: number; linkNext?: boolean }) => Promise<null>
   remove: () => void
 }) {
   const prev = workout.exercises[index - 1]
@@ -1158,9 +1201,8 @@ function ExerciseMenu({
           hint={next.exercise.name}
           onClick={async () => {
             close()
-            const g = next.group ?? `ss-${Date.now().toString(36)}`
-            await update({ workoutExerciseId: we._id, group: g })
-            if (!next.group) await update({ workoutExerciseId: next._id, group: g })
+            await update({ workoutExerciseId: we._id, linkNext: true })
+            announce(`${we.exercise.name} and ${next.exercise.name} are now a superset.`)
           }}
         />
       ) : null}
@@ -1285,7 +1327,7 @@ function RestStrip({
               <button onClick={() => onAdjust(15)} aria-label="15 seconds more" className="press num h-11 rounded-full px-3 text-[14px] font-[650] text-muted hover:bg-pressed">
                 +15
               </button>
-              <button onClick={onSkip} className="press h-11 rounded-full bg-ink px-4 text-[14px] font-[650] text-black">
+              <button onClick={onSkip} aria-label={`Skip rest, ${fmtClock(remaining)} left`} className="press h-11 rounded-full bg-ink px-4 text-[14px] font-[650] text-black">
                 Skip
               </button>
             </>
@@ -1381,7 +1423,7 @@ function FinishPanel({
         </button>
       </div>
       {(slow || (busy && !online)) && (
-        <p role="status" className="mt-3 text-center text-[13px] text-warning">
+        <p className="mt-3 text-center text-[13px] text-warning">
           Still saving… keep Lift open. It finishes as soon as you’re back online.
         </p>
       )}

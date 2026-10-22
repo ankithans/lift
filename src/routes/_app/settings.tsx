@@ -198,8 +198,8 @@ function AiAccess() {
               }
             }}
           >
-            <label className="text-[14px] text-muted">Name it after the agent that will use it</label>
-            <input value={name} onChange={(e) => setName(e.target.value)} className="field mt-2" placeholder="Claude" />
+            <label htmlFor="token-name" className="text-[14px] text-muted">Name it after the agent that will use it</label>
+            <input id="token-name" value={name} onChange={(e) => setName(e.target.value)} className="field mt-2" placeholder="Claude" />
             <button disabled={busy || !name.trim()} className="btn btn-primary mt-4 w-full">Create token</button>
           </form>
         ) : (

@@ -476,7 +476,7 @@ export const swapWorkoutExercise = defineMutation({
 
 export const updateWorkoutExercise = defineMutation({
   name: "update_workout_exercise",
-  description: "Change rest seconds, notes, rep target or superset group (null = unlink) of an exercise in a workout, or move it to a new 0-based position.",
+  description: "Change rest seconds, notes, rep target or superset group (null = unlink) of an exercise in a workout, move it to a new 0-based position, or `linkNext` to superset it with the following exercise.",
   args: {
     workoutExerciseId: v.id("workoutExercises"),
     restSec: v.optional(v.number()),
@@ -485,9 +485,20 @@ export const updateWorkoutExercise = defineMutation({
     repLow: v.optional(v.number()),
     repHigh: v.optional(v.number()),
     position: v.optional(v.number()),
+    /** Join this exercise and the next one into a superset (one atomic step). */
+    linkNext: v.optional(v.boolean()),
   },
-  run: async (ctx, { userId }, { workoutExerciseId, position, ...patch }) => {
+  run: async (ctx, { userId }, { workoutExerciseId, position, linkNext, ...patch }) => {
     const we = await own(ctx, userId, "workoutExercises", workoutExerciseId);
+    if (linkNext) {
+      const rows = await exercisesOf(ctx, we.workoutId);
+      const next = rows[rows.findIndex((r) => r._id === we._id) + 1];
+      if (!next) fail("No next exercise to superset with");
+      const g = next.group ?? we.group ?? `ss-${we._id.slice(-6)}${next._id.slice(-4)}`;
+      await ctx.db.patch(we._id, { group: g });
+      await ctx.db.patch(next._id, { group: g });
+      return null;
+    }
     await ctx.db.patch(we._id, {
       ...(patch.restSec !== undefined ? { restSec: Math.max(0, Math.min(900, patch.restSec)) } : {}),
       ...(patch.notes !== undefined ? { notes: patch.notes ?? undefined } : {}),

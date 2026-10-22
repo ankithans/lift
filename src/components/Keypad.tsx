@@ -1,5 +1,5 @@
 import { Check, ChevronDown, Delete, Minus, Plus } from 'lucide-react'
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useEffect, useRef, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react'
 import { announce } from '#/lib/announce'
 import { tap } from '#/lib/haptics'
 
@@ -35,6 +35,8 @@ export function Keypad({
   accessory,
   target,
   warning,
+  focusKey,
+  quiet,
 }: {
   context: string
   tabs: KeypadTab[]
@@ -55,6 +57,10 @@ export function Keypad({
   target?: { low: number; high: number } | null
   /** Shown when the value looks like a typo; the next confirm keeps it anyway. */
   warning?: string | null
+  /** Changes when the keypad moves to another set, so focus re-enters the active tab. */
+  focusKey?: string
+  /** Skip the field announcement (the caller already said something more useful). */
+  quiet?: boolean
 }) {
   const decimal = field === 'weight'
   const activeTab = useRef<HTMLButtonElement>(null)
@@ -63,9 +69,9 @@ export function Keypad({
   // Move focus into the keypad when it opens or the field changes, and say so.
   useEffect(() => {
     activeTab.current?.focus({ preventScroll: true })
-    announce(`${active?.label ?? ''} ${value || 'empty'}. Type a number, then Next.`)
+    if (!quiet) announce(`${active?.label ?? ''} ${value || 'empty'}. Type a number, then Next.`)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [field])
+  }, [field, focusKey])
 
   const press = (key: string) => {
     tap()
@@ -94,11 +100,13 @@ export function Keypad({
     onInput(String(next), true)
   }
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
+  // Keys are handled only while focus is inside the keypad (focus moves there on open).
+  const onKeyDown = (e: ReactKeyboardEvent) => {
+    {
       if (e.metaKey || e.ctrlKey || e.altKey) return
       const t = e.target as HTMLElement | null
-      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return
+      // Enter/Space on a focused key/button performs that button's own action.
+      if ((e.key === 'Enter' || e.key === ' ') && t?.tagName === 'BUTTON' && !t.dataset.tab) return
       if (/^[0-9]$/.test(e.key)) {
         if (field === 'rir') onInput(String(Math.min(4, Number(e.key))), true)
         else press(e.key)
@@ -111,14 +119,12 @@ export function Keypad({
       else return
       e.preventDefault()
     }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  })
+  }
 
   const key = 'press grid h-[54px] place-items-center rounded-[14px] bg-raised text-[22px] font-[560] active:bg-pressed num'
 
   return (
-    <section role="group" aria-label={`Keypad, ${context}`} className="fixed inset-x-0 bottom-0 z-50 animate-[rise_220ms_cubic-bezier(0.22,1,0.36,1)_both]">
+    <section role="region" aria-label={`Keypad, ${context}`} onKeyDown={onKeyDown} className="fixed inset-x-0 bottom-0 z-50 animate-[rise_220ms_cubic-bezier(0.22,1,0.36,1)_both]">
       <div className="mx-auto max-w-[640px] rounded-t-[26px] border border-b-0 border-line bg-[#0b0b0c]/95 px-3 pb-[calc(var(--safe-bottom)+10px)] pt-3 shadow-[0_-24px_60px_-12px_#000] backdrop-blur-xl lg:mb-4 lg:rounded-[26px] lg:border-b">
         <div className="flex items-center gap-2 px-1">
           <div className="min-w-0 flex-1 truncate text-[13px] font-[550] text-muted">{context}</div>
@@ -133,6 +139,11 @@ export function Keypad({
               }`}
             >
               {target.low === target.high ? target.high : `${target.low}–${target.high}`} reps
+              {field === 'reps' && value ? (
+                <span className="sr-only">
+                  {Number(value) < target.low ? ', below target' : Number(value) > target.high ? ', above target' : ', in target'}
+                </span>
+              ) : null}
             </span>
           ) : null}
           {accessory}
@@ -148,7 +159,8 @@ export function Keypad({
                 key={t.field}
                 ref={on ? activeTab : undefined}
                 aria-pressed={on}
-                aria-label={`${t.label}: ${(on ? value : t.value) || 'empty'}`}
+                data-tab="true"
+                aria-label={`${t.label} ${(on ? value : t.value) || 'empty'}`}
                 onClick={() => onField(t.field)}
                 className={`press flex h-[58px] flex-col items-start justify-center rounded-[14px] px-3 text-left transition-colors ${
                   on ? 'bg-ink text-black' : 'bg-surface text-ink'

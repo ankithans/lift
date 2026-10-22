@@ -389,10 +389,24 @@ export const updateSlot = defineMutation({
     targetRir: v.optional(v.union(v.number(), v.null())),
     notes: v.optional(v.union(v.string(), v.null())),
     group: v.optional(v.union(v.string(), v.null())),
+    /** Join this exercise and the next one into a superset (one atomic step). */
+    linkNext: v.optional(v.boolean()),
   },
   audit: true,
-  run: async (ctx, { userId }, { slotId, ...patch }) => {
+  run: async (ctx, { userId }, { slotId, linkNext, ...patch }) => {
     const slot = await own(ctx, userId, "programExercises", slotId);
+    if (linkNext) {
+      const slots = await ctx.db
+        .query("programExercises")
+        .withIndex("by_programDayId_and_order", (q) => q.eq("programDayId", slot.programDayId))
+        .take(60);
+      const next = slots[slots.findIndex((s) => s._id === slot._id) + 1];
+      if (!next) fail("No next exercise to superset with");
+      const g = next.group ?? slot.group ?? `ss-${slot._id.slice(-6)}${next._id.slice(-4)}`;
+      await ctx.db.patch(slot._id, { group: g });
+      await ctx.db.patch(next._id, { group: g });
+      return null;
+    }
     const clean: Partial<Doc<"programExercises">> = {};
     if (patch.sets !== undefined) clean.sets = Math.max(1, Math.min(12, Math.round(patch.sets)));
     if (patch.repLow !== undefined) clean.repLow = Math.max(0, patch.repLow);

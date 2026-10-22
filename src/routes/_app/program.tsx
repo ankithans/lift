@@ -66,7 +66,7 @@ function ProgramEditor() {
           return (
             <section key={d._id} className={`card overflow-hidden transition-colors ${expanded ? '' : 'hover:bg-raised/50'}`}>
               <div className="flex items-center">
-                <button onClick={() => setOpen(expanded ? null : d._id)} className="flex min-h-16 flex-1 items-center gap-4 pl-4 text-left">
+                <button onClick={() => setOpen(expanded ? null : d._id)} aria-expanded={expanded} className="flex min-h-16 flex-1 items-center gap-4 pl-4 text-left">
                   <span className="w-9 text-[13px] font-[650] text-subtle">{d.weekday !== undefined ? WEEKDAYS[d.weekday] : '—'}</span>
                   <span className="min-w-0 flex-1">
                     <span className={`block truncate text-[16px] font-[600] ${d.kind === 'rest' ? 'text-subtle' : ''}`}>{d.kind === 'rest' ? 'Rest' : d.title}</span>
@@ -187,7 +187,7 @@ function SlotEditor({ slot, day, index, close, onSwap }: { slot: Slot; day: Day;
         <div className="px-1 text-[15px] font-[560] text-muted">Rest</div>
         <div className="mt-2 grid grid-cols-5 gap-1.5">
           {[30, 60, 90, 120, 180].map((s) => (
-            <button key={s} onClick={() => save({ restSec: s })} className={`press num h-10 rounded-[12px] text-[14px] font-[600] ${v.restSec === s ? 'bg-ink text-black' : 'bg-pressed text-muted'}`}>
+            <button key={s} onClick={() => save({ restSec: s })} aria-pressed={v.restSec === s} className={`press num h-10 rounded-[12px] text-[14px] font-[600] ${v.restSec === s ? 'bg-ink text-black' : 'bg-pressed text-muted'}`}>
               {fmtClock(s)}
             </button>
           ))}
@@ -213,9 +213,7 @@ function SlotEditor({ slot, day, index, close, onSwap }: { slot: Slot; day: Day;
             hint={next.exercise.name}
             onClick={async () => {
               close()
-              const g = next.group ?? `ss-${Date.now().toString(36)}`
-              await update({ slotId: slot._id, group: g })
-              if (!next.group) await update({ slotId: next._id, group: g })
+              await update({ slotId: slot._id, linkNext: true })
             }}
           />
         ) : null}
@@ -254,7 +252,7 @@ function DayEditor({ day, close }: { day: Day; close: () => void }) {
           }}
           className="flex gap-2"
         >
-          <input value={title} onChange={(e) => setTitle(e.target.value)} className="field" placeholder="Name" />
+          <input value={title} onChange={(e) => setTitle(e.target.value)} className="field" placeholder="Name" aria-label="Day name" />
           <button className="btn btn-primary btn-sm h-[52px]">Save</button>
         </form>
       )}

@@ -147,7 +147,7 @@ function SignIn() {
           )}
           {error && <p id="signin-error" role="alert" className="pt-1 text-center text-[14px] text-danger animate-fade">{error}</p>}
           <p className="pt-4 text-center text-[12px] leading-[18px] text-subtle">
-            By continuing you agree to keep lifting. <a href="/privacy" className="inline-block py-2 underline decoration-subtle underline-offset-2">Privacy</a>
+            By continuing you agree to keep lifting. <a href="/privacy" className="inline-block px-1 py-3 underline decoration-subtle underline-offset-2">Privacy</a>
           </p>
         </div>
       </div>

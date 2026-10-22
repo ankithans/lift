@@ -33,7 +33,7 @@ export function PageHeader({
         <div className="flex items-center gap-1">
           {action}
           {!back && (
-            <Link to="/settings" className="press -mr-1 rounded-full lg:hidden" aria-label="Settings">
+            <Link to="/settings" className="press -mr-[6px] grid size-11 place-items-center rounded-full lg:hidden" aria-label="Settings">
               <Avatar size={34} />
             </Link>
           )}

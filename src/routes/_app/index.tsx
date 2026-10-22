@@ -71,7 +71,7 @@ function Train() {
               <h2 id="week-title" className="text-[15px] font-[650] tracking-[-0.01em]">
                 {offset === 0 ? 'This week' : offset === -1 ? 'Last week' : offset === 1 ? 'Next week' : `Week of ${fmtDate(boundaries[0], { month: 'short', day: 'numeric' })}`}
               </h2>
-              <Link to="/program" className="block truncate text-[13px] text-subtle hover:text-ink">
+              <Link to="/program" className="-my-2 flex min-h-11 items-center truncate text-[13px] text-subtle hover:text-ink">
                 {week.program.name}
               </Link>
             </div>

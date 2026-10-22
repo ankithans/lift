@@ -35,18 +35,23 @@ export function Sheet({
     returnFocus.current = document.activeElement as HTMLElement | null
     const root = document.getElementById('app-root')
     root?.setAttribute('inert', '')
-    const id = requestAnimationFrame(() => {
-      const first = panel.current?.querySelector<HTMLElement>('[autofocus], input, textarea, [data-autofocus]')
-      ;(first ?? panel.current)?.focus({ preventScroll: true })
-    })
     return () => {
-      cancelAnimationFrame(id)
       // Only release if no other sheet is still open.
       if (document.querySelectorAll('[data-sheet-open]').length === 0) root?.removeAttribute('inert')
       const target = returnFocus.current
       if (target && document.contains(target)) requestAnimationFrame(() => target.focus({ preventScroll: true }))
     }
   }, [open])
+
+  // Move focus in once the panel actually exists (it mounts a frame after `open`).
+  useEffect(() => {
+    if (!open || !mounted) return
+    const id = requestAnimationFrame(() => {
+      const first = panel.current?.querySelector<HTMLElement>('[autofocus], input, textarea, [data-autofocus]')
+      ;(first ?? panel.current)?.focus({ preventScroll: true })
+    })
+    return () => cancelAnimationFrame(id)
+  }, [open, mounted])
 
   useEffect(() => {
     if (open) {
@@ -58,6 +63,16 @@ export function Sheet({
     const t = setTimeout(() => setMounted(false), 260)
     return () => clearTimeout(t)
   }, [open])
+
+  // Move focus in once the panel actually exists (it mounts a frame after `open`).
+  useEffect(() => {
+    if (!open || !mounted) return
+    const id = requestAnimationFrame(() => {
+      const first = panel.current?.querySelector<HTMLElement>('[autofocus], input, textarea, [data-autofocus]')
+      ;(first ?? panel.current)?.focus({ preventScroll: true })
+    })
+    return () => cancelAnimationFrame(id)
+  }, [open, mounted])
 
   useEffect(() => {
     if (!open) return
@@ -72,6 +87,7 @@ export function Sheet({
   }, [open, onClose])
 
   if (!mounted || typeof document === 'undefined') return null
+
 
   const onPointerDown = (e: React.PointerEvent) => {
     startY.current = e.clientY
