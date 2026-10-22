@@ -12,7 +12,7 @@ const num = (value: unknown) => typeof value === 'number' && Number.isFinite(val
 const str = (value: unknown) => typeof value === 'string' ? value : undefined;
 const timestamp = (value: unknown) => { const n = Date.parse(String(value)); if (!Number.isFinite(n)) throw new Error('WHOOP returned an invalid date.'); return n; };
 export async function request(url: string, init: RequestInit) {
-  const response = await fetch(url, { ...init, signal: AbortSignal.timeout(20_000) });
+  const response = await fetch(url, { ...init, ...(init.body instanceof URLSearchParams ? { body: init.body.toString(), headers: { ...init.headers, 'Content-Type': 'application/x-www-form-urlencoded' } } : {}), signal: AbortSignal.timeout(20_000) });
   if (!response.ok) {
     const retry = response.headers.get('retry-after');
     const retryMs = retry ? Math.max(Number(retry) * 1000 || Date.parse(retry) - Date.now(), 1000) : 60_000;

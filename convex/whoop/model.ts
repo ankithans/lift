@@ -18,7 +18,8 @@ export const record = v.object({
   scoreState, nap: v.optional(v.boolean()), sport: v.optional(v.string()), metrics,
 });
 export type SensorRecord = Infer<typeof record>;
-export const job = v.object({ start: v.number(), end: v.number(), resource: v.number(), nextToken: v.optional(v.string()) });
+export const target = v.object({ eventId: v.id('whoopEvents'), kind, externalId: v.string(), deleted: v.boolean(), phase: v.number(), cycleId: v.optional(v.string()) });
+export const job = v.object({ start: v.number(), end: v.number(), resource: v.number(), nextToken: v.optional(v.string()), target: v.optional(target) });
 export const connectionStatus = v.union(v.literal('connected'), v.literal('syncing'), v.literal('reconnect'), v.literal('error'), v.literal('disconnecting'));
 export const whoopTables = {
   whoopConnections: defineTable({
@@ -26,6 +27,7 @@ export const whoopTables = {
     scope: v.string(), status: connectionStatus, connectedAt: v.number(), lastSyncedAt: v.optional(v.number()),
     backfilledAt: v.optional(v.number()), lastAttemptAt: v.optional(v.number()), error: v.optional(v.string()),
     lease: v.optional(v.string()), leaseUntil: v.optional(v.number()), refreshInFlight: v.optional(v.boolean()),
+    refreshedAt: v.optional(v.number()), refreshCount: v.optional(v.number()),
     job: v.optional(job), retryCount: v.optional(v.number()),
   }).index('by_userId', ['userId']).index('by_whoopUserId', ['whoopUserId']).index('by_status', ['status']),
   whoopStates: defineTable({ userId: v.id('users'), stateHash: v.string(), expiresAt: v.number(), returnTo: v.string() })
@@ -33,7 +35,10 @@ export const whoopTables = {
   whoopRecords: defineTable({ userId: v.id('users'), ...record.fields })
     .index('by_userId_and_kind_and_externalId', ['userId', 'kind', 'externalId'])
     .index('by_userId_and_startAt', ['userId', 'startAt'])
-    .index('by_userId_and_kind_and_cycleId', ['userId', 'kind', 'cycleId']),
+    .index('by_userId_and_kind_and_cycleId', ['userId', 'kind', 'cycleId'])
+    .index('by_userId_and_kind_and_sleepId', ['userId', 'kind', 'sleepId']),
+  whoopEvents: defineTable({ userId: v.id('users'), traceId: v.string(), kind, externalId: v.string(), deleted: v.boolean(), done: v.boolean(), at: v.number() })
+    .index('by_traceId', ['traceId']).index('by_userId_and_done_and_at', ['userId', 'done', 'at']).index('by_done_and_at', ['done', 'at']),
 };
 
 export const activity = v.object({

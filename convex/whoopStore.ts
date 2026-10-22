@@ -3,7 +3,7 @@ import { RateLimiter, MINUTE, DAY } from '@convex-dev/rate-limiter';
 import schema from './schema';
 import { components, internal } from './_generated/api';
 import { internalMutation } from './_generated/server';
-import { record, job } from './whoop/model';
+import { record, job, kind } from './whoop/model';
 
 const limits = new RateLimiter(components.rateLimiter, {
   whoopMinute: { kind: 'token bucket', rate: 75, period: MINUTE, capacity: 1 },
@@ -94,12 +94,12 @@ export const tokens = internalMutation({
   handler:async(ctx,{connectionId,lease,...tokens})=>{
     const c=await ctx.db.get(connectionId);
     if(!c || c.lease!==lease || c.status!=='syncing')return false;
-    await ctx.db.patch(c._id,{...tokens,refreshInFlight:false});return true;
+    await ctx.db.patch(c._id,{...tokens,refreshInFlight:false,refreshedAt:Date.now(),refreshCount:(c.refreshCount??0)+1});return true;
   },
 });
 export const finishPage = internalMutation({
-  args: { ...leased, records:v.array(record), nextJob:v.optional(job) }, returns:v.null(),
-  handler:async(ctx,{connectionId,lease,records,nextJob})=>{
+  args: { ...leased, records:v.array(record), nextJob:v.optional(job), eventDoneId:v.optional(v.id('whoopEvents')), remove:v.optional(v.object({kind,externalId:v.string()})) }, returns:v.null(),
+  handler:async(ctx,{connectionId,lease,records,nextJob,eventDoneId,remove})=>{
     const c=await ctx.db.get(connectionId);
     if(!c || c.lease!==lease || c.status!=='syncing')return null;
     for(const data of records){
@@ -112,7 +112,20 @@ export const finishPage = internalMutation({
       if(!old || data.updatedAt>=old.updatedAt){
         const value={...data,startAt,userId:c.userId};
         if(old)await ctx.db.replace(old._id,value);else await ctx.db.insert('whoopRecords',value);
+        if(data.kind==='cycle'){for(const k of ['sleep','recovery'] as const){for(const child of await ctx.db.query('whoopRecords').withIndex('by_userId_and_kind_and_cycleId',q=>q.eq('userId',c.userId).eq('kind',k).eq('cycleId',data.externalId)).take(20)){if(child.startAt!==data.startAt)await ctx.db.patch(child._id,{startAt:data.startAt});}}}
       }
+    }
+    if(remove){
+      const direct=await ctx.db.query('whoopRecords').withIndex('by_userId_and_kind_and_externalId',q=>q.eq('userId',c.userId).eq('kind',remove.kind).eq('externalId',remove.externalId)).unique();
+      if(direct)await ctx.db.delete(direct._id);
+      if(remove.kind==='sleep'||remove.kind==='recovery'){
+        const linked=await ctx.db.query('whoopRecords').withIndex('by_userId_and_kind_and_sleepId',q=>q.eq('userId',c.userId).eq('kind','recovery').eq('sleepId',remove.externalId)).take(20);
+        for(const r of linked)await ctx.db.delete(r._id);
+      }
+    }
+    if(eventDoneId){const event=await ctx.db.get(eventDoneId);if(event?.userId===c.userId)await ctx.db.patch(eventDoneId,{done:true});}
+    if(!nextJob){const event=await ctx.db.query('whoopEvents').withIndex('by_userId_and_done_and_at',q=>q.eq('userId',c.userId).eq('done',false)).first();
+      if(event)nextJob={start:Date.now(),end:Date.now(),resource:0,target:{eventId:event._id,kind:event.kind,externalId:event.externalId,deleted:event.deleted,phase:0}};
     }
     await ctx.db.patch(c._id,{job:nextJob,lease:undefined,leaseUntil:undefined,retryCount:0,error:undefined,
       ...(nextJob?{}:{status:'connected' as const,lastSyncedAt:Date.now(),backfilledAt:c.backfilledAt??Date.now()})});
@@ -150,6 +163,7 @@ export const sweep = internalMutation({
     if(!page.isDone)await ctx.scheduler.runAfter(1000,internal.whoopStore.sweep,{cursor:page.continueCursor});
     const expired=await ctx.db.query('whoopStates').withIndex('by_expiresAt',q=>q.lt('expiresAt',Date.now())).take(100);
     for(const s of expired)await ctx.db.delete(s._id);
+    for(const e of await ctx.db.query('whoopEvents').withIndex('by_done_and_at',q=>q.eq('done',true).lt('at',Date.now()-DAY)).take(100))await ctx.db.delete(e._id);
     return null;
   },
 });
@@ -159,7 +173,9 @@ export const erase = internalMutation({
     const c=await ctx.db.get(connectionId);if(!c||c.status!=='disconnecting')return null;
     const rows=await ctx.db.query('whoopRecords').withIndex('by_userId_and_startAt',q=>q.eq('userId',c.userId)).take(200);
     for(const r of rows)await ctx.db.delete(r._id);
-    if(rows.length===200)await ctx.scheduler.runAfter(0,internal.whoopStore.erase,{connectionId});else await ctx.db.delete(c._id);
+    const events=await ctx.db.query('whoopEvents').withIndex('by_userId_and_done_and_at',q=>q.eq('userId',c.userId)).take(200);
+    for(const e of events)await ctx.db.delete(e._id);
+    if(rows.length===200||events.length===200)await ctx.scheduler.runAfter(0,internal.whoopStore.erase,{connectionId});else await ctx.db.delete(c._id);
     return null;
   },
 });
@@ -177,5 +193,37 @@ export const expireForRefresh = internalMutation({
     if(!c||c.status!=='connected'||(c.leaseUntil??0)>Date.now())return false;
     await ctx.db.patch(c._id,{expiresAt:0,lastAttemptAt:0});
     await ctx.runMutation(internal.whoopStore.enqueue,{userId:c.userId});return true;
+  },
+});
+
+export const webhook = internalMutation({
+  args:{whoopUserId:v.number(),traceId:v.string(),kind,externalId:v.string(),deleted:v.boolean()},returns:v.null(),
+  handler:async(ctx,args)=>{
+    if(await ctx.db.query('whoopEvents').withIndex('by_traceId',q=>q.eq('traceId',args.traceId)).unique())return null;
+    const c=await ctx.db.query('whoopConnections').withIndex('by_whoopUserId',q=>q.eq('whoopUserId',args.whoopUserId)).unique();
+    if(!c||c.status==='disconnecting')return null;
+    const {whoopUserId:_,...event}=args;
+    const eventId=await ctx.db.insert('whoopEvents',{...event,userId:c.userId,done:false,at:Date.now()});
+    if(c.status!=='reconnect'&&!c.job&&(c.leaseUntil??0)<=Date.now()){
+      await ctx.db.patch(c._id,{status:'syncing',job:{start:Date.now(),end:Date.now(),resource:0,target:{eventId,kind:args.kind,externalId:args.externalId,deleted:args.deleted,phase:0}},lease:undefined,leaseUntil:undefined});
+      await ctx.scheduler.runAfter(0,internal.whoopSync.page,{connectionId:c._id});
+    }
+    return null;
+  },
+});
+
+/** Operator diagnostics: counts and sync/refresh metadata only, never token material. */
+export const diagnostics=internalMutation({
+  args:{email:v.string()},returns:v.union(v.null(),v.object({connectionId:v.id('whoopConnections'),status:v.string(),error:v.optional(v.string()),lastSyncedAt:v.optional(v.number()),backfilledAt:v.optional(v.number()),refreshCount:v.number(),refreshedAt:v.optional(v.number()),counts:v.record(v.string(),v.number())})),
+  handler:async(ctx,{email})=>{
+    const users=await ctx.db.query('users').withIndex('email',q=>q.eq('email',email)).take(10);
+    for(const u of users){
+      const c=await ctx.db.query('whoopConnections').withIndex('by_userId',q=>q.eq('userId',u._id)).unique();
+      if(!c)continue;
+      const counts:Record<string,number>={cycle:0,recovery:0,sleep:0,workout:0};
+      for(const r of await ctx.db.query('whoopRecords').withIndex('by_userId_and_startAt',q=>q.eq('userId',u._id)).take(5000))counts[r.kind]++;
+      return {connectionId:c._id,status:c.status,error:c.error,lastSyncedAt:c.lastSyncedAt,backfilledAt:c.backfilledAt,refreshCount:c.refreshCount??0,refreshedAt:c.refreshedAt,counts};
+    }
+    return null;
   },
 });

@@ -69,15 +69,18 @@ export const week = query({
       records.push(...await ctx.db.query('whoopRecords').withIndex('by_userId_and_startAt', q => q.eq('userId', userId).gte('startAt', todayAt - 2 * 86400000).lt('startAt', todayAt + 2 * 86400000)).take(300));
     }
     const workouts = await ctx.db.query('workouts').withIndex('by_userId_and_startedAt', q => q.eq('userId', userId).gte('startedAt', from - 86400000).lt('startedAt', end)).take(500);
-    const cycles = new Map(records.filter(r => r.kind === 'cycle').map(r => [r.externalId, r]));
+    // Today's extra range can overlap the browsed week. Process each record once,
+    // in cycle order, so activity counts and same-date cycle overwrites stay stable.
+    const ordered = [...new Map(records.map(r => [r._id, r])).values()].sort((a,b) => a.startAt-b.startAt || a._creationTime-b._creationTime);
+    const cycles = new Map(ordered.filter(r => r.kind === 'cycle').map(r => [r.externalId, r]));
     const groups = new Map<string, WhoopDay>();
     // Chronological overwrite chooses the last physiological cycle when two begin on one date.
-    for (const r of records) {
+    for (const r of ordered) {
       const cycle = r.cycleId ? cycles.get(r.cycleId) : undefined;
       const at = r.kind === 'workout' ? r.startAt : cycle?.startAt ?? r.startAt;
       const key = dateKey(at, timezone);
       const d = groups.get(key) ?? { date: key, metrics: {}, activities: [], linked: [] };
-      if (r.kind === 'cycle') Object.assign(d.metrics, r.metrics);
+      if (r.kind === 'cycle') { d.metrics = { ...r.metrics }; delete d.recoveryState; delete d.sleepState; }
       if (r.kind === 'recovery') { Object.assign(d.metrics, r.metrics); d.recoveryState = r.scoreState; }
       if (r.kind === 'sleep' && !r.nap) { Object.assign(d.metrics, r.metrics); d.sleepState = r.scoreState; }
       if (r.kind === 'workout') {

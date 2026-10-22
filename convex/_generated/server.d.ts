@@ -34,6 +34,7 @@ type Env = {
   readonly WHOOP_CLIENT_ID: string | undefined;
   readonly WHOOP_CLIENT_SECRET: string | undefined;
   readonly WHOOP_REDIRECT_URI: string | undefined;
+  readonly WHOOP_WEBHOOK_SECRET: string | undefined;
 };
 
 /**

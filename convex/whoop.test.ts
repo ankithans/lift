@@ -5,6 +5,7 @@ import schema from './schema';
 import { api, internal } from './_generated/api';
 import { dateKey, matchingWorkout } from './whoop/model';
 import { parseRecord } from './whoop/api';
+import { verifySignature } from './whoop/signature';
 const modules=import.meta.glob('./**/*.ts');
 afterEach(()=>vi.useRealTimers());
 const sensor={kind:'workout' as const,externalId:'sport-1',startAt:1000,endAt:61000,updatedAt:61000,scoreState:'SCORED' as const,sport:'strength trainer',metrics:{strain:9.8,avgHr:123,kilojoule:450}};
@@ -45,6 +46,9 @@ describe('WHOOP ownership, calendar dates and deduplication',()=>{
   expect((await stranger.query(api.whoop.week,args)).status).toBe('disconnected');
   expect(await stranger.query(api.whoop.forWorkout,{workoutId:w})).toEqual([]);
   expect((await owner.query(api.whoop.forWorkout,{workoutId:w}))).toHaveLength(1);
+  // Today's independent lookup overlaps this week's end when browsing last week.
+  const overlap=await owner.query(api.whoop.week,{...args,end:Date.parse('2026-10-23T00:00Z'),todayAt:Date.parse('2026-10-23T00:00Z')});
+  expect(overlap.days.find(d=>d.date==='2026-10-22')?.linked).toHaveLength(1);
   expect((await t.query(api.whoop.week,args)).days).toEqual([]);
  });
  test('OAuth states are single use and expire',async()=>{
@@ -72,4 +76,38 @@ describe('WHOOP ownership, calendar dates and deduplication',()=>{
   expect(await t.mutation(internal.whoopStore.claim,{connectionId:id,lease:'three'})).toBeNull();
   expect((await t.run(ctx=>ctx.db.get(id)))?.status).toBe('reconnect');
  });
+});
+
+
+test('webhook signatures reject alteration, wrong keys and expired timestamps',async()=>{
+ const timestamp='1792665000000',body='{"user_id":123,"id":"sleep-uuid","type":"recovery.updated"}',secret='test-signing-secret';
+ const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(secret),{name:'HMAC',hash:'SHA-256'},false,['sign']);
+ const signed=new Uint8Array(await crypto.subtle.sign('HMAC',key,new TextEncoder().encode(timestamp+body)));
+ const signature=btoa(String.fromCharCode(...signed));
+ expect(await verifySignature(body,timestamp,signature,secret,Number(timestamp))).toBe(true);
+ expect(await verifySignature(body+' ',timestamp,signature,secret,Number(timestamp))).toBe(false);
+ expect(await verifySignature(body,timestamp,signature,'wrong',Number(timestamp))).toBe(false);
+ expect(await verifySignature(body,timestamp,signature,secret,Number(timestamp)+300001)).toBe(false);
+});
+
+test('v2 recovery webhook uses the sleep UUID, deduplicates delivery and deletes only that owner’s record',async()=>{
+ const t=convexTest(schema,modules);
+ const c=await t.run(async ctx=>{
+  const owner=await ctx.db.insert('users',{}),other=await ctx.db.insert('users',{});
+  const c=await ctx.db.insert('whoopConnections',{userId:owner,whoopUserId:7,accessToken:'test-access',refreshToken:'test-refresh',expiresAt:9e15,scope:'offline',status:'connected',connectedAt:1});
+  for(const userId of [owner,other])await ctx.db.insert('whoopRecords',{userId,kind:'recovery',externalId:'cycle-1',sleepId:'sleep-uuid',startAt:1,updatedAt:1,scoreState:'SCORED',metrics:{recovery:44}});
+  return c;
+ });
+ const event={whoopUserId:7,traceId:'delivery-1',kind:'recovery' as const,externalId:'sleep-uuid',deleted:true};
+ await t.mutation(internal.whoopStore.webhook,event);
+ await t.mutation(internal.whoopStore.webhook,event);
+ const connection=await t.run(ctx=>ctx.db.get(c));
+ expect(connection?.job?.target?.externalId).toBe('sleep-uuid');
+ const claimed=await t.mutation(internal.whoopStore.claim,{connectionId:c,lease:'event-worker'});
+ expect(claimed).not.toBeNull();
+ await t.mutation(internal.whoopStore.finishPage,{connectionId:c,lease:'event-worker',records:[],eventDoneId:connection!.job!.target!.eventId,remove:{kind:'recovery',externalId:'sleep-uuid'}});
+ const rows=await t.run(ctx=>ctx.db.query('whoopRecords').withIndex('by_userId_and_startAt').take(10));
+ expect(rows).toHaveLength(1);expect(rows[0].userId).not.toBe(connection?.userId);
+ const events=await t.run(ctx=>ctx.db.query('whoopEvents').withIndex('by_traceId',q=>q.eq('traceId','delivery-1')).take(10));
+ expect(events).toHaveLength(1);expect(events[0].done).toBe(true);
 });

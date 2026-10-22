@@ -6,10 +6,11 @@ import { auth } from "./auth";
 import { TOOL_BY_NAME } from "./tools/registry";
 import { sha256Hex } from "./tokens";
 
-import { callback as whoopCallback } from "./whoopHttp";
+import { callback as whoopCallback, webhook as whoopWebhook } from "./whoopHttp";
 
 const http = httpRouter();
 http.route({ path: "/whoop/callback", method: "GET", handler: whoopCallback });
+http.route({ path: "/whoop/webhook", method: "POST", handler: whoopWebhook });
 auth.addHttpRoutes(http);
 
 // ---------------------------------------------------------------------------
@@ -148,6 +149,7 @@ for (const method of ["POST", "GET", "OPTIONS"] as const) {
 // Admin operations (seeding, imports). Requires the ADMIN_SECRET env var.
 
 const ADMIN_OPS = {
+  whoopStatus: internal.whoopStore.diagnostics,
   syncLibrary: internal.seed.syncLibrary,
   importHistory: internal.importer.importHistory,
   rebuildStats: internal.importer.rebuildStats,
@@ -165,6 +167,10 @@ http.route({
     }
     const body = (await req.json()) as { op?: unknown; args?: unknown };
     const op = typeof body.op === "string" ? body.op : "";
+    if (op === "whoopRefresh") {
+      const result = await ctx.runAction(internal.whoopSync.forceRefresh, (body.args ?? {}) as never);
+      return new Response(JSON.stringify(result), { headers: { "Content-Type": "application/json" } });
+    }
     if (!(op in ADMIN_OPS)) return new Response("Unknown op", { status: 400 });
     const result = await ctx.runMutation(ADMIN_OPS[op as keyof typeof ADMIN_OPS] as never, (body.args ?? {}) as never);
     return new Response(JSON.stringify(result), { headers: { "Content-Type": "application/json" } });

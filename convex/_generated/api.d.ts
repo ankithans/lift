@@ -32,6 +32,7 @@ import type * as tools_registry from "../tools/registry.js";
 import type * as whoop from "../whoop.js";
 import type * as whoop_api from "../whoop/api.js";
 import type * as whoop_model from "../whoop/model.js";
+import type * as whoop_signature from "../whoop/signature.js";
 import type * as whoopHttp from "../whoopHttp.js";
 import type * as whoopStore from "../whoopStore.js";
 import type * as whoopSync from "../whoopSync.js";
@@ -68,6 +69,7 @@ declare const fullApi: ApiFromModules<{
   whoop: typeof whoop;
   "whoop/api": typeof whoop_api;
   "whoop/model": typeof whoop_model;
+  "whoop/signature": typeof whoop_signature;
   whoopHttp: typeof whoopHttp;
   whoopStore: typeof whoopStore;
   whoopSync: typeof whoopSync;

@@ -29,6 +29,23 @@ export const page=internalAction({
       // Refresh in its own step so both API calls have independent rate reservations.
       if(c.expiresAt<Date.now()+120_000){await refresh();await ctx.runMutation(internal.whoopStore.defer,{...claim,delay:1100});return null;}
       const task=c.job;
+      if(task.target){
+        const t=task.target;
+        const done={...claim,eventDoneId:t.eventId};
+        if(t.deleted){await ctx.runMutation(internal.whoopStore.finishPage,{...done,records:[],remove:{kind:t.kind,externalId:t.externalId}});return null;}
+        if(t.kind==='recovery'){
+          // v2 recovery IDs are sleep UUIDs, never cycle IDs.
+          const path=t.phase===0?`activity/sleep/${encodeURIComponent(t.externalId)}`:t.phase===1?`cycle/${encodeURIComponent(t.cycleId??'')}`:`cycle/${encodeURIComponent(t.cycleId??'')}/recovery`;
+          const result=parseRecord(t.phase===0?'sleep':t.phase===1?'cycle':'recovery',await get(`${API}/${path}`));
+          if(t.phase===0&&!result.cycleId)throw new Error('WHOOP sleep has no cycle.');
+          const next=t.phase<2?{...task,target:{...t,phase:t.phase+1,cycleId:t.cycleId??result.cycleId}}:undefined;
+          await ctx.runMutation(internal.whoopStore.finishPage,{...claim,records:[result],nextJob:next,...(!next?{eventDoneId:t.eventId}:{})});
+        }else{
+          const result=parseRecord(t.kind,await get(`${API}/activity/${t.kind}/${encodeURIComponent(t.externalId)}`));
+          await ctx.runMutation(internal.whoopStore.finishPage,{...done,records:[result]});
+        }
+        return null;
+      }
       const url=new URL(`${API}/${resources[task.resource]}`);
       url.search=new URLSearchParams({limit:'25',start:new Date(task.start).toISOString(),end:new Date(task.end).toISOString(),...(task.nextToken?{nextToken:task.nextToken}:{})}).toString();
       const payload=object(await get(url.toString()));
@@ -39,6 +56,7 @@ export const page=internalAction({
       const nextJob=nextToken?{...task,nextToken}:task.resource<3?{start:task.start,end:task.end,resource:task.resource+1}:undefined;
       await ctx.runMutation(internal.whoopStore.finishPage,{...claim,records,nextJob});
     }catch(e){
+      if(e instanceof WhoopError&&e.status===404&&c.job.target){await ctx.runMutation(internal.whoopStore.finishPage,{...claim,records:[],eventDoneId:c.job.target.eventId,remove:{kind:c.job.target.kind,externalId:c.job.target.externalId}});return null;}
       if(e instanceof Defer){await ctx.runMutation(internal.whoopStore.defer,{...claim,delay:e.delay});return null;}
       const revoked=e instanceof WhoopError&&(e.status===401||e.status===400||e.status===403);
       await ctx.runMutation(internal.whoopStore.failed,{...claim,revoked,message:revoked?'WHOOP access expired. Reconnect to continue.':'WHOOP could not sync. Your last readings are saved.',retryMs:e instanceof WhoopError?e.retryMs:undefined});
