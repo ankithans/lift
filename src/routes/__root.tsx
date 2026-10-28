@@ -3,6 +3,7 @@ import { ConvexAuthProvider } from '@convex-dev/auth/react'
 import { useEffect, useState, type ReactNode } from 'react'
 import { getConvex } from '#/lib/convex'
 import { Splash } from '#/components/Splash'
+import { useFreshBuild } from '#/lib/freshness'
 import appCss from '../styles.css?url'
 
 export const Route = createRootRoute({
@@ -47,6 +48,7 @@ function RootDocument({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const [mounted, setMounted] = useState(false)
+  useFreshBuild()
   useEffect(() => {
     setMounted(true)
     if ('serviceWorker' in navigator) void navigator.serviceWorker.register('/sw.js').catch(() => {})

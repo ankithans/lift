@@ -29,28 +29,46 @@ export async function loadDayDetail(ctx: Ctx, day: Doc<"programDays">) {
   }
   // Target-muscle split by working sets (primary groups only).
   const groupSets = new Map<string, number>();
-  let seconds = 0;
-  for (const [i, slot] of exercises.entries()) {
+  for (const slot of exercises) {
     for (const g of slot.exercise.primaryGroups) {
       groupSets.set(g, (groupSets.get(g) ?? 0) + slot.sets / slot.exercise.primaryGroups.length);
     }
-    const next = exercises[i + 1];
-    const restsAfter = !slot.group || !next || next.group !== slot.group;
-    seconds += slot.sets * (WORK_SEC_PER_SET + (restsAfter ? slot.restSec : 15));
   }
   const total = [...groupSets.values()].reduce((a, b) => a + b, 0) || 1;
   const targets = [...groupSets.entries()]
     .map(([group, sets]) => ({ group, share: sets / total }))
     .sort((a, b) => b.share - a.share);
-  return {
-    ...day,
-    exercises,
-    targets,
-    estimatedMinutes: Math.round(seconds / 60 / 5) * 5 || 0,
-    totalSets: exercises.reduce((n, s) => n + s.sets, 0),
-  };
+  return { ...day, exercises, targets, ...slotTotals(exercises) };
 }
 export type DayDetail = Awaited<ReturnType<typeof loadDayDetail>>;
+
+type SlotShape = Pick<Doc<"programExercises">, "sets" | "restSec" | "group">;
+
+function slotTotals(slots: SlotShape[]) {
+  let seconds = 0;
+  for (const [i, slot] of slots.entries()) {
+    const next = slots[i + 1];
+    const restsAfter = !slot.group || !next || next.group !== slot.group;
+    seconds += slot.sets * (WORK_SEC_PER_SET + (restsAfter ? slot.restSec : 15));
+  }
+  return {
+    estimatedMinutes: Math.round(seconds / 60 / 5) * 5 || 0,
+    totalSets: slots.reduce((n, s) => n + s.sets, 0),
+  };
+}
+
+/**
+ * Day header for schedule views: counts and duration from the slots alone. Unlike
+ * loadDayDetail it reads no exercise or stats docs, so it stays small and isn't
+ * invalidated every time a set is logged.
+ */
+async function loadDaySummary(ctx: Ctx, day: Doc<"programDays">) {
+  const slots = await ctx.db
+    .query("programExercises")
+    .withIndex("by_programDayId_and_order", (q) => q.eq("programDayId", day._id))
+    .take(60);
+  return { ...day, exerciseCount: slots.length, ...slotTotals(slots) };
+}
 
 export async function programDays(ctx: Ctx, programId: Id<"programs">) {
   return await ctx.db
@@ -89,7 +107,7 @@ export const getProgramDay = defineQuery({
 export const getWeek = defineQuery({
   name: "get_week",
   description:
-    "The weekly schedule with status per day (done, missed, today, upcoming, rest, active). Omit arguments for the current week in the user's time zone. Optional `boundaries`: 8 epoch-ms local midnights (each day of the week plus the next); `now`: epoch ms.",
+    "The weekly schedule with status per day (done, missed, today, upcoming, rest, active), each planned day with its title, exercise count and estimated minutes (use get_program_day for its exercises). Omit arguments for the current week in the user's time zone. Optional `boundaries`: 8 epoch-ms local midnights (each day of the week plus the next); `now`: epoch ms.",
   args: { boundaries: v.optional(v.array(v.number())), now: v.optional(v.number()) },
   run: async (ctx, { userId }, args) => {
     const now = args.now ?? Date.now();
@@ -113,7 +131,7 @@ export const getWeek = defineQuery({
       const end = boundaries[i + 1];
       const weekday = (weekStartsOn + i) % 7;
       const plannedDay = days.find((d) => d.weekday === weekday) ?? null;
-      const planned = plannedDay ? await loadDayDetail(ctx, plannedDay) : null;
+      const planned = plannedDay ? await loadDaySummary(ctx, plannedDay) : null;
       const onThisDay = live.filter((w) => w.startedAt >= start && w.startedAt < end);
       let match: Doc<"workouts"> | undefined;
       if (planned) {

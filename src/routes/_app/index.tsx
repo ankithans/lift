@@ -178,7 +178,7 @@ function TodayHero({ day, days, whoop }: { day: Day; days: Day[]; whoop: WhoopVi
   } else {
     title = p.title
     titleLink = p._id
-    support = `${p.exercises.length} exercises · about ${p.estimatedMinutes} min`
+    support = `${p.exerciseCount} exercises · about ${p.estimatedMinutes} min`
     action = (
       <button disabled={start.busy} onClick={() => start.run(p._id)} className="btn btn-primary w-full">
         {start.busy ? <Loader2 className="size-5 animate-spin" /> : <Play aria-hidden className="size-[18px] fill-current" />}
